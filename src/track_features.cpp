@@ -10,6 +10,7 @@
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
 
+#include "read_image.hpp"
 #include "track.hpp"
 #include "tracker.hpp"
 #include "klt_tracker.hpp"
@@ -43,19 +44,6 @@ const int MARKER_THICKNESS = 2;
 const int TRAIL_LENGTH = 5;
 const int TRAIL_THICKNESS = 2;
 
-
-bool readImage(const std::string& filename, cv::Mat& color, cv::Mat& gray) {
-  // Attempt to read next image.
-  color = cv::imread(filename, 1);
-  if (color.empty()) {
-    return false;
-  }
-
-  // Convert to gray.
-  cvtColor(color, gray, CV_BGR2GRAY);
-
-  return true;
-}
 
 void drawTrack(cv::Mat& image, const Track& track) {
   // Get last point in track.

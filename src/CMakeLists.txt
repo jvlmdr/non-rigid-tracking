@@ -9,6 +9,13 @@ INCLUDE_DIRECTORIES(${OpenCV_INCLUDE_DIRS})
 INCLUDE_DIRECTORIES("../klt")
 LINK_DIRECTORIES("../klt")
 
-ADD_EXECUTABLE(track-features track_features.cpp tracker.cpp klt_tracker.cpp)
+ADD_EXECUTABLE(track-features track_features.cpp
+  read_image.cpp
+  tracker.cpp
+  klt_tracker.cpp)
 TARGET_LINK_LIBRARIES(track-features ${OpenCV_LIBS})
 TARGET_LINK_LIBRARIES(track-features klt)
+
+ADD_EXECUTABLE(extract-sift extract_sift.cpp
+  read_image.cpp)
+TARGET_LINK_LIBRARIES(extract-sift ${OpenCV_LIBS})
