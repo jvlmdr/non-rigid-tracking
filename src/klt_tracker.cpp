@@ -14,6 +14,7 @@ void KltTracker::init(int max_num_features,
                       double min_displacement,
                       double max_residual) {
   tc_ = KLTCreateTrackingContext();
+
   tc_->mindist = min_clearance;
   tc_->window_width = window_size;
   tc_->window_height = window_size;
@@ -23,6 +24,8 @@ void KltTracker::init(int max_num_features,
   tc_->max_iterations = max_iterations;
   tc_->max_residue = max_residual;
   tc_->nSkippedPixels = cornerness_jump;
+
+  tc_->sequentialMode = true;
 
   fl_ = KLTCreateFeatureList(max_num_features);
 }
@@ -71,12 +74,18 @@ void KltTracker::feed(const cv::Mat& image) {
       // Set up as an active track.
       active_.push_back(i);
     }
+
+    // Only need the previous image once, after that stored internally.
+    image.copyTo(previous_);
   } else {
     // Track features from previous frame to next one.
     KLTTrackFeatures(tc_,
         const_cast<uint8_t *>(previous_.ptr<uint8_t>()),
         const_cast<uint8_t*>(image.ptr<uint8_t>()),
         image.cols, image.rows, fl_);
+
+    // Only need previous image once.
+    previous_ = cv::Mat();
 
     // Update tracks.
     Subset::iterator index = active_.begin();
@@ -100,7 +109,6 @@ void KltTracker::feed(const cv::Mat& image) {
     //KLTReplaceLostFeatures(tc, image, image.cols, image.rows, fl_);
   }
 
-  image.copyTo(previous_);
   frame_number_ += 1;
 }
 
