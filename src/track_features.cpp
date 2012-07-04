@@ -30,8 +30,8 @@ double MIN_DETERMINANT = 0.01;
 int MAX_ITERATIONS = 20;
 // Minimum step size to deem converged. Default: 0.1.
 double MIN_DISPLACEMENT = 0.1;
-// Maximum residual to deem lost. Default: 1.0.
-double MAX_RESIDUAL = 1.0;
+// Maximum residual to deem lost. Default: 10.0.
+double MAX_RESIDUAL = 10.0;
 
 // Visualization settings.
 const cv::Scalar MARKER_COLOR(0xFF, 0x00, 0x00);
