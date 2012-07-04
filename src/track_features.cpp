@@ -32,6 +32,9 @@ int MAX_ITERATIONS = 20;
 double MIN_DISPLACEMENT = 0.1;
 // Maximum residual to deem lost. Default: 10.0.
 double MAX_RESIDUAL = 10.0;
+// Consistency checking mode. Default: -1.
+// -1: none, 0: translation, 1: similarity, 2: affine
+int CONSISTENCY_MODE = 2;
 
 // Visualization settings.
 const cv::Scalar MARKER_COLOR(0xFF, 0x00, 0x00);
@@ -117,7 +120,7 @@ int main(int argc, char** argv) {
   KltTracker klt_tracker;
   klt_tracker.init(MAX_NUM_FEATURES, MIN_CLEARANCE, WINDOW_SIZE, MIN_EIGENVALUE,
       CORNERNESS_JUMP, MIN_DETERMINANT, MAX_ITERATIONS, MIN_DISPLACEMENT,
-      MAX_RESIDUAL);
+      MAX_RESIDUAL, CONSISTENCY_MODE);
   SerialTracker& tracker = klt_tracker;
 
   // Loop variables.

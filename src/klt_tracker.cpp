@@ -12,7 +12,8 @@ void KltTracker::init(int max_num_features,
                       double min_determinant,
                       int max_iterations,
                       double min_displacement,
-                      double max_residual) {
+                      double max_residual,
+                      int consistency_mode) {
   tc_ = KLTCreateTrackingContext();
 
   tc_->mindist = min_clearance;
@@ -24,6 +25,8 @@ void KltTracker::init(int max_num_features,
   tc_->max_iterations = max_iterations;
   tc_->max_residue = max_residual;
   tc_->nSkippedPixels = cornerness_jump;
+
+  tc_->affineConsistencyCheck = 0;
 
   tc_->sequentialMode = true;
 

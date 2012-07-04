@@ -19,7 +19,8 @@ class KltTracker : public SerialTracker {
               double min_determinant,
               int max_iterations,
               double min_displacement,
-              double max_residual);
+              double max_residual,
+              int consistency_mode);
 
     // Processes the next frame.
     void feed(const cv::Mat& image);
