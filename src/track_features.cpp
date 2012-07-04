@@ -88,7 +88,13 @@ void drawTracks(cv::Mat& image, const std::vector<const Track*>& tracks) {
 
 int main(int argc, char** argv) {
   if (argc < 3) {
-    std::cerr << "usage: " << argv[0] << " input output" << std::endl;
+    std::cerr << "usage: " << argv[0] << " image-format tracks-file"
+              << std::endl;
+    std::cerr << std::endl;
+    std::cerr << "Example" << std::endl;
+    std::cerr << argv[0]
+              << " input/my-video/%03d.png output/my-video/tracks.txt"
+              << std::endl;
     return 1;
   }
 
