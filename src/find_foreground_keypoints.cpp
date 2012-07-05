@@ -145,7 +145,7 @@ int main(int argc, char** argv) {
   }
 
   // Third pass: Threshold foreground.
-  cv::Mat deviation;
+  cv::Mat foreground;
 
   for (n = 0; n < num_frames; n += 1) {
     // Attempt to read next frame.
@@ -155,48 +155,36 @@ int main(int argc, char** argv) {
     }
 
     // Convert to floating point.
-    image.convertTo(deviation, cv::DataType<double>::type, 1. / 255.);
+    image.convertTo(foreground, cv::DataType<double>::type, 1. / 255.);
 
     // Subtract mean.
-    deviation -= mean;
+    foreground -= mean;
     // Square.
-    cv::multiply(deviation, deviation, deviation);
+    cv::multiply(foreground, foreground, foreground);
     // Divide by sigma^2.
-    cv::divide(deviation, variance, deviation);
+    cv::divide(foreground, variance, foreground);
     // Square root.
-    cv::sqrt(deviation, deviation);
+    cv::sqrt(foreground, foreground);
 
-    cv::imshow("deviation", deviation >= 2);
+    const int erode_radius = 6;
+    const int dilate_radius = 32;
+    cv::Mat kernel;
+
+    kernel = cv::Mat_<uint8_t>(2 * erode_radius + 1, 2 * erode_radius + 1,
+        uint8_t(0));
+    cv::circle(kernel, cv::Point(erode_radius, erode_radius), erode_radius,
+        cv::Scalar(1), -1);
+    cv::erode(foreground, foreground, kernel);
+
+    kernel = cv::Mat_<uint8_t>(2 * dilate_radius + 1, 2 * dilate_radius + 1,
+        uint8_t(0));
+    cv::circle(kernel, cv::Point(dilate_radius, dilate_radius), dilate_radius,
+        cv::Scalar(1), -1);
+    cv::dilate(foreground, foreground, kernel);
+
+    cv::imshow("foreground", foreground >= 2);
     cv::waitKey(10);
   }
-
-  /*
-  // Set up background subtractor.
-  cv::BackgroundSubtractorMOG2 subtractor(HISTORY_LENGTH,
-      OUTLIER_VARIANCE * OUTLIER_VARIANCE, false);
-  //subtractor.nmixtures = MAX_MIXTURE_COMPONENTS;
-
-  while (!user_quit && have_frame) {
-    // Attempt to read next frame.
-    have_frame = readImage(imageFilename(image_format, n), color_image, image);
-    if (!have_frame) {
-      continue;
-    }
-
-    // Update background subtractor. Get foreground map.
-    subtractor(image, foreground);
-    cv::imshow("foreground", foreground);
-
-    // Check for keypress.
-    char c = char(cv::waitKey(10));
-    if (c == 27) {
-      user_quit = true;
-    }
-
-    // Frame counter.
-    n += 1;
-  }
-  */
 
   return 0;
 }
