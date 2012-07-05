@@ -82,6 +82,30 @@ cv::Point2d readPointFromFile(const cv::FileNode& node) {
   return cv::Point2d(x, y);
 }
 
+void shiftTrack(const Track& input, Track& output, int delta) {
+  output.clear();
+
+  Track::const_iterator point;
+  for (point = input.begin(); point != input.end(); ++point) {
+    int t = point->first;
+    const cv::Point2d& position = point->second;
+
+    output[t + delta] = position;
+  }
+}
+
+void shiftTracks(const TrackList& input, TrackList& output, int delta) {
+  output.clear();
+
+  TrackList::const_iterator track;
+  for (track = input.begin(); track != input.end(); ++track) {
+    // Create a new track.
+    output.push_back(Track());
+    // Copy with a shift.
+    shiftTrack(*track, output.back(), delta);
+  }
+}
+
 bool loadKeyPoints(const std::string& filename,
                    std::vector<cv::Point2d>& points) {
   // Open file.
@@ -171,8 +195,12 @@ int main(int argc, char** argv) {
     n += 1;
   }
 
+  // Shift tracks in time so that they start at the first frame.
+  TrackList shifted;
+  shiftTracks(tracker.tracks(), shifted, first_frame);
+
   // Write out tracks.
-  saveTracks(tracks_filename, size, tracker.tracks());
+  saveTracks(tracks_filename, size, shifted);
 
   return 0;
 }
