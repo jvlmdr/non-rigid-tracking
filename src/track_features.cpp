@@ -71,10 +71,6 @@ std::string imageFilename(const std::string& format, int n) {
   return boost::str(boost::format(format) % (n + 1));
 }
 
-std::string keypointsFilename(const std::string& format, int n) {
-  return boost::str(boost::format(format) % (n + 1));
-}
-
 cv::Point2d readPointFromFile(const cv::FileNode& node) {
   double x = (double)node["x"];
   double y = (double)node["y"];
