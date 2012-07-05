@@ -17,22 +17,34 @@ LINK_DIRECTORIES("../klt")
 # Shohei's SIFT
 #INCLUDE_DIRECTORIES("../sift-shohei")
 
-ADD_EXECUTABLE(track-features track_features.cpp
+ADD_EXECUTABLE(track-features
+  track_features.cpp
   read_image.cpp
   tracker.cpp
   klt_tracker.cpp)
 TARGET_LINK_LIBRARIES(track-features ${OpenCV_LIBS})
 TARGET_LINK_LIBRARIES(track-features klt)
 
-ADD_EXECUTABLE(find-keypoints find_keypoints.cpp
+ADD_EXECUTABLE(track-features-bidirectional
+  track_features_bidirectional.cpp
+  read_image.cpp
+  tracker.cpp
+  klt_tracker.cpp)
+TARGET_LINK_LIBRARIES(track-features-bidirectional ${OpenCV_LIBS})
+TARGET_LINK_LIBRARIES(track-features-bidirectional klt)
+
+ADD_EXECUTABLE(find-keypoints
+  find_keypoints.cpp
   read_image.cpp)
 TARGET_LINK_LIBRARIES(find-keypoints ${OpenCV_LIBS})
 #TARGET_LINK_LIBRARIES(find-keypoints tbb)
 
-ADD_EXECUTABLE(find-foreground-keypoints find_foreground_keypoints.cpp
+ADD_EXECUTABLE(find-foreground-keypoints
+  find_foreground_keypoints.cpp
   read_image.cpp)
 TARGET_LINK_LIBRARIES(find-foreground-keypoints ${OpenCV_LIBS})
 
-ADD_EXECUTABLE(extract-sift extract_sift.cpp
+ADD_EXECUTABLE(extract-sift
+  extract_sift.cpp
   read_image.cpp)
 TARGET_LINK_LIBRARIES(extract-sift ${OpenCV_LIBS})
