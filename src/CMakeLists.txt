@@ -2,7 +2,7 @@ CMAKE_MINIMUM_REQUIRED(VERSION 2.6)
 PROJECT(nrtrack)
 
 # OpenCV
-FIND_PACKAGE(OpenCV COMPONENTS core highgui imgproc features2d nonfree)
+FIND_PACKAGE(OpenCV COMPONENTS core highgui imgproc features2d nonfree video)
 INCLUDE_DIRECTORIES(${OpenCV_INCLUDE_DIRS})
 
 # KLT
@@ -28,6 +28,10 @@ ADD_EXECUTABLE(find-keypoints find_keypoints.cpp
   read_image.cpp)
 TARGET_LINK_LIBRARIES(find-keypoints ${OpenCV_LIBS})
 #TARGET_LINK_LIBRARIES(find-keypoints tbb)
+
+ADD_EXECUTABLE(find-foreground-keypoints find_foreground_keypoints.cpp
+  read_image.cpp)
+TARGET_LINK_LIBRARIES(find-foreground-keypoints ${OpenCV_LIBS})
 
 ADD_EXECUTABLE(extract-sift extract_sift.cpp
   read_image.cpp)
