@@ -11,11 +11,11 @@
 class KltTracker : public SerialTracker {
   public:
     KltTracker();
-
-    // Parameters:
-    // points -- Points to start tracking from.
-    void init(const std::vector<cv::Point2d>& points,
+    void init(int max_num_features,
+              int min_clearance,
               int window_size,
+              int min_eigenvalue,
+              int cornerness_jump,
               double min_determinant,
               int max_iterations,
               double min_displacement,

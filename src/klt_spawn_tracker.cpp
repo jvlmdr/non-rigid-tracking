@@ -4,8 +4,11 @@
 KltTracker::KltTracker()
     : tracks_(), active_(), frame_number_(0), tc_(), fl_() {}
 
-void KltTracker::init(const std::vector<cv::Point2d>& features,
+void KltTracker::init(int max_num_features,
+                      int min_clearance,
                       int window_size,
+                      int min_eigenvalue,
+                      int cornerness_jump,
                       double min_determinant,
                       int max_iterations,
                       double min_displacement,
@@ -13,39 +16,21 @@ void KltTracker::init(const std::vector<cv::Point2d>& features,
                       int consistency_mode) {
   tc_ = KLTCreateTrackingContext();
 
+  tc_->mindist = min_clearance;
   tc_->window_width = window_size;
   tc_->window_height = window_size;
+  tc_->min_eigenvalue = min_eigenvalue;
   tc_->min_determinant = min_determinant;
   tc_->min_displacement = min_displacement;
   tc_->max_iterations = max_iterations;
   tc_->max_residue = max_residual;
+  tc_->nSkippedPixels = cornerness_jump;
 
   tc_->affineConsistencyCheck = consistency_mode;
 
   tc_->sequentialMode = true;
 
-  // Allocate enough for all features.
-  fl_ = KLTCreateFeatureList(features.size());
-
-  // Copy in to feature list.
-  // This is a bit hacky since KLT doesn't give you a way to do it.
-  for (int i = 0; i < int(features.size()); i += 1) {
-    fl_->feature[i]->x = features[i].x;
-    fl_->feature[i]->y = features[i].y;
-    // A positive 'val' means the feature was just found.
-    fl_->feature[i]->val = 1;
-
-    // Other properties which are initialized in SelectGoodFeatures.
-    fl_->feature[i]->aff_img = NULL;
-    fl_->feature[i]->aff_img_gradx = NULL;
-    fl_->feature[i]->aff_img_grady = NULL;
-    fl_->feature[i]->aff_x = -1.0;
-    fl_->feature[i]->aff_y = -1.0;
-    fl_->feature[i]->aff_Axx = 1.0;
-    fl_->feature[i]->aff_Ayx = 0.0;
-    fl_->feature[i]->aff_Axy = 0.0;
-    fl_->feature[i]->aff_Ayy = 1.0;
-  }
+  fl_ = KLTCreateFeatureList(max_num_features);
 }
 
 // Accesses the tracks.
@@ -60,9 +45,7 @@ int KltTracker::numFrames() const {
 // Returns the tracks which are currently active.
 void KltTracker::activeTracks(std::vector<const Track*>& tracks) const {
   tracks.clear();
-
-  Subset::const_iterator it;
-  for (it = active_.begin(); it != active_.end(); ++it) {
+  for (Subset::const_iterator it = active_.begin(); it != active_.end(); ++it) {
     tracks.push_back(&tracks_[*it]);
   }
 }
@@ -76,6 +59,10 @@ void KltTracker::feed(const cv::Mat& image) {
   }
 
   if (frame_number_ == 0) {
+    // First frame, initialise some features.
+    KLTSelectGoodFeatures(tc_, const_cast<uint8_t*>(image.ptr<uint8_t>()),
+        image.cols, image.rows, fl_);
+
     // Read out features.
     for (int i = 0; i < fl_->nFeatures; i += 1) {
       // Create a new track.

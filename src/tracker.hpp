@@ -8,6 +8,10 @@
 // Describes a collection of tracks from a single video sequence.
 typedef std::vector<Track> TrackList;
 
+bool saveTracks(const std::string& filename,
+                const cv::Size& size,
+                const TrackList& tracks);
+
 // Generates a set of point tracks from an image sequence.
 class Tracker {
   public:
