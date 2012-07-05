@@ -125,18 +125,18 @@ bool loadKeyPoints(const std::string& filename,
 int main(int argc, char** argv) {
   if (argc < 5) {
     std::cerr << "usage: " << argv[0] <<
-      " image-format keypoints-format frame-number tracks" << std::endl;
+      " image-format frame-number keypoints tracks" << std::endl;
     std::cerr << std::endl;
     std::cerr << "Example" << std::endl;
     std::cerr << argv[0] <<
-      " input/my-video/%03d.png output/my-video/keypoints-%03d.yaml 5" <<
-      " output/my-video/tracks.yaml" << std::endl;
+      " input/my-video/%03d.png 5 output/my-video/keypoints/005.yaml"
+      " output/my-video/tracks/005.yaml" << std::endl;
     return 1;
   }
 
   std::string image_format = argv[1];
-  std::string keypoints_format = argv[2];
-  int first_frame = boost::lexical_cast<int>(argv[3]);
+  int first_frame = boost::lexical_cast<int>(argv[2]);
+  std::string keypoints_filename = argv[3];
   std::string tracks_filename = argv[4];
 
   // Frame index.
@@ -144,7 +144,7 @@ int main(int argc, char** argv) {
 
   // Read keypoints from file.
   std::vector<cv::Point2d> points;
-  loadKeyPoints(keypointsFilename(keypoints_format, n), points);
+  loadKeyPoints(keypoints_filename, points);
   std::cerr << points.size() << std::endl;
 
   KltTracker klt_tracker;
