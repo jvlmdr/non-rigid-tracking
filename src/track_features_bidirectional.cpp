@@ -124,6 +124,10 @@ bool loadKeyPoints(const std::string& filename,
   return true;
 }
 
+bool startsBefore(const Track& lhs, const Track& rhs) {
+  return lhs.begin()->first < rhs.begin()->first;
+}
+
 void fuseBidirectional(const TrackList& forward,
                        const TrackList& backward,
                        TrackList& fused,
@@ -185,16 +189,16 @@ int track(const std::string& image_format,
     drawTracks(color_image, tracks);
 
     // Draw image.
-    cv::imshow("tracking", color_image);
-    cv::waitKey(1);
+    //cv::imshow("tracking", color_image);
+    //cv::waitKey(1);
 
     // If there are no features, then abort.
     have_features = !tracks.empty();
     // Frame index.
     if (reverse) {
-      i += 1;
-    } else {
       i -= 1;
+    } else {
+      i += 1;
     }
     n += 1;
   }
@@ -302,7 +306,6 @@ int main(int argc, char** argv) {
   // Read keypoints from file.
   std::vector<cv::Point2d> points;
   loadKeyPoints(keypoints_filename, points);
-  std::cerr << points.size() << std::endl;
 
   // Track forwards.
   TrackList forward;
@@ -325,20 +328,20 @@ int main(int argc, char** argv) {
   }
 
   // Remove tracks which could not be tracked for the whole window.
-  {
-    TrackSubset temp;
-    std::remove_copy_if(track_subset.begin(), track_subset.end(),
-        std::inserter(temp, temp.begin()), tooShort);
-    track_subset.swap(temp);
-  }
+  std::cerr << "removing tracks which are too short..." << std::endl;
+  TrackSubset long_tracks;
+  std::remove_copy_if(track_subset.begin(), track_subset.end(),
+      std::inserter(long_tracks, long_tracks.begin()), tooShort);
+  track_subset.swap(long_tracks);
+  std::cerr << track_subset.size() << " tracks remain" << std::endl;
 
   // Remove tracks which did not move.
-  {
-    TrackSubset temp;
-    std::remove_copy_if(track_subset.begin(), track_subset.end(),
-        std::inserter(temp, temp.begin()), tooStationary);
-    track_subset.swap(temp);
-  }
+  std::cerr << "removing tracks which did not move..." << std::endl;
+  TrackSubset moving_tracks;
+  std::remove_copy_if(track_subset.begin(), track_subset.end(),
+      std::inserter(moving_tracks, moving_tracks.begin()), tooStationary);
+  track_subset.swap(moving_tracks);
+  std::cerr << track_subset.size() << " tracks remain" << std::endl;
 
   // Take subset of points.
   {
@@ -366,6 +369,9 @@ int main(int argc, char** argv) {
   // Merge tracks.
   tracks.clear();
   fuseBidirectional(forward, backward, tracks, first_frame);
+
+  // Ensure ordering by appearance is maintained.
+  std::sort(tracks.begin(), tracks.end(), startsBefore);
 
   // Write out tracks.
   saveTracks(tracks_filename, size, tracks);
