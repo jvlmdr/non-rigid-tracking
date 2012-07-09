@@ -15,6 +15,8 @@
 // Maximum number of features. 0 for no limit.
 const int MAX_NUM_FEATURES = 0;
 
+typedef std::vector<cv::KeyPoint> KeyPointList;
+
 bool writeKeyPointToFile(cv::FileStorage& out, const cv::KeyPoint& k) {
   // SIFT does not set 'response' or 'class_id' attributes.
   out << "{:";
@@ -23,6 +25,29 @@ bool writeKeyPointToFile(cv::FileStorage& out, const cv::KeyPoint& k) {
   out << "angle" << k.angle;
   out << "octave" << k.octave;
   out << "}";
+
+  return true;
+}
+
+bool saveKeyPoints(const std::string& filename, const KeyPointList& keypoints) {
+  // Open output file.
+  cv::FileStorage file(filename, cv::FileStorage::WRITE);
+  if (!file.isOpened()) {
+    std::cerr << "could not open keypoints file" << std::endl;
+    return 1;
+  }
+
+  file << "keypoints" << "[";
+
+  // Write out keypoints.
+  KeyPointList::const_iterator keypoint;
+  for (keypoint = keypoints.begin(); keypoint != keypoints.end(); ++keypoint) {
+    writeKeyPointToFile(file, *keypoint);
+  }
+
+  file << "]";
+
+  return true;
 }
 
 int main(int argc, char** argv) {
@@ -49,27 +74,13 @@ int main(int argc, char** argv) {
     return 1;
   }
 
-  // Open output file.
-  cv::FileStorage keypoints_file(keypoints_filename, cv::FileStorage::WRITE);
-  if (!keypoints_file.isOpened()) {
-    std::cerr << "could not open keypoints file" << std::endl;
-  }
-
   // Detect SIFT keypoints (scale-space maxima).
-  typedef std::vector<cv::KeyPoint> KeyPointList;
   KeyPointList keypoints;
   cv::SIFT sift(MAX_NUM_FEATURES);
   sift(image, cv::noArray(), keypoints, cv::noArray(), false);
 
-  keypoints_file << "keypoints" << "[";
-
-  // Write out keypoints.
-  KeyPointList::const_iterator keypoint;
-  for (keypoint = keypoints.begin(); keypoint != keypoints.end(); ++keypoint) {
-    writeKeyPointToFile(keypoints_file, *keypoint);
-  }
-
-  keypoints_file << "]";
+  // Write out.
+  ok = saveKeyPoints(keypoints_filename, keypoints);
 
   return 0;
 }
