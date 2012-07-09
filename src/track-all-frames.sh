@@ -1,3 +1,5 @@
+#!/bin/bash
+
 if [ $# -ne 3 ]
 then
   echo "usage: $0 image-format keypoints-format tracks-format"

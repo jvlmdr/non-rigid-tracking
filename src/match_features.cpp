@@ -4,14 +4,20 @@
 #include <list>
 #include <iterator>
 #include <algorithm>
+#include <boost/format.hpp>
+#include <boost/array.hpp>
+#include <boost/scoped_array.hpp>
 
 #include <opencv2/core/core.hpp>
+#include <opencv2/highgui/highgui.hpp>
+#include <opencv2/imgproc/imgproc.hpp>
 #include <opencv2/features2d/features2d.hpp>
 #include <opencv2/nonfree/nonfree.hpp>
 
 #include "read_image.hpp"
-#include "descriptor.hpp"
-#include "keypoint.hpp"
+#include "track.hpp"
+#include "tracker.hpp"
+#include "klt_tracker.hpp"
 
 void printUsage(std::ostream& out, const std::string& name) {
   out << "usage: " << name << " image keypoints descriptors" << std::endl;

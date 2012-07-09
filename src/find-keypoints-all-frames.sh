@@ -1,3 +1,5 @@
+#!/bin/bash
+
 if [ $# -ne 2 ]
 then
   echo "usage: $0 image-format keypoints-format"
