@@ -3,12 +3,15 @@
 
 #include <string>
 #include <vector>
-#include <boost/array.hpp>
 
-typedef boost::array<double, 128> Descriptor;
+typedef std::vector<double> Descriptor;
 
 // Saves a list of descriptors to a file.
 bool saveDescriptors(const std::string& filename,
                      const std::vector<Descriptor>& descriptors);
+
+// Loads a list of descriptors from a file.
+bool loadDescriptors(const std::string& filename,
+                     std::vector<Descriptor>& descriptors);
 
 #endif

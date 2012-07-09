@@ -30,3 +30,10 @@ ADD_EXECUTABLE(extract-sift
   keypoint.cpp
   descriptor.cpp)
 TARGET_LINK_LIBRARIES(extract-sift ${OpenCV_LIBS})
+
+ADD_EXECUTABLE(match-features
+  match_features.cpp
+  read_image.cpp
+  descriptor.cpp
+  match.cpp)
+TARGET_LINK_LIBRARIES(match-features ${OpenCV_LIBS})
