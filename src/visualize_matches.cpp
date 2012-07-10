@@ -5,60 +5,34 @@
 #include <iterator>
 #include <algorithm>
 #include <cstdlib>
-
 #include <opencv2/core/core.hpp>
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/features2d/features2d.hpp>
-
+#include <gflags/gflags.h>
 #include "read_image.hpp"
 #include "descriptor.hpp"
 #include "keypoint.hpp"
 #include "match.hpp"
+#include "draw_matches.hpp"
+
+DEFINE_string(output_file, "matches.png", "Location to save image.");
+DEFINE_bool(save, false, "Save to file?");
+DEFINE_bool(display, true, "Show matches?");
 
 typedef std::vector<cv::KeyPoint> KeyPointList;
 
-cv::Scalar randomColor() {
-  double h = double(std::rand()) / RAND_MAX;
-  double s = 0.8;
-  double v = 0.9;
-
-  double c = v * s;
-  double h_dash = 6 * h;
-  double x = c * (1 - std::abs(1 - std::fmod(h_dash, 2)));
-
-  cv::Scalar rgb;
-  if (h_dash < 1) {
-    rgb = cv::Scalar(c, x, 0);
-  } else if (h_dash < 2) {
-    rgb = cv::Scalar(x, c, 0);
-  } else if (h_dash < 3) {
-    rgb = cv::Scalar(0, c, x);
-  } else if (h_dash < 4) {
-    rgb = cv::Scalar(0, x, c);
-  } else if (h_dash < 5) {
-    rgb = cv::Scalar(x, 0, c);
-  } else if (h_dash < 6) {
-    rgb = cv::Scalar(c, 0, x);
-  } else {
-    rgb = cv::Scalar(0, 0, 0);
-  }
-
-  double m = v - c;
-  rgb += cv::Scalar(m, m, m);
-  rgb *= 255;
-
-  return rgb;
-}
-
-void printUsage(std::ostream& out, const std::string& name) {
-  out << "Usage: " << name << " matches image1 image2 keypoints1 keypoints2 output" <<
-    std::endl;
-  out << std::endl;
-}
-
 int main(int argc, char** argv) {
-  if (argc < 7) {
-    printUsage(std::cerr, argv[0]);
+  std::ostringstream usage;
+  usage << "Visualizes matches between a pair of images." << std::endl;
+  usage << std::endl;
+  usage << argv[0] << " matches image1 image2 keypoints1 keypoints2" <<
+    std::endl;
+
+  google::SetUsageMessage(usage.str());
+  google::ParseCommandLineFlags(&argc, &argv, true);
+
+  if (argc != 6) {
+    google::ShowUsageWithFlags(argv[0]);
     return 1;
   }
 
@@ -67,7 +41,7 @@ int main(int argc, char** argv) {
   std::string image_file2 = argv[3];
   std::string keypoints_file1 = argv[4];
   std::string keypoints_file2 = argv[5];
-  std::string output_file = argv[6];
+  std::string output_file = FLAGS_output_file;
 
   bool ok;
 
@@ -108,36 +82,17 @@ int main(int argc, char** argv) {
     return 1;
   }
 
-  // Generate some random colors to show the matches.
-  int num_matches = matches.size();
-  std::vector<cv::Scalar> colors;
+  // Visualize matches.
+  cv::Mat render;
+  drawMatches(keypoints1, keypoints2, matches, image1, image2, render);
 
-  MatchList::const_iterator match;
-  for (match = matches.begin(); match != matches.end(); ++match) {
-    // Generate a random color.
-    cv::Scalar color = randomColor();
-
-    // Draw the match position.
-    const cv::KeyPoint* keypoint;
-
-    keypoint = &keypoints1[match->first];
-    cv::circle(image1, keypoint->pt, 8, color, 2);
-
-    keypoint = &keypoints2[match->second];
-    cv::circle(image2, keypoint->pt, 8, color, 2);
+  if (FLAGS_save) {
+    cv::imwrite(output_file, render);
   }
-
-  int rows = image1.rows;
-  int cols = image1.cols + image2.cols;
-  cv::Mat render = cv::Mat_<cv::Vec3b>(rows, cols, cv::Vec3b(0, 0, 0));
-
-  cv::Mat dst;
-  dst = render(cv::Range(0, rows), cv::Range(0, image1.cols));
-  image1.copyTo(dst);
-  dst = render(cv::Range(0, rows), cv::Range(image1.cols, cols));
-  image2.copyTo(dst);
-
-  cv::imwrite(output_file, render);
+  if (FLAGS_display) {
+    cv::imshow("matches", render);
+    cv::waitKey(0);
+  }
 
   return 0;
 }

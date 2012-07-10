@@ -77,15 +77,18 @@ int main(int argc, char** argv) {
   }
 
   // Copy into nicer data structure.
-  std::vector<Descriptor> descriptors(num_features);
+  std::vector<Descriptor> descriptors;
   for (int i = 0; i < table.rows; i += 1) {
     // Add a descriptor to the vector.
     descriptors.push_back(Descriptor());
     Descriptor& descriptor = descriptors.back();
 
+    //descriptor.assign(table.cols, 0);
+
     // Copy row into descriptor.
-    cv::Mat row = table.row(i);
-    std::copy(row.begin<float>(), row.end<float>(), descriptor.begin());
+    for (int j = 0; j < table.cols; j += 1) {
+      descriptor.push_back(table.at<float>(i, j));
+    }
   }
 
   // Write out descriptors.

@@ -1,6 +1,7 @@
 #include "descriptor.hpp"
 #include <iostream>
 #include <stdexcept>
+#include <boost/bind.hpp>
 #include <opencv2/core/core.hpp>
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -8,14 +9,17 @@
 
 namespace {
 
+template<typename T>
+bool writeToFile(cv::FileStorage& file, const T& x) {
+  file << x;
+  return true;
+}
+
 // Writes a single descriptor to a file.
 bool writeDescriptor(cv::FileStorage& file, const Descriptor& descriptor) {
   file << "[:";
-
-  for (int i = 0; i < descriptor.size(); i += 1) {
-    file << descriptor[i];
-  }
-
+  std::for_each(descriptor.begin(), descriptor.end(),
+      boost::bind(writeToFile<double>, boost::ref(file), _1));
   file << "]";
 
   return true;
@@ -34,20 +38,8 @@ bool saveDescriptors(const std::string& filename,
   }
 
   file << "descriptors" << "[";
-
-  std::vector<Descriptor>::const_iterator desc;
-  for (desc = descriptors.begin(); desc != descriptors.end(); ++desc) {
-    // Write descriptor to file.
-    bool ok = writeDescriptor(file, *desc);
-
-    if (!ok) {
-      // Throw exception. It's unclear what to do after failing mid-write.
-      throw std::runtime_error("could not write descriptor");
-    }
-
-    ++desc;
-  }
-
+  std::for_each(descriptors.begin(), descriptors.end(),
+      boost::bind(writeDescriptor, boost::ref(file), _1));
   file << "]";
 
   return true;

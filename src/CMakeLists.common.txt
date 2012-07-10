@@ -36,10 +36,13 @@ ADD_EXECUTABLE(match-features
   descriptor.cpp
   match.cpp)
 TARGET_LINK_LIBRARIES(match-features ${OpenCV_LIBS})
+TARGET_LINK_LIBRARIES(match-features gflags)
 
 ADD_EXECUTABLE(visualize-matches
   visualize_matches.cpp
   match.cpp
   read_image.cpp
-  keypoint.cpp)
+  keypoint.cpp
+  draw_matches.cpp)
 TARGET_LINK_LIBRARIES(visualize-matches ${OpenCV_LIBS})
+TARGET_LINK_LIBRARIES(visualize-matches gflags)

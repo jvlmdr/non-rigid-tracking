@@ -4,15 +4,17 @@
 #include <list>
 #include <iterator>
 #include <algorithm>
-
+#include <boost/bind.hpp>
+#include <boost/lexical_cast.hpp>
 #include <opencv2/core/core.hpp>
-
+#include <gflags/gflags.h>
 #include "read_image.hpp"
 #include "descriptor.hpp"
 #include "keypoint.hpp"
 #include "match.hpp"
 
-const double MIN_RATIO = 1.1;
+DEFINE_double(threshold, 1.5, "Minimum relative distance between best and"
+    " second-best matches.");
 
 typedef std::vector<Descriptor> DescriptorList;
 // List of matches with detailed results.
@@ -32,7 +34,7 @@ void listToMatrix(const DescriptorList& list, cv::Mat& matrix) {
   }
 }
 
-bool isNotDistinctive(const MatchResultList& matches) {
+bool isNotDistinctive(const MatchResultList& matches, double ratio) {
   MatchResultList::const_iterator it = matches.begin();
   const cv::DMatch& first = *it;
   ++it;
@@ -40,7 +42,7 @@ bool isNotDistinctive(const MatchResultList& matches) {
 
   // Note: Carefully crafted to handle case where both distance are zero.
   // (No division. Non-strict comparison.)
-  return (second.distance <= MIN_RATIO * first.distance);
+  return (second.distance <= ratio * first.distance);
 }
 
 Match extractIndices(const cv::DMatch& match) {
@@ -78,31 +80,28 @@ struct IsInconsistent {
   }
 };
 
-void printUsage(std::ostream& out, const std::string& name) {
-  out << "Usage: " << name << " descriptors1 descriptors2 matches" << std::endl;
-  out << std::endl;
-
-  out << "Parameters:" << std::endl;
-  out << "descriptors1, descriptors2 -- Input. Descriptors to match." <<
-    std::endl;
-  out << "matches -- Output. Pairwise association of indices." << std::endl;
-  out << std::endl;
-
-  out << "Example:" << std::endl;
-  out << name << " output/camera1/descriptors/005.yaml"
-    " output/camera2/descriptors/005.yaml output/matches/005.yaml" << std::endl;
-  out << std::endl;
-}
-
 int main(int argc, char** argv) {
-  if (argc < 4) {
-    printUsage(std::cerr, argv[0]);
+  std::ostringstream usage;
+  usage << "Computes matches between sets of descriptors." << std::endl;
+  usage << std::endl;
+  usage << argv[0] << " descriptors1 descriptors2 matches" << std::endl;
+  usage << std::endl;
+  usage << "descriptors1, descriptors2 -- Input. Descriptors to match." <<
+    std::endl;
+  usage << "matches -- Output. Pairwise association of indices." << std::endl;
+
+  google::SetUsageMessage(usage.str());
+  google::ParseCommandLineFlags(&argc, &argv, true);
+
+  if (argc != 4) {
+    google::ShowUsageWithFlags(argv[0]);
     return 1;
   }
 
   std::string descriptors_file1 = argv[1];
   std::string descriptors_file2 = argv[2];
   std::string matches_file = argv[3];
+  double min_relative_distance = FLAGS_threshold;
 
   bool ok;
 
@@ -148,7 +147,8 @@ int main(int argc, char** argv) {
   {
     std::vector<MatchResultList> distinctive;
     std::remove_copy_if(forward_match_lists.begin(), forward_match_lists.end(),
-        std::back_inserter(distinctive), isNotDistinctive);
+        std::back_inserter(distinctive),
+        boost::bind(isNotDistinctive, _1, min_relative_distance));
     forward_match_lists.swap(distinctive);
   }
   std::cerr << forward_match_lists.size() << " forward matches remain" <<
@@ -158,7 +158,8 @@ int main(int argc, char** argv) {
   {
     std::vector<MatchResultList> distinctive;
     std::remove_copy_if(reverse_match_lists.begin(), reverse_match_lists.end(),
-        std::back_inserter(distinctive), isNotDistinctive);
+        std::back_inserter(distinctive),
+        boost::bind(isNotDistinctive, _1, min_relative_distance));
     reverse_match_lists.swap(distinctive);
   }
   std::cerr << reverse_match_lists.size() << " reverse matches remain" <<
