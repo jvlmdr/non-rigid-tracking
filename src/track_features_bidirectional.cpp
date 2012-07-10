@@ -14,6 +14,7 @@
 
 #include "read_image.hpp"
 #include "track.hpp"
+#include "track_list.hpp"
 #include "tracker.hpp"
 #include "klt_tracker.hpp"
 

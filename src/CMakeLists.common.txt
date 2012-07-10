@@ -1,6 +1,10 @@
+#SET(CMAKE_CXX_FLAGS_DEBUG 
+
 ADD_EXECUTABLE(track-features
   track_features.cpp
   read_image.cpp
+  track.cpp
+  track_list.cpp
   tracker.cpp
   klt_tracker.cpp)
 TARGET_LINK_LIBRARIES(track-features ${OpenCV_LIBS})
@@ -9,10 +13,21 @@ TARGET_LINK_LIBRARIES(track-features klt)
 ADD_EXECUTABLE(track-features-bidirectional
   track_features_bidirectional.cpp
   read_image.cpp
+  track.cpp
+  track_list.cpp
   tracker.cpp
   klt_tracker.cpp)
 TARGET_LINK_LIBRARIES(track-features-bidirectional ${OpenCV_LIBS})
 TARGET_LINK_LIBRARIES(track-features-bidirectional klt)
+
+ADD_EXECUTABLE(visualize-tracks
+  visualize_tracks.cpp
+  read_image.cpp
+  track.cpp
+  track_list.cpp
+  random_color.cpp)
+TARGET_LINK_LIBRARIES(visualize-tracks ${OpenCV_LIBS})
+TARGET_LINK_LIBRARIES(visualize-tracks gflags)
 
 ADD_EXECUTABLE(find-keypoints
   find_keypoints.cpp
@@ -43,6 +58,7 @@ ADD_EXECUTABLE(visualize-matches
   match.cpp
   read_image.cpp
   keypoint.cpp
-  draw_matches.cpp)
+  draw_matches.cpp
+  random_color.cpp)
 TARGET_LINK_LIBRARIES(visualize-matches ${OpenCV_LIBS})
 TARGET_LINK_LIBRARIES(visualize-matches gflags)

@@ -4,13 +4,7 @@
 #include <vector>
 #include <opencv2/core/core.hpp>
 #include "track.hpp"
-
-// Describes a collection of tracks from a single video sequence.
-typedef std::vector<Track> TrackList;
-
-bool saveTracks(const std::string& filename,
-                const cv::Size& size,
-                const TrackList& tracks);
+#include "track_list.hpp"
 
 // Generates a set of point tracks from an image sequence.
 class Tracker {

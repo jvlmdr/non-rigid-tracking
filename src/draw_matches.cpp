@@ -1,40 +1,10 @@
 #include "draw_matches.hpp"
+#include "random_color.hpp"
+
+const double SATURATION = 0.99;
+const double BRIGHTNESS = 0.99;
 
 typedef std::vector<cv::KeyPoint> KeyPointList;
-
-cv::Scalar randomColor() {
-  // http://en.wikipedia.org/wiki/HSL_and_HSV
-  double h = double(std::rand()) / RAND_MAX;
-  double s = 0.99;
-  double v = 0.99;
-
-  double c = v * s;
-  double h_dash = 6 * h;
-  double x = c * (1 - std::abs(1 - std::fmod(h_dash, 2)));
-
-  cv::Scalar rgb;
-  if (h_dash < 1) {
-    rgb = cv::Scalar(c, x, 0);
-  } else if (h_dash < 2) {
-    rgb = cv::Scalar(x, c, 0);
-  } else if (h_dash < 3) {
-    rgb = cv::Scalar(0, c, x);
-  } else if (h_dash < 4) {
-    rgb = cv::Scalar(0, x, c);
-  } else if (h_dash < 5) {
-    rgb = cv::Scalar(x, 0, c);
-  } else if (h_dash < 6) {
-    rgb = cv::Scalar(c, 0, x);
-  } else {
-    rgb = cv::Scalar(0, 0, 0);
-  }
-
-  double m = v - c;
-  rgb += cv::Scalar(m, m, m);
-  rgb *= 255;
-
-  return rgb;
-}
 
 void drawMatches(const KeyPointList& keypoints1,
                  const KeyPointList& keypoints2,
@@ -45,7 +15,7 @@ void drawMatches(const KeyPointList& keypoints1,
   MatchList::const_iterator match;
   for (match = matches.begin(); match != matches.end(); ++match) {
     // Generate a random color.
-    cv::Scalar color = randomColor();
+    cv::Scalar color = randomColor(SATURATION, BRIGHTNESS);
 
     // Draw the keypoint in each image.
     const cv::KeyPoint* keypoint;
