@@ -29,6 +29,15 @@ ADD_EXECUTABLE(visualize-tracks
 TARGET_LINK_LIBRARIES(visualize-tracks ${OpenCV_LIBS})
 TARGET_LINK_LIBRARIES(visualize-tracks gflags)
 
+ADD_EXECUTABLE(visualize-all-tracks
+  visualize_all_tracks.cpp
+  read_image.cpp
+  track.cpp
+  track_list.cpp
+  random_color.cpp)
+TARGET_LINK_LIBRARIES(visualize-all-tracks ${OpenCV_LIBS})
+TARGET_LINK_LIBRARIES(visualize-all-tracks gflags)
+
 ADD_EXECUTABLE(find-keypoints
   find_keypoints.cpp
   read_image.cpp
