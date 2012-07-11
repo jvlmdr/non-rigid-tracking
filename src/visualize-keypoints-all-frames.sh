@@ -9,6 +9,7 @@ fi
 image_format=$1
 keypoints_format=$2
 frame_format=$3
+movie=$4
 
 (( i = 1 ))
 while [ -e `printf $image_format $i` ]
@@ -25,4 +26,4 @@ do
   (( i += 1 ))
 done
 
-ffmpeg -y -i $image_format -sameq -vcodec mpeg4 $movie 2> /dev/null
+ffmpeg -y -i $image_format -sameq -vcodec mpeg4 $movie

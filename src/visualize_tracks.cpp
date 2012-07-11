@@ -92,10 +92,10 @@ TrackPointIterator findTailEnd(TrackPointIterator begin,
 }
 
 template<class TrackPointIterator>
-void drawTail(cv::Mat& image,
-              const cv::Scalar& color,
-              TrackPointIterator begin,
-              TrackPointIterator end) {
+void drawTailRange(cv::Mat& image,
+                   const cv::Scalar& color,
+                   TrackPointIterator begin,
+                   TrackPointIterator end) {
   TrackPointIterator it = begin;
   bool first = true;
   cv::Point2d previous;
@@ -113,30 +113,52 @@ void drawTail(cv::Mat& image,
   }
 }
 
-void drawPoint(cv::Mat& image,
-               int t,
-               int start_t,
-               const ColoredCursor& cursor) {
+void drawTail(cv::Mat& image,
+              const TrackCursor& cursor,
+              const cv::Scalar& color,
+              int start_t) {
+  const Track::const_iterator& it = cursor.point;
+  int t = it->first;
+
+  // Create either a forward or reverse iterator range.
+  if (t < start_t) {
+    Track::const_iterator begin(it);
+    Track::const_iterator end = cursor.track->end();
+    end = findTailEnd(begin, end, t, start_t, MAX_TAIL_LENGTH);
+    drawTailRange(image, color, begin, end);
+  } else {
+    Track::const_reverse_iterator begin(it);
+    --begin;
+    Track::const_reverse_iterator end = cursor.track->rend();
+    end = findTailEnd(begin, end, t, start_t, MAX_TAIL_LENGTH);
+    drawTailRange(image, color, begin, end);
+  }
+}
+
+void drawFeature(cv::Mat& image,
+                 const TrackCursor& cursor,
+                 const cv::Scalar& color,
+                 int start_t) {
+  Track::const_iterator it = cursor.point;
+  int t = it->first;
+
+  // Draw point.
+  cv::circle(image, it->second, POINT_RADIUS, color, -1);
+
+  // Draw tail.
+  drawTail(image, cursor, color, start_t);
+}
+
+void drawFeatureIfPresent(cv::Mat& image,
+                          const ColoredCursor& cursor,
+                          int t,
+                          int start_t) {
   Track::const_iterator it = cursor.cursor.point;
   int u = it->first;
 
   if (t == u) {
-    // Cursor is at this point. Draw point.
-    const cv::Point2d& position = it->second;
-    cv::circle(image, position, POINT_RADIUS, cursor.color, -1);
-
-    if (t < start_t) {
-      Track::const_iterator begin(it);
-      Track::const_iterator end = cursor.cursor.track->end();
-      end = findTailEnd(begin, end, t, start_t, MAX_TAIL_LENGTH);
-      drawTail(image, cursor.color, begin, end);
-    } else {
-      Track::const_reverse_iterator begin(it);
-      --begin;
-      Track::const_reverse_iterator end = cursor.cursor.track->rend();
-      end = findTailEnd(begin, end, t, start_t, MAX_TAIL_LENGTH);
-      drawTail(image, cursor.color, begin, end);
-    }
+    // Cursor points to this frame. Draw feature.
+    drawFeature(image, cursor.cursor, cursor.color, start_t);
   }
 }
 
@@ -196,7 +218,8 @@ int main(int argc, char** argv) {
 
     // Draw the points that appear in this frame.
     std::for_each(cursors.begin(), cursors.end(),
-        boost::bind(drawPoint, boost::ref(image), t, initial_frame, _1));
+        boost::bind(drawFeatureIfPresent, boost::ref(image), _1, t,
+          initial_frame));
 
     if (FLAGS_save) {
       std::string output_file = imageFilename(output_format, t);
