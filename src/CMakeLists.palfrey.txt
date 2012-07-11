@@ -1,18 +1,16 @@
 CMAKE_MINIMUM_REQUIRED(VERSION 2.6)
 PROJECT(nrtrack)
 
-# Boost
-SET(BOOST_INCLUDE_DIRS /home/jvalmadr/local/include)
+# OpenCV, Boost, gflags, ...
+INCLUDE_DIRECTORIES(/home/jvalmadr/local/include)
+LINK_DIRECTORIES(/home/jvalmadr/local/lib)
 
 # OpenCV
 #FIND_PACKAGE(OpenCV COMPONENTS core highgui imgproc features2d nonfree video)
-SET(OpenCV_INCLUDE_DIRS /home/jvalmadr/local/include)
-SET(OpenCV_LINK_DIRS /home/jvalmadr/local/lib)
 SET(OpenCV_LIBS opencv_core opencv_highgui opencv_imgproc
   opencv_features2d opencv_nonfree opencv_video)
-
-INCLUDE_DIRECTORIES(${OpenCV_INCLUDE_DIRS})
-LINK_DIRECTORIES(${OpenCV_LINK_DIRS})
+#INCLUDE_DIRECTORIES(${OpenCV_INCLUDE_DIRS})
+#LINK_DIRECTORIES(${OpenCV_LINK_DIRS})
 
 # KLT
 INCLUDE_DIRECTORIES("../klt")

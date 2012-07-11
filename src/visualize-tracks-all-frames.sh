@@ -29,7 +29,7 @@ do
   ./visualize-tracks $image_format $tracks $n --nodisplay --save --output_format $frame_pattern
 
   # Convert to movie.
-  ffmpeg -y -loglevel quiet -i $frame_pattern -sameq -vcodec libx264 $movie
+  ffmpeg -y -i $frame_pattern -sameq -vcodec mpeg4 $movie 2> /dev/null
 
   # Remove directory.
   rm -rf $render_dir
