@@ -35,6 +35,14 @@ ADD_EXECUTABLE(find-keypoints
   keypoint.cpp)
 TARGET_LINK_LIBRARIES(find-keypoints ${OpenCV_LIBS})
 
+ADD_EXECUTABLE(visualize-keypoints
+  visualize_keypoints.cpp
+  read_image.cpp
+  keypoint.cpp
+  random_color.cpp)
+TARGET_LINK_LIBRARIES(visualize-keypoints ${OpenCV_LIBS})
+TARGET_LINK_LIBRARIES(visualize-keypoints gflags)
+
 #ADD_EXECUTABLE(find-foreground-keypoints
 #  find_foreground_keypoints.cpp
 #  read_image.cpp)
