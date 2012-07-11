@@ -32,7 +32,7 @@ std::string keypointsFilename(const std::string& format, int n) {
   return boost::str(boost::format(format) % (n + 1));
 }
 
-bool writeKeyPointToFile(cv::FileStorage& out, const cv::KeyPoint& k) {
+bool writeKeypointToFile(cv::FileStorage& out, const cv::KeyPoint& k) {
   // SIFT does not set 'response' or 'class_id' attributes.
   out << "{:";
   out << "x" << k.pt.x << "y" << k.pt.y;

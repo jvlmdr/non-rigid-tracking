@@ -53,7 +53,7 @@ int main(int argc, char** argv) {
 
   // Load keypoints.
   std::vector<cv::KeyPoint> keypoints;
-  ok = loadKeyPoints(keypoints_filename, keypoints);
+  ok = loadKeypoints(keypoints_filename, keypoints);
   if (!ok) {
     std::cerr << "unable to read keypoints" << std::endl;
     return 1;

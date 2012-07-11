@@ -4,10 +4,10 @@
 const double SATURATION = 0.99;
 const double BRIGHTNESS = 0.99;
 
-typedef std::vector<cv::KeyPoint> KeyPointList;
+typedef std::vector<cv::KeyPoint> KeypointList;
 
-void drawMatches(const KeyPointList& keypoints1,
-                 const KeyPointList& keypoints2,
+void drawMatches(const KeypointList& keypoints1,
+                 const KeypointList& keypoints2,
                  const MatchList& matches,
                  cv::Mat& image1,
                  cv::Mat& image2,

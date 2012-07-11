@@ -5,10 +5,10 @@
 #include <vector>
 #include <opencv2/features2d/features2d.hpp>
 
-bool saveKeyPoints(const std::string& filename,
+bool saveKeypoints(const std::string& filename,
                    const std::vector<cv::KeyPoint>& keypoints);
 
-bool loadKeyPoints(const std::string& filename,
+bool loadKeypoints(const std::string& filename,
                    std::vector<cv::KeyPoint>& keypoints);
 
 #endif

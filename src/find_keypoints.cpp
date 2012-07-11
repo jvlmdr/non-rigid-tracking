@@ -45,7 +45,7 @@ int main(int argc, char** argv) {
   sift(image, cv::noArray(), keypoints, cv::noArray(), false);
 
   // Write out.
-  ok = saveKeyPoints(keypoints_filename, keypoints);
+  ok = saveKeypoints(keypoints_filename, keypoints);
 
   return 0;
 }

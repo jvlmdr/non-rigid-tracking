@@ -109,7 +109,7 @@ void shiftTracks(const TrackList& input,
   }
 }
 
-bool loadKeyPoints(const std::string& filename,
+bool loadKeypoints(const std::string& filename,
                    std::vector<cv::Point2d>& points) {
   // Open file.
   cv::FileStorage fs(filename, cv::FileStorage::READ);
@@ -306,7 +306,7 @@ int main(int argc, char** argv) {
 
   // Read keypoints from file.
   std::vector<cv::Point2d> points;
-  loadKeyPoints(keypoints_filename, points);
+  loadKeypoints(keypoints_filename, points);
 
   // Track forwards.
   TrackList forward;

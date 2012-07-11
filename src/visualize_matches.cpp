@@ -19,7 +19,7 @@ DEFINE_string(output_file, "matches.png", "Location to save image.");
 DEFINE_bool(save, false, "Save to file?");
 DEFINE_bool(display, true, "Show matches?");
 
-typedef std::vector<cv::KeyPoint> KeyPointList;
+typedef std::vector<cv::KeyPoint> KeypointList;
 
 int main(int argc, char** argv) {
   std::ostringstream usage;
@@ -69,14 +69,14 @@ int main(int argc, char** argv) {
   }
 
   // Load keypoints.
-  KeyPointList keypoints1;
-  KeyPointList keypoints2;
-  ok = loadKeyPoints(keypoints_file1, keypoints1);
+  KeypointList keypoints1;
+  KeypointList keypoints2;
+  ok = loadKeypoints(keypoints_file1, keypoints1);
   if (!ok) {
     std::cerr << "could not load keypoints" << std::endl;
     return 1;
   }
-  ok = loadKeyPoints(keypoints_file2, keypoints2);
+  ok = loadKeypoints(keypoints_file2, keypoints2);
   if (!ok) {
     std::cerr << "could not load keypoints" << std::endl;
     return 1;

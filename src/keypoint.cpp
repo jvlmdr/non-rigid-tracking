@@ -7,7 +7,7 @@
 
 namespace {
 
-bool writeKeyPointToFile(cv::FileStorage& out, const cv::KeyPoint& k) {
+bool writeKeypointToFile(cv::FileStorage& out, const cv::KeyPoint& k) {
   // SIFT does not set 'response' or 'class_id' attributes.
   out << "{:";
   out << "x" << k.pt.x << "y" << k.pt.y;
@@ -21,7 +21,7 @@ bool writeKeyPointToFile(cv::FileStorage& out, const cv::KeyPoint& k) {
 
 }
 
-bool saveKeyPoints(const std::string& filename,
+bool saveKeypoints(const std::string& filename,
                    const std::vector<cv::KeyPoint>& keypoints) {
   // Open output file.
   cv::FileStorage file(filename, cv::FileStorage::WRITE);
@@ -33,10 +33,10 @@ bool saveKeyPoints(const std::string& filename,
   file << "keypoints" << "[";
 
   // Write out keypoints.
-  typedef std::vector<cv::KeyPoint> KeyPointList;
-  KeyPointList::const_iterator keypoint;
+  typedef std::vector<cv::KeyPoint> KeypointList;
+  KeypointList::const_iterator keypoint;
   for (keypoint = keypoints.begin(); keypoint != keypoints.end(); ++keypoint) {
-    writeKeyPointToFile(file, *keypoint);
+    writeKeypointToFile(file, *keypoint);
   }
 
   file << "]";
@@ -49,7 +49,7 @@ bool saveKeyPoints(const std::string& filename,
 
 namespace {
 
-cv::KeyPoint readKeyPointFromFileNode(const cv::FileNode& node) {
+cv::KeyPoint readKeypointFromFileNode(const cv::FileNode& node) {
   cv::KeyPoint k;
 
   double x = (double)node["x"];
@@ -64,7 +64,7 @@ cv::KeyPoint readKeyPointFromFileNode(const cv::FileNode& node) {
 
 }
 
-bool loadKeyPoints(const std::string& filename,
+bool loadKeypoints(const std::string& filename,
                    std::vector<cv::KeyPoint>& keypoints) {
   // Open file.
   cv::FileStorage fs(filename, cv::FileStorage::READ);
@@ -75,7 +75,7 @@ bool loadKeyPoints(const std::string& filename,
   // Parse keypoints.
   cv::FileNode list = fs["keypoints"];
   std::transform(list.begin(), list.end(), std::back_inserter(keypoints),
-      readKeyPointFromFileNode);
+      readKeypointFromFileNode);
 
   return true;
 }

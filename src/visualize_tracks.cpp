@@ -198,14 +198,14 @@ int main(int argc, char** argv) {
     std::for_each(cursors.begin(), cursors.end(),
         boost::bind(drawPoint, boost::ref(image), t, initial_frame, _1));
 
-    if (FLAGS_display) {
-      cv::imshow("tracks", image);
-      cv::waitKey(10);
-    }
-
     if (FLAGS_save) {
       std::string output_file = imageFilename(output_format, t);
       cv::imwrite(output_file, image);
+    }
+
+    if (FLAGS_display) {
+      cv::imshow("tracks", image);
+      cv::waitKey(10);
     }
 
     // Advance cursors.
@@ -224,49 +224,6 @@ int main(int argc, char** argv) {
 
     t += 1;
   }
-
-  /*
-  // Load images.
-  cv::Mat image1;
-  cv::Mat image2;
-  cv::Mat gray;
-  ok = readImage(image_file1, image1, gray);
-  if (!ok) {
-    std::cerr << "could not load image" << std::endl;
-    return 1;
-  }
-  ok = readImage(image_file2, image2, gray);
-  if (!ok) {
-    std::cerr << "could not load image" << std::endl;
-    return 1;
-  }
-
-  // Load keypoints.
-  KeyPointList keypoints1;
-  KeyPointList keypoints2;
-  ok = loadKeyPoints(keypoints_file1, keypoints1);
-  if (!ok) {
-    std::cerr << "could not load keypoints" << std::endl;
-    return 1;
-  }
-  ok = loadKeyPoints(keypoints_file2, keypoints2);
-  if (!ok) {
-    std::cerr << "could not load keypoints" << std::endl;
-    return 1;
-  }
-
-  // Visualize matches.
-  cv::Mat render;
-  drawMatches(keypoints1, keypoints2, matches, image1, image2, render);
-
-  if (FLAGS_save) {
-    cv::imwrite(output_file, render);
-  }
-  if (FLAGS_display) {
-    cv::imshow("matches", render);
-    cv::waitKey(0);
-  }
-  */
 
   return 0;
 }
