@@ -26,4 +26,4 @@ do
   (( i += 1 ))
 done
 
-ffmpeg -y -i $image_format -sameq -vcodec mpeg4 $movie
+ffmpeg -y -i $frame_format $movie
