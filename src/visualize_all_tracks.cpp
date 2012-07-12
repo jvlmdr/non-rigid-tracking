@@ -199,7 +199,7 @@ bool loadAllTracks(const std::string& tracks_format,
 
     // Attempt to load tracks.
     cv::Size size;
-    ok = loadTracks(tracks_file, size, track_lists.back());
+    ok = loadTracks(tracks_file, size, track_lists.back(), NULL);
     if (!ok) {
       // Failed.
       continue;

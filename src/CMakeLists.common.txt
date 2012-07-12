@@ -63,6 +63,16 @@ ADD_EXECUTABLE(extract-sift
   descriptor.cpp)
 TARGET_LINK_LIBRARIES(extract-sift ${OpenCV_LIBS})
 
+ADD_EXECUTABLE(extract-dense-sift
+  extract_dense_sift.cpp
+  read_image.cpp
+  track.cpp
+  track_list.cpp
+  keypoint.cpp
+  descriptor.cpp
+  descriptor_sequence.cpp)
+TARGET_LINK_LIBRARIES(extract-dense-sift ${OpenCV_LIBS})
+
 ADD_EXECUTABLE(match-features
   match_features.cpp
   descriptor.cpp

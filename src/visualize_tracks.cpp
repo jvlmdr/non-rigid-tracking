@@ -195,7 +195,7 @@ int main(int argc, char** argv) {
   // Load tracks.
   cv::Size size;
   TrackList tracks;
-  ok = loadTracks(tracks_file, size, tracks);
+  ok = loadTracks(tracks_file, size, tracks, NULL);
 
   typedef std::list<ColoredCursor> CursorList;
   CursorList cursors(tracks.size());

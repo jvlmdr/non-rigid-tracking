@@ -4,6 +4,92 @@
 #include <numeric>
 #include <limits>
 
+////////////////////////////////////////////////////////////////////////////////
+// FrameIterator
+
+// Initializes at start of tracks.
+FrameIterator::FrameIterator(const TrackList& tracks) : cursors_(), t_(0) {
+  // Iterate through tracks.
+  TrackList::const_iterator track = tracks.begin();
+  for (track = tracks.begin(); track != tracks.end(); ++track) {
+    // Add a cursor for each non-empty track.
+    if (!track->empty()) {
+      cursors_.push_back(TrackCursor::make(*track));
+    }
+  }
+}
+
+// Copy constructor.
+FrameIterator::FrameIterator(const FrameIterator& rhs)
+    : cursors_(rhs.cursors_), t_(rhs.t_) {}
+
+// Pre-increment.
+// Updates the list of points in this frame and advances the cursor.
+FrameIterator& FrameIterator::operator++() {
+  // Iterate through tracks.
+  CursorList::iterator cursor = cursors_.begin();
+  while (cursor != cursors_.end()) {
+    bool remove = false;
+
+    // Get space-time point.
+    Track::const_iterator space_time = cursor->point;
+    int t = space_time->first;
+
+    // If track appeared in this frame, advance the cursor.
+    if (t == t_) {
+      ++cursor->point;
+      // If the cursor reached the end of the track, remove it.
+      if (cursor->end()) {
+        remove = true;
+      }
+    }
+
+    if (remove) {
+      cursor = cursors_.erase(cursor);
+    } else {
+      ++cursor;
+    }
+  }
+
+  t_ += 1;
+
+  return *this;
+}
+
+// Post-increment.
+FrameIterator FrameIterator::operator++(int) {
+  FrameIterator result(*this);
+  ++(*this);
+  return result;
+}
+
+void FrameIterator::getPoints(IndexedPoints& points) const {
+  // Iterate through tracks.
+  int i = 0;
+  CursorList::const_iterator cursor;
+
+  for (cursor = cursors_.begin(); cursor != cursors_.end(); ++cursor) {
+    // Get space-time point.
+    Track::const_iterator space_time = cursor->point;
+    int t = space_time->first;
+
+    // If track appeared in this frame, add to points.
+    if (t == t_) {
+      const cv::Point2d& x = space_time->second;
+      points[i] = x;
+    }
+
+    i += 1;
+  }
+}
+
+// Returns true if this is the last frame.
+bool FrameIterator::end() const {
+  return cursors_.empty();
+}
+
+////////////////////////////////////////////////////////////////////////////////
+
 namespace {
 
 int firstFrame(const Track& track) {
@@ -109,7 +195,8 @@ bool saveTracks(const std::string& filename,
 // Loads a list of tracks from a file.
 bool loadTracks(const std::string& filename,
                 cv::Size& size,
-                TrackList& tracks) {
+                TrackList& tracks,
+                int* num_frames) {
   // Open file to read tracks.
   cv::FileStorage file(filename, cv::FileStorage::READ);
   if (!file.isOpened()) {
@@ -165,6 +252,10 @@ bool loadTracks(const std::string& filename,
     }
 
     t += 1;
+  }
+
+  if (num_frames != NULL) {
+    *num_frames = t;
   }
 
   return true;

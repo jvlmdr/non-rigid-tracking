@@ -16,6 +16,8 @@ struct TrackCursor {
   TrackCursor();
   TrackCursor(const Track& track, Track::const_iterator point);
 
+  bool end() const;
+
   // Returns a cursor at the start of the track.
   static TrackCursor make(const Track& track);
 };

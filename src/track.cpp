@@ -8,3 +8,7 @@ TrackCursor::TrackCursor(const Track& track, Track::const_iterator point)
 TrackCursor TrackCursor::make(const Track& track) {
   return TrackCursor(track, track.begin());
 }
+
+bool TrackCursor::end() const {
+  return point == track->end();
+}
