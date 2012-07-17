@@ -193,9 +193,11 @@ int main(int argc, char** argv) {
   bool ok;
 
   // Load tracks.
-  cv::Size size;
-  TrackList tracks;
-  ok = loadTracks(tracks_file, size, tracks, NULL);
+  TrackList_<cv::Point2d> tracks;
+  ReadPoint read;
+  std::cerr << "loading tracks..." << std::endl;
+  ok = tracks.load(tracks_file, read);
+  std::cerr << "done" << std::endl;
 
   typedef std::list<ColoredCursor> CursorList;
   CursorList cursors(tracks.size());

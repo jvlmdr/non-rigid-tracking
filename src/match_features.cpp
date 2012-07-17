@@ -13,7 +13,7 @@
 #include "keypoint.hpp"
 #include "match.hpp"
 
-DEFINE_double(threshold, 1.5, "Minimum relative distance between best and"
+DEFINE_double(threshold, 0.8, "Minimum relative distance between best and"
     " second-best matches.");
 
 typedef std::vector<Descriptor> DescriptorList;
@@ -42,7 +42,7 @@ bool isNotDistinctive(const MatchResultList& matches, double ratio) {
 
   // Note: Carefully crafted to handle case where both distance are zero.
   // (No division. Non-strict comparison.)
-  return (second.distance <= ratio * first.distance);
+  return (first.distance >= ratio * second.distance);
 }
 
 Match extractIndices(const cv::DMatch& match) {
@@ -178,7 +178,6 @@ int main(int argc, char** argv) {
   MatchList matches;
   std::remove_copy_if(forward_matches.begin(), forward_matches.end(),
       std::back_inserter(matches), IsInconsistent(reverse_matches));
-  forward_matches.swap(matches);
   std::cerr << matches.size() << " matches remain" << std::endl;
 
   // Write out matches.

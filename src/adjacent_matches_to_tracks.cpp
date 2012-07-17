@@ -18,14 +18,14 @@
 // That would be a lot of descriptors.
 
 struct IndexedPoint {
-  cv::Point2d point;
   int index;
+  cv::Point2d point;
 
-  IndexedPoint(const cv::Point2d& point, int index)
-      : point(point), index(index) {}
+  IndexedPoint(int index, const cv::Point2d& point)
+      : index(index), point(point) {}
 
   // Default constructor.
-  IndexedPoint() : point(), index() {}
+  IndexedPoint() : index(-1), point() {}
 };
 
 struct WriteIndexedPoint : public Write<IndexedPoint> {
@@ -50,21 +50,7 @@ struct ReadIndexedPoint : public Read<IndexedPoint> {
   }
 };
 
-// Constructs indexed points from an unindexed list.
-struct MakeIndexedPoint {
-  int i;
-
-  MakeIndexedPoint() : i(0) {}
-
-  IndexedPoint operator()(const cv::KeyPoint& keypoint) {
-    IndexedPoint feature(keypoint.pt, i);
-    i += 1;
-    return feature;
-  }
-};
-
 typedef std::map<int, int> Lookup;
-typedef std::vector<IndexedPoint> PointList;
 typedef std::vector<cv::KeyPoint> KeypointList;
 
 std::string makeFilename(const std::string& format, int n) {
@@ -101,7 +87,7 @@ int main(int argc, char** argv) {
   int u = 0;
 
   Lookup previous_active_tracks;
-  PointList previous_features;
+  KeypointList previous_keypoints;
 
   while (ok) {
     // Load keypoints.
@@ -112,11 +98,6 @@ int main(int argc, char** argv) {
       std::cerr << "could not load keypoints" << std::endl;
       continue;
     }
-
-    // Build features.
-    PointList features;
-    std::transform(keypoints.begin(), keypoints.end(),
-        std::back_inserter(features), MakeIndexedPoint());
 
     int t = u - 1;
 
@@ -145,13 +126,13 @@ int main(int argc, char** argv) {
         if (previous_track != previous_active_tracks.end()) {
           // It was: extend the track.
           int index = previous_track->second;
-          tracks[index][u] = features[b];
+          tracks[index][u] = IndexedPoint(b, keypoints[b].pt);
           active_tracks[b] = index;
         } else {
           // It wasn't: create a new track.
           tracks.push_back(Track_<IndexedPoint>());
-          tracks.back()[t] = previous_features[a];
-          tracks.back()[u] = features[b];
+          tracks.back()[t] = IndexedPoint(a, previous_keypoints[a].pt);
+          tracks.back()[u] = IndexedPoint(b, keypoints[b].pt);
           active_tracks[b] = tracks.size() - 1;
         }
       }
@@ -159,7 +140,7 @@ int main(int argc, char** argv) {
       previous_active_tracks.swap(active_tracks);
     }
 
-    previous_features.swap(features);
+    previous_keypoints.swap(keypoints);
     u += 1;
   }
 

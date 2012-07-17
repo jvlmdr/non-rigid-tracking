@@ -186,6 +186,11 @@ void TrackList_<T>::clear() {
 }
 
 template<class T>
+void TrackList_<T>::swap(TrackList_<T>& other) {
+  other.list_.swap(list_);
+}
+
+template<class T>
 typename TrackList_<T>::iterator TrackList_<T>::begin() {
   return list_.begin();
 }
@@ -234,11 +239,16 @@ FrameIterator_<T>::FrameIterator_(const TrackList_<T>& tracks)
     : cursors_(), t_(0) {
   // Iterate through tracks.
   typename TrackList_<T>::const_iterator track = tracks.begin();
+  // Monitor track index.
+  int i = 0;
+
   for (track = tracks.begin(); track != tracks.end(); ++track) {
     // Add a cursor for each non-empty track.
     if (!track->empty()) {
-      cursors_.push_back(TrackCursor_<T>::make(*track));
+      cursors_[i] = TrackCursor_<T>::make(*track);
     }
+
+    i += 1;
   }
 }
 
@@ -257,19 +267,19 @@ FrameIterator_<T>& FrameIterator_<T>::operator++() {
     bool remove = false;
 
     // Get space-time point.
-    int t = cursor->point->first;
+    int t = cursor->second.point->first;
 
     // If track appeared in this frame, advance the cursor.
     if (t == t_) {
-      ++cursor->point;
+      ++cursor->second.point;
       // If the cursor reached the end of the track, remove it.
-      if (cursor->end()) {
+      if (cursor->second.end()) {
         remove = true;
       }
     }
 
     if (remove) {
-      cursor = cursors_.erase(cursor);
+      cursors_.erase(cursor++);
     } else {
       ++cursor;
     }
@@ -291,20 +301,18 @@ FrameIterator_<T> FrameIterator_<T>::operator++(int) {
 template<class T>
 void FrameIterator_<T>::getPoints(Points& points) const {
   // Iterate through tracks.
-  int i = 0;
   typename CursorList::const_iterator cursor;
 
   for (cursor = cursors_.begin(); cursor != cursors_.end(); ++cursor) {
     // Get space-time point.
-    int t = cursor->point->first;
-    const T& x = cursor->point->second;
+    int i = cursor->first;
+    int t = cursor->second.point->first;
+    const T& x = cursor->second.point->second;
 
     // If track appeared in this frame, add to points.
     if (t == t_) {
       points[i] = x;
     }
-
-    i += 1;
   }
 }
 

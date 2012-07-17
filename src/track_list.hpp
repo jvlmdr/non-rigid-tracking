@@ -63,6 +63,7 @@ class TrackList_ {
     int size() const;
     bool empty() const;
     void clear();
+    void swap(TrackList_<T>& other);
 
     iterator begin();
     const_iterator begin() const;
@@ -121,7 +122,7 @@ class FrameIterator_ {
   private:
     // Maintain a list of positions in each track.
     typedef TrackCursor_<T> Cursor;
-    typedef std::list<Cursor> CursorList;
+    typedef std::map<int, Cursor> CursorList;
     CursorList cursors_;
     // Index of current frame.
     int t_;
@@ -131,6 +132,18 @@ class FrameIterator_ {
 };
 
 typedef FrameIterator_<cv::Point2d> FrameIterator;
+
+class WritePoint : public Write<cv::Point2d> {
+  public:
+    ~WritePoint();
+    void operator()(cv::FileStorage& file, const cv::Point2d& x);
+};
+
+class ReadPoint : public Read<cv::Point2d> {
+  public:
+    ~ReadPoint();
+    void operator()(const cv::FileNode& node, cv::Point2d& x);
+};
 
 #include "track_list.inl"
 

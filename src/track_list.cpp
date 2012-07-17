@@ -2,6 +2,22 @@
 #include <iostream>
 #include <map>
 
+WritePoint::~WritePoint() {}
+
+void WritePoint::operator()(cv::FileStorage& file, const cv::Point2d& point) {
+  file << "{:";
+  file << "x" << point.x;
+  file << "y" << point.y;
+  file << "}";
+}
+
+ReadPoint::~ReadPoint() {}
+
+void ReadPoint::operator()(const cv::FileNode& node, cv::Point2d& point) {
+  point.x = (double)node["x"];
+  point.y = (double)node["y"];
+}
+
 ////////////////////////////////////////////////////////////////////////////////
 
 // Saves a list of tracks to a file.

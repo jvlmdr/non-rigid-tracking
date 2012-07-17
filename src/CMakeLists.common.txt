@@ -89,6 +89,6 @@ ADD_EXECUTABLE(adjacent-matches-to-tracks
   match.cpp
   read_image.cpp
   keypoint.cpp
-  descriptor.cpp)
+  track_list.cpp)
 TARGET_LINK_LIBRARIES(adjacent-matches-to-tracks ${OpenCV_LIBS})
 TARGET_LINK_LIBRARIES(adjacent-matches-to-tracks gflags)
