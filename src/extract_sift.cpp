@@ -87,7 +87,7 @@ int main(int argc, char** argv) {
 
     // Copy row into descriptor.
     for (int j = 0; j < table.cols; j += 1) {
-      descriptor.push_back(table.at<float>(i, j));
+      descriptor.data.push_back(table.at<float>(i, j));
     }
   }
 

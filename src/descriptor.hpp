@@ -1,10 +1,31 @@
 #ifndef DESCRIPTOR_HPP_
 #define DESCRIPTOR_HPP_
 
+#include <opencv2/core/core.hpp>
 #include <string>
 #include <vector>
+#include "track_list.hpp"
 
-typedef std::vector<double> Descriptor;
+struct Descriptor {
+  typedef std::vector<double> Data;
+  Data data;
+
+  // Writes a single descriptor to a file.
+  void write(cv::FileStorage& file) const;
+
+  // Reads a descriptor from a file.
+  void read(const cv::FileNode& node);
+};
+
+struct WriteDescriptor : public Write<Descriptor> {
+  ~WriteDescriptor();
+  void operator()(cv::FileStorage& file, const Descriptor& descriptor);
+};
+
+struct ReadDescriptor : public Read<Descriptor> {
+  ~ReadDescriptor();
+  void operator()(const cv::FileNode& node, Descriptor& descriptor);
+};
 
 // Saves a list of descriptors to a file.
 bool saveDescriptors(const std::string& filename,

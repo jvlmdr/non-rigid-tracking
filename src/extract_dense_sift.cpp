@@ -11,7 +11,6 @@
 #include "track_list.hpp"
 #include "read_image.hpp"
 #include "descriptor.hpp"
-#include "descriptor_sequence.hpp"
 
 // Default SIFT feature size.
 // 1.6 from cv::SIFT constructor.
@@ -23,7 +22,7 @@ std::string makeFilename(const std::string& format, int n) {
   return boost::str(boost::format(format) % (n + 1));
 }
 
-cv::KeyPoint makeKeypoint(const IndexedPoint& indexed) {
+cv::KeyPoint makeKeypoint(const FrameIterator::Points::value_type& indexed) {
   const cv::Point2d& point = indexed.second;
   return cv::KeyPoint(point, FEATURE_SIZE, FEATURE_ANGLE);
 }
@@ -66,11 +65,12 @@ int main(int argc, char** argv) {
   int t = 0;
 
   // Construct a list of empty track descriptors.
-  DescriptorSequenceList descriptor_sequences(tracks.size());
+  int num_tracks = tracks.size();
+  TrackList_<Descriptor> descriptor_lists(num_tracks);
 
   while (!frame.end() && ok) {
     // Extract points.
-    IndexedPoints points;
+    FrameIterator::Points points;
     frame.getPoints(points);
 
     if (!points.empty()) {
@@ -114,15 +114,16 @@ int main(int argc, char** argv) {
         // Copy row into descriptor.
         cv::Mat row = table.row(i);
         std::copy(row.begin<float>(), row.end<float>(),
-            std::back_inserter(descriptors.back()));
+            std::back_inserter(descriptors.back().data));
       }
 
       // Copy into list of descriptors for whole tracks.
-      IndexedPoints::const_iterator point = points.begin();
+      FrameIterator::Points::const_iterator point = points.begin();
       DescriptorList::const_iterator descriptor = descriptors.begin();
+
       while (point != points.end()) {
         int index = point->first;
-        descriptor_sequences[index][t] = *descriptor;
+        descriptor_lists[index][t] = *descriptor;
         ++point;
         ++descriptor;
       }
@@ -132,7 +133,8 @@ int main(int argc, char** argv) {
     t += 1;
   }
 
-  saveDescriptorSequences(descriptors_file, descriptor_sequences);
+  WriteDescriptor write;
+  descriptor_lists.save(descriptors_file, write);
 
   return 0;
 }

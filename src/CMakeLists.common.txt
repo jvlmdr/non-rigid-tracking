@@ -3,7 +3,6 @@
 ADD_EXECUTABLE(track-features
   track_features.cpp
   read_image.cpp
-  track.cpp
   track_list.cpp
   tracker.cpp
   klt_tracker.cpp)
@@ -13,7 +12,6 @@ TARGET_LINK_LIBRARIES(track-features klt)
 ADD_EXECUTABLE(track-features-bidirectional
   track_features_bidirectional.cpp
   read_image.cpp
-  track.cpp
   track_list.cpp
   tracker.cpp
   klt_tracker.cpp)
@@ -23,7 +21,6 @@ TARGET_LINK_LIBRARIES(track-features-bidirectional klt)
 ADD_EXECUTABLE(visualize-tracks
   visualize_tracks.cpp
   read_image.cpp
-  track.cpp
   track_list.cpp
   random_color.cpp)
 TARGET_LINK_LIBRARIES(visualize-tracks ${OpenCV_LIBS})
@@ -32,7 +29,6 @@ TARGET_LINK_LIBRARIES(visualize-tracks gflags)
 ADD_EXECUTABLE(visualize-all-tracks
   visualize_all_tracks.cpp
   read_image.cpp
-  track.cpp
   track_list.cpp
   random_color.cpp)
 TARGET_LINK_LIBRARIES(visualize-all-tracks ${OpenCV_LIBS})
@@ -66,11 +62,9 @@ TARGET_LINK_LIBRARIES(extract-sift ${OpenCV_LIBS})
 ADD_EXECUTABLE(extract-dense-sift
   extract_dense_sift.cpp
   read_image.cpp
-  track.cpp
   track_list.cpp
   keypoint.cpp
-  descriptor.cpp
-  descriptor_sequence.cpp)
+  descriptor.cpp)
 TARGET_LINK_LIBRARIES(extract-dense-sift ${OpenCV_LIBS})
 
 ADD_EXECUTABLE(match-features
@@ -89,3 +83,12 @@ ADD_EXECUTABLE(visualize-matches
   random_color.cpp)
 TARGET_LINK_LIBRARIES(visualize-matches ${OpenCV_LIBS})
 TARGET_LINK_LIBRARIES(visualize-matches gflags)
+
+ADD_EXECUTABLE(adjacent-matches-to-tracks
+  adjacent_matches_to_tracks.cpp
+  match.cpp
+  read_image.cpp
+  keypoint.cpp
+  descriptor.cpp)
+TARGET_LINK_LIBRARIES(adjacent-matches-to-tracks ${OpenCV_LIBS})
+TARGET_LINK_LIBRARIES(adjacent-matches-to-tracks gflags)

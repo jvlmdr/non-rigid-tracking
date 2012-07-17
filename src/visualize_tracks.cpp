@@ -203,7 +203,7 @@ int main(int argc, char** argv) {
       ColoredCursor::make);
 
   // Find the index of the first frame.
-  int t = findFirstFrame(tracks);
+  int t = tracks.findFirstFrame();
 
   // Visualize frames until we have no tracks left to draw.
   while (!cursors.empty()) {

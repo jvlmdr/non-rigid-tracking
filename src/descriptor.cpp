@@ -4,8 +4,19 @@
 #include <boost/bind.hpp>
 #include <opencv2/core/core.hpp>
 
-////////////////////////////////////////////////////////////////////////////////
-// Saving
+WriteDescriptor::~WriteDescriptor() {}
+
+void WriteDescriptor::operator()(cv::FileStorage& file,
+                                 const Descriptor& descriptor) {
+  descriptor.write(file);
+}
+
+ReadDescriptor::~ReadDescriptor() {}
+
+void ReadDescriptor::operator()(const cv::FileNode& node,
+                                Descriptor& descriptor) {
+  descriptor.read(node);
+}
 
 namespace {
 
@@ -15,17 +26,29 @@ bool writeToFile(cv::FileStorage& file, const T& x) {
   return true;
 }
 
-// Writes a single descriptor to a file.
-bool writeDescriptor(cv::FileStorage& file, const Descriptor& descriptor) {
+template<class Input, class Output>
+Output cast(const Input& x) {
+  return static_cast<Output>(x);
+}
+
+}
+
+void Descriptor::write(cv::FileStorage& file) const {
   file << "[:";
-  std::for_each(descriptor.begin(), descriptor.end(),
+  std::for_each(data.begin(), data.end(),
       boost::bind(writeToFile<double>, boost::ref(file), _1));
   file << "]";
-
-  return true;
 }
 
+void Descriptor::read(const cv::FileNode& node) {
+  data.clear();
+  std::transform(node.begin(), node.end(), std::back_inserter(data),
+      cast<const cv::FileNode&, double>);
 }
+
+////////////////////////////////////////////////////////////////////////////////
+// Saving
+
 
 // Saves a list of descriptors to a file.
 bool saveDescriptors(const std::string& filename,
@@ -39,7 +62,7 @@ bool saveDescriptors(const std::string& filename,
 
   file << "descriptors" << "[";
   std::for_each(descriptors.begin(), descriptors.end(),
-      boost::bind(writeDescriptor, boost::ref(file), _1));
+      boost::bind(&Descriptor::write, _1, boost::ref(file)));
   file << "]";
 
   return true;
@@ -47,23 +70,6 @@ bool saveDescriptors(const std::string& filename,
 
 ////////////////////////////////////////////////////////////////////////////////
 // Loading
-
-namespace {
-
-template<class Input, class Output>
-Output cast(const Input& x) {
-  return static_cast<Output>(x);
-}
-
-// Writes a single descriptor to a file.
-Descriptor readDescriptor(const cv::FileNode& node) {
-  Descriptor descriptor;
-  std::transform(node.begin(), node.end(), std::back_inserter(descriptor),
-      cast<const cv::FileNode&, double>);
-  return descriptor;
-}
-
-}
 
 // Loads a list of descriptors from a file.
 bool loadDescriptors(const std::string& filename,
@@ -76,8 +82,11 @@ bool loadDescriptors(const std::string& filename,
 
   // Parse keypoints.
   cv::FileNode list = fs["descriptors"];
-  std::transform(list.begin(), list.end(), std::back_inserter(descriptors),
-      readDescriptor);
+  cv::FileNodeIterator node;
+  for (node = list.begin(); node != list.end(); ++node) {
+    descriptors.push_back(Descriptor());
+    descriptors.back().read(*node);
+  }
 
   return true;
 }

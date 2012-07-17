@@ -5,11 +5,81 @@
 #include <list>
 #include <map>
 #include <string>
+#include <boost/function.hpp>
 #include <opencv2/core/core.hpp>
 #include "track.hpp"
 
+template<class T>
+class Write {
+  public:
+    virtual ~Write() = 0;
+    virtual void operator()(cv::FileStorage& file, const T& x) = 0;
+};
+
+template<class T>
+class Read {
+  public:
+    virtual ~Read() = 0;
+    virtual void operator()(const cv::FileNode& node, T& x) = 0;
+};
+
+template<class T>
+class TrackList_ {
+  private:
+    typedef Track_<T> Track;
+    typedef std::vector<Track> List;
+
+  public:
+    // Returns the first frame in the track.
+    int findFirstFrame() const;
+
+    // Saves a list of tracks to a file.
+    bool save(const std::string& filename, Write<T>& write_point) const;
+    // Loads a list of tracks from a file.
+    bool load(const std::string& filename, Read<T>& read_point);
+
+    typedef typename List::iterator iterator;
+    typedef typename List::const_iterator const_iterator;
+    typedef typename List::reverse_iterator reverse_iterator;
+    typedef typename List::const_reverse_iterator const_reverse_iterator;
+
+    typedef typename List::reference reference;
+    typedef typename List::const_reference const_reference;
+    typedef typename List::pointer pointer;
+    typedef typename List::const_pointer const_pointer;
+
+    TrackList_();
+    TrackList_(int size);
+
+    Track& operator[](int n);
+    const Track& operator[](int n) const;
+
+    void push_back(const Track& x);
+    Track& back();
+    const Track& back() const;
+    Track& front();
+    const Track& front() const;
+
+    int size() const;
+    bool empty() const;
+    void clear();
+
+    iterator begin();
+    const_iterator begin() const;
+    iterator end();
+    const_iterator end() const;
+
+    reverse_iterator rbegin();
+    const_reverse_iterator rbegin() const;
+    reverse_iterator rend();
+    const_reverse_iterator rend() const;
+
+  private:
+    List list_;
+};
+
 // Describes a collection of tracks from a single video sequence.
-typedef std::vector<Track> TrackList;
+typedef TrackList_<cv::Point2d> TrackList;
 
 // Saves a list of tracks to a file.
 bool saveTracks(const std::string& filename,
@@ -25,31 +95,33 @@ bool loadTracks(const std::string& filename,
 // Returns the first frame in any track.
 int findFirstFrame(const TrackList& tracks);
 
-// Describes the points present in a frame, indexed by track number.
-typedef std::map<int, cv::Point2d> IndexedPoints;
-typedef IndexedPoints::value_type IndexedPoint;
+////////////////////////////////////////////////////////////////////////////////
 
 // Iterates through a list of tracks one frame at a time.
-class FrameIterator {
+template<class T>
+class FrameIterator_ {
   public:
-    // Initializes at start of tracks.
-    FrameIterator(const TrackList& tracks);
-    // Copy constructor.
-    FrameIterator(const FrameIterator& rhs);
-
-    // Pre-increment.
-    FrameIterator& operator++();
-    // Post-increment.
-    FrameIterator operator++(int);
+    typedef std::map<int, T> Points;
 
     // Writes out the points in the current frame.
-    void getPoints(IndexedPoints& points) const;
+    void getPoints(Points& points) const;
     // Returns true if this is the last frame.
     bool end() const;
 
+    // Initializes at start of tracks.
+    FrameIterator_(const TrackList_<T>& tracks);
+    // Copy constructor.
+    FrameIterator_(const FrameIterator_& rhs);
+
+    // Pre-increment.
+    FrameIterator_<T>& operator++();
+    // Post-increment.
+    FrameIterator_<T> operator++(int);
+
   private:
     // Maintain a list of positions in each track.
-    typedef std::list<TrackCursor> CursorList;
+    typedef TrackCursor_<T> Cursor;
+    typedef std::list<Cursor> CursorList;
     CursorList cursors_;
     // Index of current frame.
     int t_;
@@ -57,5 +129,9 @@ class FrameIterator {
     // Updates the list of points in this frame and advances the cursor.
     void advance();
 };
+
+typedef FrameIterator_<cv::Point2d> FrameIterator;
+
+#include "track_list.inl"
 
 #endif

@@ -22,13 +22,13 @@ typedef std::vector<cv::DMatch> MatchResultList;
 
 void listToMatrix(const DescriptorList& list, cv::Mat& matrix) {
   int rows = list.size();
-  int cols = list.front().size();
+  int cols = list.front().data.size();
   matrix.create(rows, cols, cv::DataType<float>::type);
 
   int i = 0;
   DescriptorList::const_iterator descriptor;
   for (descriptor = list.begin(); descriptor != list.end(); ++descriptor) {
-    std::copy(descriptor->begin(), descriptor->end(),
+    std::copy(descriptor->data.begin(), descriptor->data.end(),
         matrix.row(i).begin<float>());
     i += 1;
   }
