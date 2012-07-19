@@ -1,5 +1,3 @@
-#SET(CMAKE_CXX_FLAGS_DEBUG 
-
 ADD_EXECUTABLE(track-features
   track_features.cpp
   read_image.cpp
@@ -92,3 +90,12 @@ ADD_EXECUTABLE(adjacent-matches-to-tracks
   track_list.cpp)
 TARGET_LINK_LIBRARIES(adjacent-matches-to-tracks ${OpenCV_LIBS})
 TARGET_LINK_LIBRARIES(adjacent-matches-to-tracks gflags)
+
+ADD_EXECUTABLE(track-rigid-warp
+  track_rigid_warp.cpp
+  read_image.cpp)
+TARGET_LINK_LIBRARIES(track-rigid-warp ${OpenCV_LIBS})
+TARGET_LINK_LIBRARIES(track-rigid-warp gflags)
+TARGET_LINK_LIBRARIES(track-rigid-warp ceres)
+TARGET_LINK_LIBRARIES(track-rigid-warp glog)
+TARGET_LINK_LIBRARIES(track-rigid-warp ${LAPACK_LIB} amd camd colamd ccolamd cholmod)

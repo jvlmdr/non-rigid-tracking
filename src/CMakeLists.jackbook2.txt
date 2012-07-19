@@ -9,4 +9,10 @@ INCLUDE_DIRECTORIES(${OpenCV_INCLUDE_DIRS})
 INCLUDE_DIRECTORIES("../klt")
 LINK_DIRECTORIES("../klt")
 
+# Ceres
+INCLUDE_DIRECTORIES("/Users/jack/src/ceres-solver-1.2.3/include")
+LINK_DIRECTORIES("/Users/jack/src/ceres-solver-1.2.3/debug/internal/ceres")
+INCLUDE_DIRECTORIES("/usr/local/include/eigen3")
+FIND_LIBRARY(LAPACK_LIB NAMES vecLib)
+
 INCLUDE("CMakeLists.common.txt")
