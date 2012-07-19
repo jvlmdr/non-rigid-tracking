@@ -17,6 +17,7 @@
 
 // Size of window to track. Default: 7.
 const int WINDOW_SIZE = 15;
+const int NUM_PIXELS = WINDOW_SIZE * WINDOW_SIZE;
 
 const int MAX_ITERATIONS = 100;
 
@@ -134,7 +135,7 @@ class RigidWarp {
 };
 
 // Translation warp has two parameters (x, y).
-class TranslationWarpCost : public ceres::SizedCostFunction<1, 2> {
+class TranslationWarpCost : public ceres::SizedCostFunction<NUM_PIXELS, 2> {
   public:
     TranslationWarpCost(const cv::Mat& J,
                         const cv::Mat& I,
@@ -159,19 +160,11 @@ class TranslationWarpCost : public ceres::SizedCostFunction<1, 2> {
       cv::Mat patch;
       sample(*I_, patch, M, WINDOW_SIZE);
 
-      // Compute squared difference.
-      cv::Mat error = patch - *J_;
-      cv::multiply(error, error, error);
-      residuals[0] = std::accumulate(error.begin<double>(), error.end<double>(),
-          0.);
+      // Compute residuals.
+      cv::Mat error = cv::Mat_<double>(WINDOW_SIZE, WINDOW_SIZE, residuals);
+      error = patch - *J_;
 
       if (jacobians != NULL && jacobians[0] != NULL) {
-        // Compute 1x2 Jacobian.
-        cv::Mat dfdp = cv::Mat_<double>::zeros(1, 2);
-
-        // E(p) = sum_x f(x, p)
-        // dE/dp(p) = sum_x df/dp(x, p)
-
         // f(x, p) = I(W(x, p))
         // df/dp(x, p) = dI/dx(W(x, p)) dW/dp(x, p)
 
@@ -204,11 +197,14 @@ class TranslationWarpCost : public ceres::SizedCostFunction<1, 2> {
 
             // Use chain rule.
             cv::Mat dWdp(2, 2, cv::DataType<double>::type, dWdp_data);
-            dfdp += dIdx * dWdp;
+
+            // Compute 1x2 Jacobian.
+            // Row-major order.
+            int i = v * WINDOW_SIZE + u;
+            cv::Mat dfdp = cv::Mat_<double>(1, 2, &jacobians[0][i * 2]);
+            dfdp = dIdx * dWdp;
           }
         }
-
-        std::copy(dfdp.begin<double>(), dfdp.end<double>(), jacobians[0]);
       }
 
       return true;
@@ -223,7 +219,7 @@ class TranslationWarpCost : public ceres::SizedCostFunction<1, 2> {
 };
 
 // Rigid warp has four parameters (x, y, s, theta).
-class RigidWarpCost : public ceres::SizedCostFunction<1, 4> {
+class RigidWarpCost : public ceres::SizedCostFunction<NUM_PIXELS, 4> {
   public:
     RigidWarpCost(const cv::Mat& J,
                   const cv::Mat& I,
@@ -426,13 +422,11 @@ int main(int argc, char** argv) {
 
       // Set up non-linear optimization problem.
       ceres::Problem problem;
-      /*
-      problem.AddResidualBlock(
-          new ceres::NumericDiffCostFunction<TranslationWarpCost, ceres::CENTRAL, 1, 2>(
-            new TranslationWarpCost(reference, image, dIdx, dIdy),
-            ceres::TAKE_OWNERSHIP),
-          NULL, &feature.x);
-      */
+      //problem.AddResidualBlock(
+      //    new ceres::NumericDiffCostFunction<TranslationWarpCost, ceres::CENTRAL, NUM_PIXELS, 2>(
+      //      new TranslationWarpCost(reference, image, dIdx, dIdy),
+      //      ceres::TAKE_OWNERSHIP),
+      //    NULL, &feature.x);
       problem.AddResidualBlock(
           new TranslationWarpCost(reference, image, dIdx, dIdy), NULL,
           &feature.x);
@@ -445,9 +439,35 @@ int main(int argc, char** argv) {
       ceres::Solver::Summary summary;
       ceres::Solve(options, &problem, &summary);
 
-      //std::cout << "(" << feature.x << ", " << feature.y << "), " << feature.scale << ", " << feature.theta << std::endl;
       std::cout << "(" << feature.x << ", " << feature.y << ")" << std::endl;
       std::cerr << summary.BriefReport() << std::endl;
+
+      /*
+      // Do not use Ceres for the actual optimization, only for derivatives.
+      TranslationWarpCost warp_cost(reference, image, dIdx, dIdy);
+
+      int n = 0;
+
+      int NUM_PARAMS = 2;
+
+      while (n < MAX_ITERATIONS) {
+        // Value of objective function.
+        double objective;
+        // Need contiguous array.
+        double J_data[NUM_PIXELS * NUM_PARAMS];
+        // Evaluate.
+        const double* params[] = { &feature.x };
+        double* jacobians[] = { J_data };
+        warp_cost.Evaluate(params, &objective, jacobians);
+
+        cv::Mat J = cv::Mat_<double>(NUM_PIXELS, NUM_PARAMS, J_data);
+
+        std::cout << J << std::endl;
+        exit(1);
+
+        n += 1;
+      }
+      */
 
       // Visualize.
       feature.draw(color_image);
