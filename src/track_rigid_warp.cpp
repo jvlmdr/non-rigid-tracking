@@ -16,7 +16,7 @@
 #include "klt_tracker.hpp"
 
 // Size of window to track. Default: 7.
-const int WINDOW_SIZE = 15;
+const int WINDOW_SIZE = 31;
 const int NUM_PIXELS = WINDOW_SIZE * WINDOW_SIZE;
 
 const int MAX_ITERATIONS = 100;
@@ -241,18 +241,10 @@ class RigidWarpCost : public ceres::SizedCostFunction<NUM_PIXELS, 4> {
       sample(*I_, patch, M, WINDOW_SIZE);
 
       // Compute squared difference.
-      cv::Mat error = patch - *J_;
-      cv::multiply(error, error, error);
-      residuals[0] = std::accumulate(error.begin<double>(), error.end<double>(),
-          0.);
+      cv::Mat error = cv::Mat_<double>(WINDOW_SIZE, WINDOW_SIZE, residuals);
+      error = patch - *J_;
 
       if (jacobians != NULL && jacobians[0] != NULL) {
-        // Compute 1x4 Jacobian.
-        cv::Mat dfdp = cv::Mat_<double>::zeros(1, 4);
-
-        // E(p) = sum_x f(x, p)
-        // dE/dp(p) = sum_x df/dp(x, p)
-
         // f(x, p) = I(W(x, p))
         // df/dp(x, p) = dI/dx(W(x, p)) dW/dp(x, p)
 
@@ -285,11 +277,14 @@ class RigidWarpCost : public ceres::SizedCostFunction<NUM_PIXELS, 4> {
 
             // Use chain rule.
             cv::Mat dWdp(2, 4, cv::DataType<double>::type, dWdp_data);
-            dfdp += dIdx * dWdp;
+
+            // Compute 1x4 Jacobian.
+            // Row-major order.
+            int i = v * WINDOW_SIZE + u;
+            cv::Mat dfdp = cv::Mat_<double>(1, 4, &jacobians[0][i * 4]);
+            dfdp = dIdx * dWdp;
           }
         }
-
-        std::copy(dfdp.begin<double>(), dfdp.end<double>(), jacobians[0]);
       }
 
       return true;
@@ -355,8 +350,8 @@ struct RigidFeature {
     int thickness = 2;
 
     cv::Point2d c(x, y);
-    cv::Point2d i(std::cos(theta), std::sin(theta));
-    cv::Point2d j(std::sin(theta), -std::cos(theta));
+    cv::Point2d i(std::cos(-theta), std::sin(-theta));
+    cv::Point2d j(std::sin(-theta), -std::cos(-theta));
 
     double radius = scale * (WINDOW_SIZE - 1) / 2;
     i *= radius;
@@ -383,7 +378,7 @@ int main(int argc, char** argv) {
   cv::Mat previous_image;
 
   // Start at image center with unit scale and zero orientation.
-  TranslationFeature feature;
+  RigidFeature feature;
 
   while (ok) {
     // Read image.
@@ -402,13 +397,13 @@ int main(int argc, char** argv) {
     if (t == 0) {
       feature.x = 540;
       feature.y = 220;
-      //feature.scale = 1;
-      //feature.theta = 0;
+      feature.scale = 1;
+      feature.theta = 0;
     } else {
       // Sample patch from previous image.
       cv::Mat M;
-      //rigidWarp(M, feature.x, feature.y, feature.scale, feature.theta);
-      translationWarp(M, feature.x, feature.y);
+      rigidWarp(M, feature.x, feature.y, feature.scale, feature.theta);
+      //translationWarp(M, feature.x, feature.y);
       cv::Mat reference;
       sample(previous_image, reference, M, WINDOW_SIZE);
 
@@ -427,9 +422,8 @@ int main(int argc, char** argv) {
       //      new TranslationWarpCost(reference, image, dIdx, dIdy),
       //      ceres::TAKE_OWNERSHIP),
       //    NULL, &feature.x);
-      problem.AddResidualBlock(
-          new TranslationWarpCost(reference, image, dIdx, dIdy), NULL,
-          &feature.x);
+      problem.AddResidualBlock(new RigidWarpCost(reference, image, dIdx, dIdy),
+          NULL, &feature.x);
 
       ceres::Solver::Options options;
       options.max_num_iterations = MAX_ITERATIONS;
