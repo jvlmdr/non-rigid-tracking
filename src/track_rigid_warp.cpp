@@ -16,23 +16,10 @@
 #include "klt_tracker.hpp"
 
 // Size of window to track. Default: 7.
-const int WINDOW_SIZE = 31;
+const int WINDOW_SIZE = 15;
 const int NUM_PIXELS = WINDOW_SIZE * WINDOW_SIZE;
 
 const int MAX_ITERATIONS = 100;
-
-// Represents a parametrised warp function.
-/*
-class WarpType {
-  public:
-    // Evaluate the warp.
-    virtual cv::Point2d operator()(const cv::Point2d& x,
-                                   const std::vector<double>& params) const = 0;
-
-    // Provides the number of parameters in the warp.
-    virtual int numParameters() const = 0;
-};
-*/
 
 std::string makeFilename(const std::string& format, int n) {
   return boost::str(boost::format(format) % (n + 1));
@@ -88,28 +75,99 @@ void sample(const cv::Mat& src, cv::Mat& dst, const cv::Mat& M, int width) {
   //warpAffine(src, dst, Q, size);
 }
 
-void translationWarp(cv::Mat& M, double x, double y) {
-  M.create(2, 3, cv::DataType<double>::type);
-  M.at<double>(0, 0) = 1;
-  M.at<double>(0, 1) = 0;
-  M.at<double>(0, 2) = x;
-  M.at<double>(1, 0) = 0;
-  M.at<double>(1, 1) = 1;
-  M.at<double>(1, 2) = y;
-}
+////////////////////////////////////////////////////////////////////////////////
 
-void rigidWarp(cv::Mat& M, double x, double y, double scale, double theta) {
-  M.create(2, 3, cv::DataType<double>::type);
-  M.at<double>(0, 0) = scale * std::cos(theta);
-  M.at<double>(0, 1) = scale * std::sin(theta);
-  M.at<double>(0, 2) = x;
-  M.at<double>(1, 0) = scale * -std::sin(theta);
-  M.at<double>(1, 1) = scale * std::cos(theta);
-  M.at<double>(1, 2) = y;
-}
+struct TranslationFeature {
+  double x;
+  double y;
 
-class TranslationWarp {
+  void draw(cv::Mat& image) const {
+    cv::Scalar color(0, 0, 255);
+    int thickness = 2;
+
+    cv::Point2d c(x, y);
+    cv::Point2d i(1, 0);
+    cv::Point2d j(0, 1);
+    double radius = (WINDOW_SIZE - 1) / 2.;
+    i *= radius;
+    j *= radius;
+
+    cv::line(image, c - i - j, c + i - j, color, thickness);
+    cv::line(image, c - i + j, c + i + j, color, thickness);
+    cv::line(image, c - i - j, c - i + j, color, thickness);
+    cv::line(image, c + i - j, c + i + j, color, thickness);
+    cv::circle(image, c, thickness, color, -1);
+  }
+};
+
+struct RigidFeature {
+  double x;
+  double y;
+  double scale;
+  double theta;
+
+  void draw(cv::Mat& image) const {
+    cv::Scalar color(0, 0, 255);
+    int thickness = 2;
+
+    cv::Point2d c(x, y);
+    cv::Point2d i(std::cos(-theta), std::sin(-theta));
+    cv::Point2d j(std::sin(-theta), -std::cos(-theta));
+
+    double radius = scale * (WINDOW_SIZE - 1) / 2;
+    i *= radius;
+    j *= radius;
+
+    cv::line(image, c - i - j, c + i - j, color, thickness);
+    cv::line(image, c - i + j, c + i + j, color, thickness);
+    cv::line(image, c - i - j, c - i + j, color, thickness);
+    cv::line(image, c + i - j, c + i + j, color, thickness);
+    cv::line(image, c, c + j, color, thickness);
+  }
+};
+
+////////////////////////////////////////////////////////////////////////////////
+
+// Mostly-implicit interface that warp classes must satisfy.
+class ParametrizedAffineWarp {
   public:
+    // Pure virtual.
+    virtual ~ParametrizedAffineWarp() = 0;
+
+    // AutoDiffCostFunction needs number of parameters at compile time.
+    //static const int NUM_PARAMS;
+
+    // Returns a matrix representation of the affine warp.
+    // For use with warpAffine().
+    virtual void getMatrix(cv::Mat& M, const double* params) const = 0;
+
+    // Templated warp function for use with auto-differentiation.
+    //template<class T>
+    //bool operator()(const T* const x, const T* const p, T* q) const;
+};
+
+ParametrizedAffineWarp::~ParametrizedAffineWarp() {}
+
+class TranslationWarp : public ParametrizedAffineWarp {
+  public:
+    ~TranslationWarp() {}
+
+    // Number of parameters required for template parameters of AutoDiff.
+    static const int NUM_PARAMS = 2;
+
+    void getMatrix(cv::Mat& M, const double* params) const {
+      const TranslationFeature* feature =
+          reinterpret_cast<const TranslationFeature*>(params);
+
+      M.create(2, 3, cv::DataType<double>::type);
+      M.at<double>(0, 0) = 1;
+      M.at<double>(0, 1) = 0;
+      M.at<double>(0, 2) = feature->x;
+      M.at<double>(1, 0) = 0;
+      M.at<double>(1, 1) = 1;
+      M.at<double>(1, 2) = feature->y;
+    }
+
     template<class T>
     bool operator()(const T* const x, const T* const p, T* q) const {
       // x' = x + tx
@@ -121,8 +179,26 @@ class TranslationWarp {
     }
 };
 
-class RigidWarp {
+class RigidWarp : public ParametrizedAffineWarp {
   public:
+    ~RigidWarp() {}
+
+    // Number of parameters required for template parameters of AutoDiff.
+    static const int NUM_PARAMS = 4;
+
+    void getMatrix(cv::Mat& M, const double* params) const {
+      const RigidFeature* feature =
+          reinterpret_cast<const RigidFeature*>(params);
+
+      M.create(2, 3, cv::DataType<double>::type);
+      M.at<double>(0, 0) = feature->scale * std::cos(feature->theta);
+      M.at<double>(0, 1) = feature->scale * std::sin(feature->theta);
+      M.at<double>(0, 2) = feature->x;
+      M.at<double>(1, 0) = feature->scale * -std::sin(feature->theta);
+      M.at<double>(1, 1) = feature->scale * std::cos(feature->theta);
+      M.at<double>(1, 2) = feature->y;
+    }
+
     template<class T>
     bool operator()(const T* const x, const T* const p, T* q) const {
       // x' = scale * ( cos(theta) * x + sin(theta) * y) + tx
@@ -134,27 +210,30 @@ class RigidWarp {
     }
 };
 
-// Translation warp has two parameters (x, y).
-class TranslationWarpCost : public ceres::SizedCostFunction<NUM_PIXELS, 2> {
+////////////////////////////////////////////////////////////////////////////////
+
+template<class Warp>
+class WarpCost : public ceres::SizedCostFunction<NUM_PIXELS, Warp::NUM_PARAMS> {
   public:
-    TranslationWarpCost(const cv::Mat& J,
-                        const cv::Mat& I,
-                        const cv::Mat& dIdx,
-                        const cv::Mat& dIdy)
+    WarpCost(const cv::Mat& J,
+             const cv::Mat& I,
+             const cv::Mat& dIdx,
+             const cv::Mat& dIdy)
         : J_(&J),
           I_(&I),
           dIdx_(&dIdx),
           dIdy_(&dIdy),
-          warp_(new TranslationWarp) {}
+          warp_(new Warp),
+          autodiff_(warp_) {}
 
-    ~TranslationWarpCost() {}
+    ~WarpCost() {}
 
     bool Evaluate(double const* const* params,
                   double* residuals,
                   double** jacobians) const {
       // Build affine transform.
       cv::Mat M;
-      translationWarp(M, params[0][0], params[0][1]);
+      warp_->getMatrix(M, params[0]);
 
       // Sample image for x in regular grid.
       cv::Mat patch;
@@ -188,20 +267,21 @@ class TranslationWarpCost : public ceres::SizedCostFunction<NUM_PIXELS, 2> {
             const double* warp_params[] = { position, params[0] };
             // Give somewhere to write the warp to.
             double W[2];
-            // Need 2x2 matrix with contiguous storage to write out Jacobian.
-            double dWdp_data[2 * 2];
+            // Need matrix with contiguous storage to write out Jacobian.
+            double dWdp_data[2 * Warp::NUM_PARAMS];
             // Only ask for the derivative of the second argument.
             double* warp_jacobians[2] = { NULL, dWdp_data };
             // Use Ceres to get the derivative of the warp function.
-            warp_.Evaluate(warp_params, W, warp_jacobians);
+            autodiff_.Evaluate(warp_params, W, warp_jacobians);
 
             // Use chain rule.
-            cv::Mat dWdp(2, 2, cv::DataType<double>::type, dWdp_data);
+            cv::Mat dWdp(2, Warp::NUM_PARAMS, cv::DataType<double>::type,
+                dWdp_data);
 
-            // Compute 1x2 Jacobian.
-            // Row-major order.
+            // Compute partial Jacobian. Stored in row-major order.
             int i = v * WINDOW_SIZE + u;
-            cv::Mat dfdp = cv::Mat_<double>(1, 2, &jacobians[0][i * 2]);
+            cv::Mat dfdp = cv::Mat_<double>(1, Warp::NUM_PARAMS,
+                &jacobians[0][i * Warp::NUM_PARAMS]);
             dfdp = dIdx * dWdp;
           }
         }
@@ -215,87 +295,10 @@ class TranslationWarpCost : public ceres::SizedCostFunction<NUM_PIXELS, 2> {
     const cv::Mat* I_;
     const cv::Mat* dIdx_;
     const cv::Mat* dIdy_;
-    ceres::AutoDiffCostFunction<TranslationWarp, 2, 2, 2> warp_;
-};
-
-// Rigid warp has four parameters (x, y, s, theta).
-class RigidWarpCost : public ceres::SizedCostFunction<NUM_PIXELS, 4> {
-  public:
-    RigidWarpCost(const cv::Mat& J,
-                  const cv::Mat& I,
-                  const cv::Mat& dIdx,
-                  const cv::Mat& dIdy)
-        : J_(&J), I_(&I), dIdx_(&dIdx), dIdy_(&dIdy), warp_(new RigidWarp) {}
-
-    ~RigidWarpCost() {}
-
-    bool Evaluate(double const* const* params,
-                  double* residuals,
-                  double** jacobians) const {
-      // Build affine transform.
-      cv::Mat M;
-      rigidWarp(M, params[0][0], params[0][1], params[0][2], params[0][3]);
-
-      // Sample image for x in regular grid.
-      cv::Mat patch;
-      sample(*I_, patch, M, WINDOW_SIZE);
-
-      // Compute squared difference.
-      cv::Mat error = cv::Mat_<double>(WINDOW_SIZE, WINDOW_SIZE, residuals);
-      error = patch - *J_;
-
-      if (jacobians != NULL && jacobians[0] != NULL) {
-        // f(x, p) = I(W(x, p))
-        // df/dp(x, p) = dI/dx(W(x, p)) dW/dp(x, p)
-
-        // Sample whole patches of derivative image.
-        // (for efficiency and hopefully correct downsampling)
-        cv::Mat ddx_patch;
-        cv::Mat ddy_patch;
-        sample(*dIdx_, ddx_patch, M, WINDOW_SIZE);
-        sample(*dIdy_, ddy_patch, M, WINDOW_SIZE);
-
-        double offset = (WINDOW_SIZE - 1) / 2.;
-
-        for (int u = 0; u < WINDOW_SIZE; u += 1) {
-          for (int v = 0; v < WINDOW_SIZE; v += 1) {
-            // Get image derivative at each warped point.
-            cv::Mat dIdx = (cv::Mat_<double>(1, 2) <<
-                ddx_patch.at<double>(v, u), ddy_patch.at<double>(v, u));
-
-            // Get derivative of warp function.
-            double position[2] = { u - offset, v - offset };
-            const double* warp_params[] = { position, params[0] };
-            // Give somewhere to write the warp to.
-            double W[2];
-            // Need 2x4 matrix with contiguous storage to write out Jacobian.
-            double dWdp_data[2 * 4];
-            // Only ask for the derivative of the second argument.
-            double* warp_jacobians[2] = { NULL, dWdp_data };
-            // Use Ceres to get the derivative of the warp function.
-            warp_.Evaluate(warp_params, W, warp_jacobians);
-
-            // Use chain rule.
-            cv::Mat dWdp(2, 4, cv::DataType<double>::type, dWdp_data);
-
-            // Compute 1x4 Jacobian.
-            // Row-major order.
-            int i = v * WINDOW_SIZE + u;
-            cv::Mat dfdp = cv::Mat_<double>(1, 4, &jacobians[0][i * 4]);
-            dfdp = dIdx * dWdp;
-          }
-        }
-      }
-
-      return true;
-    }
-
-  private:
-    const cv::Mat* J_;
-    const cv::Mat* I_;
-    const cv::Mat* dIdx_;
-    const cv::Mat* dIdy_;
-    ceres::AutoDiffCostFunction<RigidWarp, 2, 2, 4> warp_;
+    // It seems there is no way to retain ownership of this object.
+    // AutoDiffCostFunction will delete it but does not provide access.
+    Warp* warp_;
+    ceres::AutoDiffCostFunction<Warp, 2, 2, Warp::NUM_PARAMS> autodiff_;
 };
 
 /*
@@ -316,54 +319,6 @@ void solveFlow(const cv::Mat& image1,
   // Solve system.
 }
 */
-
-struct TranslationFeature {
-  double x;
-  double y;
-
-  void draw(cv::Mat& image) const {
-    cv::Scalar color(0, 0, 255);
-    int thickness = 2;
-
-    cv::Point2d c(x, y);
-    cv::Point2d i(1, 0);
-    cv::Point2d j(0, 1);
-    double radius = (WINDOW_SIZE - 1) / 2.;
-    i *= radius;
-    j *= radius;
-
-    cv::line(image, c - i - j, c + i - j, color, thickness);
-    cv::line(image, c - i + j, c + i + j, color, thickness);
-    cv::line(image, c - i - j, c - i + j, color, thickness);
-    cv::line(image, c + i - j, c + i + j, color, thickness);
-  }
-};
-
-struct RigidFeature {
-  double x;
-  double y;
-  double scale;
-  double theta;
-
-  void draw(cv::Mat& image) const {
-    cv::Scalar color(0, 0, 255);
-    int thickness = 2;
-
-    cv::Point2d c(x, y);
-    cv::Point2d i(std::cos(-theta), std::sin(-theta));
-    cv::Point2d j(std::sin(-theta), -std::cos(-theta));
-
-    double radius = scale * (WINDOW_SIZE - 1) / 2;
-    i *= radius;
-    j *= radius;
-
-    cv::line(image, c - i - j, c + i - j, color, thickness);
-    cv::line(image, c - i + j, c + i + j, color, thickness);
-    cv::line(image, c - i - j, c - i + j, color, thickness);
-    cv::line(image, c + i - j, c + i + j, color, thickness);
-    cv::line(image, c, c + j, color, thickness);
-  }
-};
 
 int main(int argc, char** argv) {
   if (argc < 2) {
@@ -397,13 +352,14 @@ int main(int argc, char** argv) {
     if (t == 0) {
       feature.x = 540;
       feature.y = 220;
-      feature.scale = 1;
+      feature.scale = 4;
       feature.theta = 0;
     } else {
       // Sample patch from previous image.
       cv::Mat M;
-      rigidWarp(M, feature.x, feature.y, feature.scale, feature.theta);
-      //translationWarp(M, feature.x, feature.y);
+      RigidWarp warp;
+      warp.getMatrix(M, reinterpret_cast<const double*>(&feature));
+
       cv::Mat reference;
       sample(previous_image, reference, M, WINDOW_SIZE);
 
@@ -422,8 +378,9 @@ int main(int argc, char** argv) {
       //      new TranslationWarpCost(reference, image, dIdx, dIdy),
       //      ceres::TAKE_OWNERSHIP),
       //    NULL, &feature.x);
-      problem.AddResidualBlock(new RigidWarpCost(reference, image, dIdx, dIdy),
-          NULL, &feature.x);
+      problem.AddResidualBlock(
+          new WarpCost<RigidWarp>(reference, image, dIdx, dIdy), NULL,
+          &feature.x);
 
       ceres::Solver::Options options;
       options.max_num_iterations = MAX_ITERATIONS;
@@ -435,33 +392,6 @@ int main(int argc, char** argv) {
 
       std::cout << "(" << feature.x << ", " << feature.y << ")" << std::endl;
       std::cerr << summary.BriefReport() << std::endl;
-
-      /*
-      // Do not use Ceres for the actual optimization, only for derivatives.
-      TranslationWarpCost warp_cost(reference, image, dIdx, dIdy);
-
-      int n = 0;
-
-      int NUM_PARAMS = 2;
-
-      while (n < MAX_ITERATIONS) {
-        // Value of objective function.
-        double objective;
-        // Need contiguous array.
-        double J_data[NUM_PIXELS * NUM_PARAMS];
-        // Evaluate.
-        const double* params[] = { &feature.x };
-        double* jacobians[] = { J_data };
-        warp_cost.Evaluate(params, &objective, jacobians);
-
-        cv::Mat J = cv::Mat_<double>(NUM_PIXELS, NUM_PARAMS, J_data);
-
-        std::cout << J << std::endl;
-        exit(1);
-
-        n += 1;
-      }
-      */
 
       // Visualize.
       feature.draw(color_image);
