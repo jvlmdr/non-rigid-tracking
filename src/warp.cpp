@@ -1,0 +1,142 @@
+#include "warp.hpp"
+#include <cmath>
+
+const int LINE_THICKNESS = 2;
+
+Warp::~Warp() {}
+
+////////////////////////////////////////////////////////////////////////////////
+
+const double* TranslationFeature::data() const {
+  return &x;
+}
+
+double* TranslationFeature::data() {
+  return &x;
+}
+
+TranslationWarp::TranslationWarp() : warp_(new TranslationWarpFunction) {}
+
+TranslationWarp::~TranslationWarp() {}
+
+int TranslationWarp::numParams() const {
+  return 2;
+}
+
+cv::Point2d TranslationWarp::evaluate(const cv::Point2d& position,
+                                      const double* params,
+                                      double* jacobian) const {
+  // Get derivative of warp function.
+  double x[2] = { position.x, position.y };
+  // Create somewhere to write out the result.
+  double y[2];
+
+  const double* param_blocks[2] = { x, params };
+  double* jacobian_blocks[2] = { NULL, jacobian };
+
+  // Use Ceres to get the derivative of the warp function.
+  warp_.Evaluate(param_blocks, y, jacobian_blocks);
+
+  return cv::Point2d(y[0], y[1]);
+}
+
+cv::Mat TranslationWarp::matrix(const double* params) const {
+  const TranslationFeature* p =
+      reinterpret_cast<const TranslationFeature*>(params);
+
+  cv::Mat M = (cv::Mat_<double>(2, 3) << 1, 0, p->x, 0, 1, p->y);
+
+  return M;
+}
+
+void TranslationWarp::draw(cv::Mat& image,
+                           const double* params,
+                           int width,
+                           const cv::Scalar& color) const {
+  const TranslationFeature* p =
+      reinterpret_cast<const TranslationFeature*>(params);
+
+  cv::Point2d c(p->x, p->y);
+  cv::Point2d i(1, 0);
+  cv::Point2d j(0, 1);
+  double radius = (width - 1) / 2.;
+  i *= radius;
+  j *= radius;
+
+  cv::line(image, c - i - j, c + i - j, color, LINE_THICKNESS);
+  cv::line(image, c - i + j, c + i + j, color, LINE_THICKNESS);
+  cv::line(image, c - i - j, c - i + j, color, LINE_THICKNESS);
+  cv::line(image, c + i - j, c + i + j, color, LINE_THICKNESS);
+  cv::circle(image, c, LINE_THICKNESS, color, -1);
+}
+
+////////////////////////////////////////////////////////////////////////////////
+
+RigidFeature::RigidFeature() {}
+
+RigidFeature::RigidFeature(double x, double y, double scale, double theta)
+      : x(x), y(y), scale(scale), theta(theta) {}
+
+const double* RigidFeature::data() const {
+  return &x;
+}
+
+double* RigidFeature::data() {
+  return &x;
+}
+
+RigidWarp::RigidWarp() : warp_(new RigidWarpFunction) {}
+
+RigidWarp::~RigidWarp() {}
+
+cv::Point2d RigidWarp::evaluate(const cv::Point2d& position,
+                                const double* params,
+                                double* jacobian) const {
+  // Get derivative of warp function.
+  double x[2] = { position.x, position.y };
+  // Create somewhere to write out the result.
+  double y[2];
+
+  const double* param_blocks[2] = { x, params };
+  double* jacobian_blocks[2] = { NULL, jacobian };
+
+  // Use Ceres to get the derivative of the warp function.
+  warp_.Evaluate(param_blocks, y, jacobian_blocks);
+
+  return cv::Point2d(y[0], y[1]);
+}
+
+int RigidWarp::numParams() const {
+  return NUM_PARAMS;
+}
+
+cv::Mat RigidWarp::matrix(const double* params) const {
+  const RigidFeature* p = reinterpret_cast<const RigidFeature*>(params);
+
+  cv::Mat M = (cv::Mat_<double>(2, 3) <<
+      p->scale *  std::cos(p->theta), p->scale * std::sin(p->theta), p->x,
+      p->scale * -std::sin(p->theta), p->scale * std::cos(p->theta), p->y);
+
+  return M;
+}
+
+void RigidWarp::draw(cv::Mat& image,
+                     const double* params,
+                     int width,
+                     const cv::Scalar& color) const {
+  const RigidFeature* p = reinterpret_cast<const RigidFeature*>(params);
+
+  cv::Point2d c(p->x, p->y);
+  cv::Point2d i(std::cos(-p->theta), std::sin(-p->theta));
+  cv::Point2d j(std::sin(-p->theta), -std::cos(-p->theta));
+
+  double radius = p->scale * (width - 1) / 2;
+  i *= radius;
+  j *= radius;
+
+  cv::line(image, c - i - j, c + i - j, color, LINE_THICKNESS);
+  cv::line(image, c - i + j, c + i + j, color, LINE_THICKNESS);
+  cv::line(image, c - i - j, c - i + j, color, LINE_THICKNESS);
+  cv::line(image, c + i - j, c + i + j, color, LINE_THICKNESS);
+  cv::line(image, c, c + j, color, LINE_THICKNESS);
+}
