@@ -93,7 +93,8 @@ TARGET_LINK_LIBRARIES(adjacent-matches-to-tracks gflags)
 
 ADD_EXECUTABLE(track-rigid-warp
   track_rigid_warp.cpp
-  read_image.cpp)
+  read_image.cpp
+  random_color.cpp)
 TARGET_LINK_LIBRARIES(track-rigid-warp ${OpenCV_LIBS})
 TARGET_LINK_LIBRARIES(track-rigid-warp gflags)
 TARGET_LINK_LIBRARIES(track-rigid-warp ceres)

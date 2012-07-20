@@ -9,17 +9,27 @@
 #include <opencv2/core/core.hpp>
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
+#include <opencv2/features2d/features2d.hpp>
+#include <opencv2/nonfree/nonfree.hpp>
 #include <ceres/ceres.h>
 #include "read_image.hpp"
 #include "track.hpp"
 #include "tracker.hpp"
-#include "klt_tracker.hpp"
+#include "random_color.hpp"
 
 // Size of window to track. Default: 7.
 const int WINDOW_SIZE = 15;
 const int NUM_PIXELS = WINDOW_SIZE * WINDOW_SIZE;
-
 const int MAX_ITERATIONS = 100;
+
+const int MAX_NUM_FEATURES = 100;
+const int NUM_OCTAVE_LAYERS = 3;
+const double CONTRAST_THRESHOLD = 0.04;
+const double EDGE_THRESHOLD = 10;
+const double SIGMA = 1.6;
+
+const double SATURATION = 0.99;
+const double BRIGHTNESS = 0.99;
 
 std::string makeFilename(const std::string& format, int n) {
   return boost::str(boost::format(format) % (n + 1));
@@ -81,8 +91,7 @@ struct TranslationFeature {
   double x;
   double y;
 
-  void draw(cv::Mat& image) const {
-    cv::Scalar color(0, 0, 255);
+  void draw(cv::Mat& image, const cv::Scalar& color) const {
     int thickness = 2;
 
     cv::Point2d c(x, y);
@@ -106,8 +115,12 @@ struct RigidFeature {
   double scale;
   double theta;
 
-  void draw(cv::Mat& image) const {
-    cv::Scalar color(0, 0, 255);
+  RigidFeature() {}
+
+  RigidFeature(double x, double y, double scale, double theta)
+      : x(x), y(y), scale(scale), theta(theta) {}
+
+  void draw(cv::Mat& image, const cv::Scalar& color) const {
     int thickness = 2;
 
     cv::Point2d c(x, y);
@@ -301,39 +314,75 @@ class WarpCost : public ceres::SizedCostFunction<NUM_PIXELS, Warp::NUM_PARAMS> {
     ceres::AutoDiffCostFunction<Warp, 2, 2, Warp::NUM_PARAMS> autodiff_;
 };
 
-/*
-void solveFlow(const cv::Mat& image1,
-               const cv::Mat& image2,
-               const cv::Mat& image1_ddx,
-               const cv::Mat& image1_ddy,
-               WarpType& warp,
-               const std::vector<double>& params1,
-               std::vector<double>& params2,
-               int patch_size) {
-  // Extract reference patch from first image.
-  cv::Mat M;
-  //warp(params1, M);
-  cv::Mat ref;
-  sample(image1, ref, M, patch_size);
+void solveFlow(const RigidFeature& prev_feature,
+               const cv::Mat& prev_image,
+               const cv::Mat& image,
+               const cv::Mat& ddx_image,
+               const cv::Mat& ddy_image,
+               RigidFeature& feature) {
+  // Use previous state as initialization.
+  feature = prev_feature;
 
-  // Solve system.
+  // Sample patch from previous image.
+  cv::Mat M;
+  RigidWarp warp;
+  warp.getMatrix(M, reinterpret_cast<const double*>(&feature));
+  cv::Mat reference;
+  sample(prev_image, reference, M, WINDOW_SIZE);
+
+  // Set up non-linear optimization problem.
+  ceres::Problem problem;
+  problem.AddResidualBlock(
+      new WarpCost<RigidWarp>(reference, image, ddx_image, ddy_image), NULL,
+      &feature.x);
+
+  ceres::Solver::Options options;
+  options.max_num_iterations = MAX_ITERATIONS;
+  options.linear_solver_type = ceres::DENSE_QR;
+  options.minimizer_progress_to_stdout = false;
+
+  // Solve!
+  ceres::Solver::Summary summary;
+  ceres::Solve(options, &problem, &summary);
 }
-*/
+
+RigidFeature keypointToRigidFeature(const cv::KeyPoint& keypoint) {
+  return RigidFeature(keypoint.pt.x, keypoint.pt.y,
+      keypoint.size / double(WINDOW_SIZE), keypoint.angle / 180. * CV_PI);
+}
+
+struct ColoredFeature {
+  RigidFeature value;
+  cv::Scalar color;
+
+  ColoredFeature() : value(), color() {}
+
+  ColoredFeature(const RigidFeature& value, const cv::Scalar& color)
+      : value(value), color(color) {}
+};
+
+ColoredFeature makeRandomlyColoredFeature(const cv::KeyPoint& keypoint) {
+  return ColoredFeature(keypointToRigidFeature(keypoint),
+      randomColor(SATURATION, BRIGHTNESS));
+}
 
 int main(int argc, char** argv) {
-  if (argc < 2) {
-    std::cerr << "usage: " << argv[0] << " image-format" << std::endl;
+  if (argc < 3) {
+    std::cerr << "usage: " << argv[0] << " image-format output-format" <<
+      std::endl;
     return 1;
   }
 
   std::string image_format = argv[1];
+  std::string output_format = argv[2];
 
   int t = 0;
   bool ok = true;
   cv::Mat previous_image;
 
   // Start at image center with unit scale and zero orientation.
-  RigidFeature feature;
+  typedef std::list<ColoredFeature> FeatureList;
+  FeatureList features;
 
   while (ok) {
     // Read image.
@@ -350,19 +399,18 @@ int main(int argc, char** argv) {
     integer_image.convertTo(image, cv::DataType<double>::type, 1. / 255.);
 
     if (t == 0) {
-      feature.x = 540;
-      feature.y = 220;
-      feature.scale = 4;
-      feature.theta = 0;
+      // Get some features to track.
+      std::vector<cv::KeyPoint> keypoints;
+      cv::SIFT sift(MAX_NUM_FEATURES, NUM_OCTAVE_LAYERS, CONTRAST_THRESHOLD,
+          EDGE_THRESHOLD, SIGMA);
+      sift(integer_image, cv::noArray(), keypoints, cv::noArray(), false);
+
+      // Convert keypoints to our features.
+      std::transform(keypoints.begin(), keypoints.end(),
+          std::back_inserter(features), makeRandomlyColoredFeature);
+
+      std::cerr << "detected " << features.size() << " features" << std::endl;
     } else {
-      // Sample patch from previous image.
-      cv::Mat M;
-      RigidWarp warp;
-      warp.getMatrix(M, reinterpret_cast<const double*>(&feature));
-
-      cv::Mat reference;
-      sample(previous_image, reference, M, WINDOW_SIZE);
-
       // Take x and y derivatives.
       cv::Mat dIdx;
       cv::Mat dIdy;
@@ -371,34 +419,37 @@ int main(int argc, char** argv) {
       cv::sepFilter2D(image, dIdx, -1, diff, identity);
       cv::sepFilter2D(image, dIdy, -1, identity, diff);
 
-      // Set up non-linear optimization problem.
-      ceres::Problem problem;
-      //problem.AddResidualBlock(
-      //    new ceres::NumericDiffCostFunction<TranslationWarpCost, ceres::CENTRAL, NUM_PIXELS, 2>(
-      //      new TranslationWarpCost(reference, image, dIdx, dIdy),
-      //      ceres::TAKE_OWNERSHIP),
-      //    NULL, &feature.x);
-      problem.AddResidualBlock(
-          new WarpCost<RigidWarp>(reference, image, dIdx, dIdy), NULL,
-          &feature.x);
+      FeatureList prev_features;
+      prev_features.swap(features);
 
-      ceres::Solver::Options options;
-      options.max_num_iterations = MAX_ITERATIONS;
-      options.linear_solver_type = ceres::DENSE_QR;
-      options.minimizer_progress_to_stdout = false;
+      int i = 0;
+      for (FeatureList::const_iterator prev_feature = prev_features.begin();
+           prev_feature != prev_features.end();
+           ++prev_feature) {
+        std::cout << i << std::endl;
 
-      ceres::Solver::Summary summary;
-      ceres::Solve(options, &problem, &summary);
+        ColoredFeature feature;
+        feature.color = prev_feature->color;
+        solveFlow(prev_feature->value, previous_image, image, dIdx, dIdy,
+            feature.value);
+        features.push_back(feature);
 
-      std::cout << "(" << feature.x << ", " << feature.y << ")" << std::endl;
-      std::cerr << summary.BriefReport() << std::endl;
-
-      // Visualize.
-      feature.draw(color_image);
-
-      cv::imshow("frame", color_image);
-      cv::waitKey(10);
+        i += 1;
+      }
     }
+
+    // Visualize.
+    for (FeatureList::const_iterator feature = features.begin();
+         feature != features.end();
+         ++feature) {
+      feature->value.draw(color_image, feature->color);
+    }
+
+    std::string output_filename = makeFilename(output_format, t);
+    cv::imwrite(output_filename, color_image);
+
+    cv::imshow("frame", color_image);
+    cv::waitKey(10);
 
     image.copyTo(previous_image);
     t += 1;
