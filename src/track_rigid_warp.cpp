@@ -16,6 +16,8 @@
 #include "tracker.hpp"
 #include "random_color.hpp"
 #include "warp.hpp"
+#include "rigid_warp.hpp"
+#include "rigid_feature.hpp"
 #include "flow.hpp"
 
 // Size of window to track.

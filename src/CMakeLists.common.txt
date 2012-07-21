@@ -95,6 +95,10 @@ ADD_EXECUTABLE(track-rigid-warp
   track_rigid_warp.cpp
   read_image.cpp
   warp.cpp
+  rigid_warp.cpp
+  rigid_feature.cpp
+  translation_warp.cpp
+  translation_feature.cpp
   flow.cpp
   random_color.cpp)
 TARGET_LINK_LIBRARIES(track-rigid-warp ${OpenCV_LIBS})
@@ -102,3 +106,10 @@ TARGET_LINK_LIBRARIES(track-rigid-warp gflags)
 TARGET_LINK_LIBRARIES(track-rigid-warp ceres)
 TARGET_LINK_LIBRARIES(track-rigid-warp glog)
 TARGET_LINK_LIBRARIES(track-rigid-warp ${LAPACK_LIB} amd camd colamd ccolamd cholmod)
+
+ADD_EXECUTABLE(extract-sift
+  extract_sift.cpp
+  read_image.cpp
+  rigid_feature.cpp)
+TARGET_LINK_LIBRARIES(extract-sift ${OpenCV_LIBS})
+TARGET_LINK_LIBRARIES(extract-sift gflags)
