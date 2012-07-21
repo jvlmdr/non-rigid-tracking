@@ -2,7 +2,6 @@ ADD_EXECUTABLE(track-features
   track_features.cpp
   read_image.cpp
   track_list.cpp
-  tracker.cpp
   klt_tracker.cpp)
 TARGET_LINK_LIBRARIES(track-features ${OpenCV_LIBS})
 TARGET_LINK_LIBRARIES(track-features klt)
@@ -11,7 +10,6 @@ ADD_EXECUTABLE(track-features-bidirectional
   track_features_bidirectional.cpp
   read_image.cpp
   track_list.cpp
-  tracker.cpp
   klt_tracker.cpp)
 TARGET_LINK_LIBRARIES(track-features-bidirectional ${OpenCV_LIBS})
 TARGET_LINK_LIBRARIES(track-features-bidirectional klt)
@@ -94,7 +92,6 @@ TARGET_LINK_LIBRARIES(adjacent-matches-to-tracks gflags)
 ADD_EXECUTABLE(track-rigid-warp
   track_rigid_warp.cpp
   read_image.cpp
-  warp.cpp
   rigid_warp.cpp
   rigid_feature.cpp
   translation_warp.cpp

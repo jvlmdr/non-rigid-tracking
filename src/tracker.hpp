@@ -10,7 +10,7 @@
 class Tracker {
   public:
     // Pure virtual.
-    virtual ~Tracker() = 0;
+    virtual ~Tracker() {}
 
     // Feeds in the next image.
     virtual void feed(const cv::Mat& image) = 0;
@@ -28,7 +28,7 @@ class Tracker {
 class SerialTracker : public Tracker {
   public:
     // Pure virtual.
-    virtual ~SerialTracker() = 0;
+    virtual ~SerialTracker() {}
 
     // Writes current frame to file storage.
     virtual bool write(cv::FileStorage& out) const = 0;

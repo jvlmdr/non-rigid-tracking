@@ -5,17 +5,25 @@
 
 class RigidWarpFunction {
   public:
+    explicit RigidWarpFunction(double patch_size);
+
     template<class T>
     bool operator()(const T* const x, const T* const p, T* q) const;
+
+  private:
+    double patch_size_;
 };
 
 class RigidWarp : public Warp {
   private:
+    // Need patch size to calculate 
+    int patch_size_;
+
     static const int NUM_PARAMS = 4;
     ceres::AutoDiffCostFunction<RigidWarpFunction, 2, 2, NUM_PARAMS> warp_;
 
   public:
-    RigidWarp();
+    RigidWarp(int patch_size);
     ~RigidWarp();
 
     cv::Point2d evaluate(const cv::Point2d& position,

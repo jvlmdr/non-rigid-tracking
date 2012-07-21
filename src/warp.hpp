@@ -13,8 +13,7 @@
 // - method to draw a warped patch on an image
 class Warp {
   public:
-    // Pure virtual.
-    virtual ~Warp() = 0;
+    virtual ~Warp() {}
 
     // Returns the number of parameters.
     virtual int numParams() const = 0;

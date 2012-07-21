@@ -4,7 +4,15 @@
 
 const int LINE_THICKNESS = 2;
 
-RigidWarp::RigidWarp() : warp_(new RigidWarpFunction) {}
+////////////////////////////////////////////////////////////////////////////////
+
+RigidWarpFunction::RigidWarpFunction(double patch_size)
+    : patch_size_(patch_size) {}
+
+////////////////////////////////////////////////////////////////////////////////
+
+RigidWarp::RigidWarp(int patch_size)
+    : patch_size_(patch_size), warp_(new RigidWarpFunction(patch_size)) {}
 
 RigidWarp::~RigidWarp() {}
 
@@ -32,9 +40,10 @@ int RigidWarp::numParams() const {
 cv::Mat RigidWarp::matrix(const double* params) const {
   const RigidFeature* p = reinterpret_cast<const RigidFeature*>(params);
 
+  double scale = p->size / double(patch_size_);
   cv::Mat M = (cv::Mat_<double>(2, 3) <<
-      p->scale *  std::cos(p->theta), p->scale * std::sin(p->theta), p->x,
-      p->scale * -std::sin(p->theta), p->scale * std::cos(p->theta), p->y);
+      scale *  std::cos(p->theta), scale * std::sin(p->theta), p->x,
+      scale * -std::sin(p->theta), scale * std::cos(p->theta), p->y);
 
   return M;
 }
@@ -49,7 +58,7 @@ void RigidWarp::draw(cv::Mat& image,
   cv::Point2d i(std::cos(-p->theta), std::sin(-p->theta));
   cv::Point2d j(std::sin(-p->theta), -std::cos(-p->theta));
 
-  double radius = p->scale * (width - 1) / 2;
+  double radius = (p->size - 1) / 2.;
   i *= radius;
   j *= radius;
 

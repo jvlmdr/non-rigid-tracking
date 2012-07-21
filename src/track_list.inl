@@ -2,12 +2,6 @@
 #include <numeric>
 #include <limits>
 
-template<class T>
-Write<T>::~Write() {}
-
-template<class T>
-Read<T>::~Read() {}
-
 ////////////////////////////////////////////////////////////////////////////////
 // TrackList
 

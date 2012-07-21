@@ -30,7 +30,7 @@ const double FUNCTION_TOLERANCE = 1e-4;
 const double GRADIENT_TOLERANCE = 0;
 const double PARAMETER_TOLERANCE = 1e-4;
 const bool ITERATION_LIMIT_IS_FATAL = true;
-const double MAX_CONDITION = 100;
+const double MAX_CONDITION = 1000;
 
 // Do not want to sample below one pixel.
 const double MIN_SCALE = 0.5;
@@ -55,8 +55,8 @@ std::string makeFilename(const std::string& format, int n) {
 ////////////////////////////////////////////////////////////////////////////////
 
 RigidFeature keypointToRigidFeature(const cv::KeyPoint& keypoint) {
-  return RigidFeature(keypoint.pt.x, keypoint.pt.y,
-      keypoint.size / double(PATCH_SIZE), keypoint.angle / 180. * CV_PI);
+  double theta = keypoint.angle / 180. * CV_PI;
+  return RigidFeature(keypoint.pt.x, keypoint.pt.y, keypoint.size, theta);
 }
 
 struct ColoredFeature {
@@ -95,8 +95,8 @@ int main(int argc, char** argv) {
   options.gradient_tolerance = GRADIENT_TOLERANCE;
   options.parameter_tolerance = PARAMETER_TOLERANCE;
 
-  RigidWarp warp_impl;
-  Warp& warp = warp_impl;
+  RigidWarp rigid_warp(PATCH_SIZE);
+  Warp& warp = rigid_warp;
 
   // Start at image center with unit scale and zero orientation.
   typedef std::list<ColoredFeature> FeatureList;
@@ -130,12 +130,12 @@ int main(int argc, char** argv) {
       std::cerr << "detected " << features.size() << " features" << std::endl;
     } else {
       // Take x and y derivatives.
-      cv::Mat dIdx;
-      cv::Mat dIdy;
+      cv::Mat ddx_image;
+      cv::Mat ddy_image;
       cv::Mat diff = (cv::Mat_<double>(1, 3) << -0.5, 0, 0.5);
       cv::Mat identity = (cv::Mat_<double>(1, 1) << 1);
-      cv::sepFilter2D(image, dIdx, -1, diff, identity);
-      cv::sepFilter2D(image, dIdy, -1, identity, diff);
+      cv::sepFilter2D(image, ddx_image, -1, diff, identity);
+      cv::sepFilter2D(image, ddy_image, -1, identity, diff);
 
       FeatureList prev_features;
       prev_features.swap(features);
@@ -153,12 +153,14 @@ int main(int argc, char** argv) {
 
         // Use previous state as initialization (and keep same color).
         ColoredFeature feature = *prev_feature;
-        bool tracked = solveFlow(warp, PATCH_SIZE, reference, image, dIdx, dIdy,
-            feature.value.data(), options, ITERATION_LIMIT_IS_FATAL,
+        bool tracked = solveFlow(warp, PATCH_SIZE, reference, image, ddx_image,
+            ddy_image, feature.value.data(), options, ITERATION_LIMIT_IS_FATAL,
             MAX_CONDITION);
 
         if (tracked) {
-          if (feature.value.scale >= MIN_SCALE) {
+          double scale = feature.value.size / PATCH_SIZE;
+
+          if (scale >= MIN_SCALE) {
             // Check appearance.
             double residual = meanPixelDifference(warp, PATCH_SIZE, reference,
                 image, feature.value.data());

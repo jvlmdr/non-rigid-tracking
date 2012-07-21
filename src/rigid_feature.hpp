@@ -4,11 +4,11 @@
 struct RigidFeature {
   double x;
   double y;
-  double scale;
+  double size;
   double theta;
 
   RigidFeature();
-  RigidFeature(double x, double y, double scale, double theta);
+  RigidFeature(double x, double y, double size, double theta);
 
   const double* data() const;
   double* data();

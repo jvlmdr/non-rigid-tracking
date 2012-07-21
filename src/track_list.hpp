@@ -12,14 +12,14 @@
 template<class T>
 class Write {
   public:
-    virtual ~Write() = 0;
+    virtual ~Write() {}
     virtual void operator()(cv::FileStorage& file, const T& x) = 0;
 };
 
 template<class T>
 class Read {
   public:
-    virtual ~Read() = 0;
+    virtual ~Read() {}
     virtual void operator()(const cv::FileNode& node, T& x) = 0;
 };
 
@@ -135,14 +135,14 @@ typedef FrameIterator_<cv::Point2d> FrameIterator;
 
 class WritePoint : public Write<cv::Point2d> {
   public:
-    ~WritePoint();
+    ~WritePoint() {}
     void operator()(cv::FileStorage& file, const cv::Point2d& x);
 };
 
 class ReadPoint : public Read<cv::Point2d> {
   public:
-    ~ReadPoint();
-    void operator()(const cv::FileNode& node, cv::Point2d& x);
+    ~ReadPoint() {}
+   void operator()(const cv::FileNode& node, cv::Point2d& x);
 };
 
 #include "track_list.inl"
