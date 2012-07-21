@@ -50,12 +50,12 @@ TARGET_LINK_LIBRARIES(visualize-keypoints gflags)
 #  find_foreground_keypoints.cpp
 #  read_image.cpp)
 
-ADD_EXECUTABLE(extract-sift
-  extract_sift.cpp
+ADD_EXECUTABLE(extract-sift-at-keypoints
+  extract_sift_at_keypoints.cpp
   read_image.cpp
   keypoint.cpp
   descriptor.cpp)
-TARGET_LINK_LIBRARIES(extract-sift ${OpenCV_LIBS})
+TARGET_LINK_LIBRARIES(extract-sift-at-keypoints ${OpenCV_LIBS})
 
 ADD_EXECUTABLE(extract-hog
   extract_hog.cpp
