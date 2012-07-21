@@ -57,13 +57,13 @@ ADD_EXECUTABLE(extract-sift
   descriptor.cpp)
 TARGET_LINK_LIBRARIES(extract-sift ${OpenCV_LIBS})
 
-ADD_EXECUTABLE(extract-dense-sift
-  extract_dense_sift.cpp
+ADD_EXECUTABLE(extract-hog
+  extract_hog.cpp
   read_image.cpp
   track_list.cpp
   keypoint.cpp
   descriptor.cpp)
-TARGET_LINK_LIBRARIES(extract-dense-sift ${OpenCV_LIBS})
+TARGET_LINK_LIBRARIES(extract-hog ${OpenCV_LIBS})
 
 ADD_EXECUTABLE(match-features
   match_features.cpp
