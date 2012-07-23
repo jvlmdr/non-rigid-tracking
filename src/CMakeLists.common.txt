@@ -89,20 +89,31 @@ ADD_EXECUTABLE(adjacent-matches-to-tracks
 TARGET_LINK_LIBRARIES(adjacent-matches-to-tracks ${OpenCV_LIBS})
 TARGET_LINK_LIBRARIES(adjacent-matches-to-tracks gflags)
 
-ADD_EXECUTABLE(track-rigid-warp
-  track_rigid_warp.cpp
+ADD_EXECUTABLE(track-rigid
+  track_rigid.cpp
   read_image.cpp
+  flow.cpp
   rigid_warp.cpp
   rigid_feature.cpp
-  translation_warp.cpp
-  translation_feature.cpp
-  flow.cpp
   random_color.cpp)
-TARGET_LINK_LIBRARIES(track-rigid-warp ${OpenCV_LIBS})
-TARGET_LINK_LIBRARIES(track-rigid-warp gflags)
-TARGET_LINK_LIBRARIES(track-rigid-warp ceres)
-TARGET_LINK_LIBRARIES(track-rigid-warp glog)
-TARGET_LINK_LIBRARIES(track-rigid-warp ${LAPACK_LIB} amd camd colamd ccolamd cholmod)
+TARGET_LINK_LIBRARIES(track-rigid ${OpenCV_LIBS})
+TARGET_LINK_LIBRARIES(track-rigid gflags)
+TARGET_LINK_LIBRARIES(track-rigid ceres)
+TARGET_LINK_LIBRARIES(track-rigid glog)
+TARGET_LINK_LIBRARIES(track-rigid ${LAPACK_LIB} amd camd colamd ccolamd cholmod)
+
+ADD_EXECUTABLE(track-rigid-bidir
+  track_rigid_bidir.cpp
+  read_image.cpp
+  flow.cpp
+  rigid_warp.cpp
+  rigid_feature.cpp
+  random_color.cpp)
+TARGET_LINK_LIBRARIES(track-rigid-bidir ${OpenCV_LIBS})
+TARGET_LINK_LIBRARIES(track-rigid-bidir gflags)
+TARGET_LINK_LIBRARIES(track-rigid-bidir ceres)
+TARGET_LINK_LIBRARIES(track-rigid-bidir glog)
+TARGET_LINK_LIBRARIES(track-rigid-bidir ${LAPACK_LIB} amd camd colamd ccolamd cholmod)
 
 ADD_EXECUTABLE(extract-sift
   extract_sift.cpp
