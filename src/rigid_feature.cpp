@@ -12,4 +12,3 @@ const double* RigidFeature::data() const {
 double* RigidFeature::data() {
   return &x;
 }
-

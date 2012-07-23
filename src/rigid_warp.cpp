@@ -42,8 +42,8 @@ cv::Mat RigidWarp::matrix(const double* params) const {
 
   double scale = p->size / double(patch_size_);
   cv::Mat M = (cv::Mat_<double>(2, 3) <<
-      scale *  std::cos(p->theta), scale * std::sin(p->theta), p->x,
-      scale * -std::sin(p->theta), scale * std::cos(p->theta), p->y);
+      scale * std::cos(p->theta), scale * -std::sin(p->theta), p->x,
+      scale * std::sin(p->theta), scale *  std::cos(p->theta), p->y);
 
   return M;
 }
@@ -54,13 +54,15 @@ void RigidWarp::draw(cv::Mat& image,
                      const cv::Scalar& color) const {
   const RigidFeature* p = reinterpret_cast<const RigidFeature*>(params);
 
-  cv::Point2d c(p->x, p->y);
-  cv::Point2d i(std::cos(-p->theta), std::sin(-p->theta));
-  cv::Point2d j(std::sin(-p->theta), -std::cos(-p->theta));
-
-  double radius = (p->size - 1) / 2.;
-  i *= radius;
-  j *= radius;
+  double radius = width / 2.;
+  cv::Point2d c(0, 0);
+  cv::Point2d i(radius, 0);
+  cv::Point2d j(0, radius);
+  c = evaluate(c, params, NULL);
+  i = evaluate(i, params, NULL);
+  j = evaluate(j, params, NULL);
+  i -= c;
+  j -= c;
 
   cv::line(image, c - i - j, c + i - j, color, LINE_THICKNESS);
   cv::line(image, c - i + j, c + i + j, color, LINE_THICKNESS);

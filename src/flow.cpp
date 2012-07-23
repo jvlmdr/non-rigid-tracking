@@ -184,6 +184,50 @@ void warpAffine(const cv::Mat& src,
 
 }
 
+// Returns the number of real solutions (0, 1 or 2).
+// Sets v1 to be the larger-magnitude eigenvalue, v2 the second.
+int twoByTwoEigenvalues(const cv::Mat& A, double* v1, double* v2) {
+  double a = A.at<double>(0, 0);
+  double b = A.at<double>(0, 1);
+  double c = A.at<double>(1, 0);
+  double d = A.at<double>(1, 1);
+
+  // http://en.wikipedia.org/wiki/Eigenvalue_algorithm
+  double tr = a + d;
+  double det = a * d - b * c;
+  double delta = tr * tr - 4 * det;
+
+  int num_real_solutions;
+
+  if (delta < 0) {
+    num_real_solutions = 0;
+  } else {
+    double sqrt_delta = std::sqrt(delta);
+    double q1 = (tr + sqrt_delta) / 2;
+    double q2 = (tr - sqrt_delta) / 2;
+
+    // The larger magnitude eigenvalue should be the first.
+    if (std::abs(q1) < std::abs(q2)) {
+      std::swap(q1, q2);
+    }
+
+    if (v1 != NULL) {
+      *v1 = q1;
+    }
+    if (v2 != NULL) {
+      *v2 = q2;
+    }
+
+    if (delta == 0) {
+      num_real_solutions = 1;
+    } else {
+      num_real_solutions = 2;
+    }
+  }
+
+  return num_real_solutions;
+}
+
 void sampleAffinePatch(const cv::Mat& src,
                        cv::Mat& dst,
                        const cv::Mat& M,
@@ -201,6 +245,18 @@ void sampleAffinePatch(const cv::Mat& src,
   cv::Mat c = (cv::Mat_<double>(3, 1) << -offset, -offset, 1.);
   // Caution: Assignment of MatExpr to matrix of correct size.
   Q.col(2) = M * c;
+
+  // Get the larger eigenvalue of the rotation/scale component.
+  double lambda1;
+  twoByTwoEigenvalues(M.colRange(0, 2), &lambda1, NULL);
+
+  // If we are downsampling, use "area" interpolation.
+  int interpolation;
+  if (lambda1 > 2) {
+    interpolation = cv::INTER_AREA;
+  } else {
+    interpolation = cv::INTER_LINEAR;
+  }
 
   // Invert the warp. OpenCV doesn't seem to be doing what it says.
   cv::warpAffine(src, dst, Q, size, cv::INTER_LINEAR | cv::WARP_INVERSE_MAP,

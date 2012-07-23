@@ -2,6 +2,8 @@
 #define WARP_HPP_
 
 #include <opencv2/core/core.hpp>
+// TODO: Separate differentiation from rest of implementation?
+// Otherwise anything that uses a warp has to...
 #include <ceres/ceres.h>
 
 // Describes a parametrized affine warp.
