@@ -107,6 +107,17 @@ TARGET_LINK_LIBRARIES(track-rigid-warp ${LAPACK_LIB} amd camd colamd ccolamd cho
 ADD_EXECUTABLE(extract-sift
   extract_sift.cpp
   read_image.cpp
-  rigid_feature.cpp)
+  rigid_feature.cpp
+  rigid_warp.cpp)
 TARGET_LINK_LIBRARIES(extract-sift ${OpenCV_LIBS})
 TARGET_LINK_LIBRARIES(extract-sift gflags)
+TARGET_LINK_LIBRARIES(extract-sift glog)
+
+ADD_EXECUTABLE(test-extract-sift
+  test_extract_sift.cpp
+  read_image.cpp
+  rigid_feature.cpp
+  rigid_warp.cpp)
+TARGET_LINK_LIBRARIES(test-extract-sift ${OpenCV_LIBS})
+TARGET_LINK_LIBRARIES(test-extract-sift gflags)
+TARGET_LINK_LIBRARIES(test-extract-sift glog)
