@@ -168,13 +168,12 @@ WarpTracker::WarpTracker(const Warp& warp,
   options_.function_tolerance = function_tolerance;
   options_.gradient_tolerance = gradient_tolerance;
   options_.parameter_tolerance = parameter_tolerance;
-  options_.check_gradients = true;
 }
 
 void WarpTracker::feedImage(const cv::Mat& image) {
   // Rotate buffer and copy new image in.
   previous_image_ = image_;
-  image.copyTo(image_);
+  image_ = image.clone();
 
   // Compute gradients.
   cv::Mat diff = (cv::Mat_<double>(1, 3) << -0.5, 0, 0.5);
@@ -189,8 +188,10 @@ bool WarpTracker::track(double* feature) const {
   cv::Mat reference;
   sampleAffinePatch(previous_image_, reference, M, patch_size_);
 
-  return trackPatch(*warp_, patch_size_, reference, image_, ddx_image_,
+  bool ok = trackPatch(*warp_, patch_size_, reference, image_, ddx_image_,
       ddy_image_, feature, options_, iteration_limit_is_fatal_, max_condition_);
+
+  return ok;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
