@@ -293,6 +293,27 @@ FrameIterator_<T> FrameIterator_<T>::operator++(int) {
 }
 
 template<class T>
+void FrameIterator_<T>::seekToStart() {
+  bool found = false;
+
+  while (!found && !end()) {
+    Points points;
+    getPoints(points);
+
+    found = !points.empty();
+
+    if (!found) {
+      ++(*this);
+    }
+  }
+}
+
+template<class T>
+int FrameIterator_<T>::t() const {
+  return t_;
+}
+
+template<class T>
 void FrameIterator_<T>::getPoints(Points& points) const {
   // Iterate through tracks.
   typename CursorList::const_iterator cursor;

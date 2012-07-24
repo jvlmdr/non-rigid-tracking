@@ -119,6 +119,11 @@ class FrameIterator_ {
     // Post-increment.
     FrameIterator_<T> operator++(int);
 
+    // Seek to the start of the tracks.
+    void seekToStart();
+    // Get current time.
+    int t() const;
+
   private:
     // Maintain a list of positions in each track.
     typedef TrackCursor_<T> Cursor;
