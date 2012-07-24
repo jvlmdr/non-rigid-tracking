@@ -6,7 +6,7 @@
 #include <ceres/ceres.h>
 
 ////////////////////////////////////////////////////////////////////////////////
-// solveFlow
+// trackPatch
 
 namespace {
 
@@ -104,16 +104,16 @@ double cond(const cv::Mat& A) {
 }
 
 // Returns false if the optimisation did not converge.
-bool solveFlow(const Warp& warp,
-               int patch_size,
-               const cv::Mat& reference,
-               const cv::Mat& image,
-               const cv::Mat& ddx_image,
-               const cv::Mat& ddy_image,
-               double* params,
-               const ceres::Solver::Options& options,
-               bool iteration_limit_is_fatal,
-               double max_condition) {
+bool trackPatch(const Warp& warp,
+                int patch_size,
+                const cv::Mat& reference,
+                const cv::Mat& image,
+                const cv::Mat& ddx_image,
+                const cv::Mat& ddy_image,
+                double* params,
+                const ceres::Solver::Options& options,
+                bool iteration_limit_is_fatal,
+                double max_condition) {
   // Set up non-linear optimization problem.
   ceres::CostFunction* objective = new WarpCost(warp, patch_size, reference,
       image, ddx_image, ddy_image);
@@ -146,6 +146,51 @@ bool solveFlow(const Warp& warp,
   }
 
   return true;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+
+WarpTracker::WarpTracker(const Warp& warp,
+                         int patch_size,
+                         int max_num_iterations,
+                         double function_tolerance,
+                         double gradient_tolerance,
+                         double parameter_tolerance,
+                         bool iteration_limit_is_fatal,
+                         double max_condition)
+      : warp_(&warp),
+        patch_size_(patch_size),
+        options_(),
+        iteration_limit_is_fatal_(iteration_limit_is_fatal),
+        max_condition_(max_condition) {
+  options_.linear_solver_type = ceres::DENSE_QR;
+  options_.max_num_iterations = max_num_iterations;
+  options_.function_tolerance = function_tolerance;
+  options_.gradient_tolerance = gradient_tolerance;
+  options_.parameter_tolerance = parameter_tolerance;
+  options_.check_gradients = true;
+}
+
+void WarpTracker::feedImage(const cv::Mat& image) {
+  // Rotate buffer and copy new image in.
+  previous_image_ = image_;
+  image.copyTo(image_);
+
+  // Compute gradients.
+  cv::Mat diff = (cv::Mat_<double>(1, 3) << -0.5, 0, 0.5);
+  cv::Mat identity = (cv::Mat_<double>(1, 1) << 1);
+  cv::sepFilter2D(image_, ddx_image_, -1, diff, identity);
+  cv::sepFilter2D(image_, ddy_image_, -1, identity, diff);
+}
+
+bool WarpTracker::track(double* feature) const {
+  // Sample patch from previous image.
+  cv::Mat M = warp_->matrix(feature);
+  cv::Mat reference;
+  sampleAffinePatch(previous_image_, reference, M, patch_size_);
+
+  return trackPatch(*warp_, patch_size_, reference, image_, ddx_image_,
+      ddy_image_, feature, options_, iteration_limit_is_fatal_, max_condition_);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -267,21 +312,11 @@ void sampleAffinePatch(const cv::Mat& src,
 ////////////////////////////////////////////////////////////////////////////////
 // checkAppearance
 
-double meanPixelDifference(const Warp& warp,
-                           int patch_size,
-                           const cv::Mat& reference,
-                           const cv::Mat& image,
-                           const double* params) {
-  // Sample patch from image.
-  cv::Mat M = warp.matrix(params);
+double averageResidual(const cv::Mat& A, const cv::Mat& B) {
+  cv::Mat diff = cv::abs(A - B);
+  int num_pixels = A.total();
 
-  cv::Mat patch;
-  sampleAffinePatch(image, patch, M, patch_size);
+  double error = std::accumulate(diff.begin<double>(), diff.end<double>(), 0.);
 
-  cv::Mat diff = cv::abs(reference - patch);
-  int num_pixels = patch_size * patch_size;
-
-  return std::accumulate(diff.begin<double>(), diff.end<double>(), 0.) /
-      num_pixels;
+  return error / num_pixels;
 }
-

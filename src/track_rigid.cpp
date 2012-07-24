@@ -29,7 +29,7 @@ const int MAX_NUM_ITERATIONS = 100;
 const double FUNCTION_TOLERANCE = 1e-4;
 const double GRADIENT_TOLERANCE = 0;
 const double PARAMETER_TOLERANCE = 1e-4;
-const bool ITERATION_LIMIT_IS_FATAL = true;
+const bool ITERATION_LIMIT_IS_FATAL = false;
 const double MAX_CONDITION = 1000;
 
 // Do not want to sample below one pixel.
@@ -37,7 +37,8 @@ const double MIN_SCALE = 0.5;
 
 // Maximum average intensity difference as a fraction of the range.
 // (A value of 1 means anything is permitted.)
-const double MAX_RESIDUAL = 0.1;
+const bool CHECK_RESIDUAL = true;
+const double MAX_AVERAGE_RESIDUAL = 0.1;
 
 const int MAX_NUM_FEATURES = 100;
 const int NUM_OCTAVE_LAYERS = 3;
@@ -52,29 +53,30 @@ std::string makeFilename(const std::string& format, int n) {
   return boost::str(boost::format(format) % (n + 1));
 }
 
-////////////////////////////////////////////////////////////////////////////////
-
 RigidFeature keypointToRigidFeature(const cv::KeyPoint& keypoint) {
   double theta = keypoint.angle / 180. * CV_PI;
   return RigidFeature(keypoint.pt.x, keypoint.pt.y, keypoint.size, theta);
 }
 
-struct ColoredFeature {
-  RigidFeature value;
+struct Feature {
+  RigidFeature state;
+  cv::Mat appearance;
   cv::Scalar color;
 
-  ColoredFeature() : value(), color() {}
+  Feature() : state(), appearance(), color() {}
 
-  ColoredFeature(const RigidFeature& value, const cv::Scalar& color)
-      : value(value), color(color) {}
+  Feature(const RigidFeature& state, const cv::Scalar& color)
+      : state(state), appearance(), color(color) {}
 };
 
-ColoredFeature makeRandomlyColoredFeature(const cv::KeyPoint& keypoint) {
-  return ColoredFeature(keypointToRigidFeature(keypoint),
+Feature makeRandomColorFeature(const cv::KeyPoint& keypoint) {
+  return Feature(keypointToRigidFeature(keypoint),
       randomColor(SATURATION, BRIGHTNESS));
 }
 
 int main(int argc, char** argv) {
+  google::InitGoogleLogging(argv[0]);
+
   if (argc < 3) {
     std::cerr << "usage: " << argv[0] << " image-format output-format" <<
       std::endl;
@@ -86,20 +88,15 @@ int main(int argc, char** argv) {
 
   int t = 0;
   bool ok = true;
-  cv::Mat previous_image;
-
-  ceres::Solver::Options options;
-  options.linear_solver_type = ceres::DENSE_QR;
-  options.max_num_iterations = MAX_NUM_ITERATIONS;
-  options.function_tolerance = FUNCTION_TOLERANCE;
-  options.gradient_tolerance = GRADIENT_TOLERANCE;
-  options.parameter_tolerance = PARAMETER_TOLERANCE;
 
   RigidWarp rigid_warp(PATCH_SIZE);
   Warp& warp = rigid_warp;
 
-  // Start at image center with unit scale and zero orientation.
-  typedef std::list<ColoredFeature> FeatureList;
+  WarpTracker tracker(warp, PATCH_SIZE, MAX_NUM_ITERATIONS, FUNCTION_TOLERANCE,
+      GRADIENT_TOLERANCE, PARAMETER_TOLERANCE, ITERATION_LIMIT_IS_FATAL,
+      MAX_CONDITION);
+
+  typedef std::list<Feature> FeatureList;
   FeatureList features;
 
   while (ok) {
@@ -116,8 +113,10 @@ int main(int argc, char** argv) {
     cv::Mat image;
     integer_image.convertTo(image, cv::DataType<double>::type, 1. / 255.);
 
+    tracker.feedImage(image);
+
     if (t == 0) {
-      // Get some features to track.
+      // First frame: get some features.
       std::vector<cv::KeyPoint> keypoints;
       cv::SIFT sift(MAX_NUM_FEATURES, NUM_OCTAVE_LAYERS, CONTRAST_THRESHOLD,
           EDGE_THRESHOLD, SIGMA);
@@ -125,68 +124,71 @@ int main(int argc, char** argv) {
 
       // Convert keypoints to our features.
       std::transform(keypoints.begin(), keypoints.end(),
-          std::back_inserter(features), makeRandomlyColoredFeature);
+          std::back_inserter(features), makeRandomColorFeature);
+
+      // Sample appearance of each feature.
+      for (FeatureList::iterator feature = features.begin();
+           feature != features.end();
+           ++feature) {
+        // Sample patch at new position in image.
+        cv::Mat M = warp.matrix(feature->state.data());
+        sampleAffinePatch(image, feature->appearance, M, PATCH_SIZE);
+      }
 
       std::cerr << "detected " << features.size() << " features" << std::endl;
     } else {
-      // Take x and y derivatives.
-      cv::Mat ddx_image;
-      cv::Mat ddy_image;
-      cv::Mat diff = (cv::Mat_<double>(1, 3) << -0.5, 0, 0.5);
-      cv::Mat identity = (cv::Mat_<double>(1, 1) << 1);
-      cv::sepFilter2D(image, ddx_image, -1, diff, identity);
-      cv::sepFilter2D(image, ddy_image, -1, identity, diff);
+      // Iterate through features and either update or remove each.
+      FeatureList::iterator feature = features.begin();
 
-      FeatureList prev_features;
-      prev_features.swap(features);
+      while (feature != features.end()) {
+        bool remove;
+        bool tracked = tracker.track(feature->state.data());
 
-      std::map<int, ColoredFeature> results;
-      int i = 0;
+        if (!tracked) {
+          // Remove from list.
+          remove = true;
+          std::cerr << "could not track" << std::endl;
+        } else {
+          // Check that feature did not become too small.
+          double scale = feature->state.size / double(PATCH_SIZE);
 
-      for (FeatureList::const_iterator prev_feature = prev_features.begin();
-           prev_feature != prev_features.end();
-           ++prev_feature) {
-        // Sample patch from previous image.
-        cv::Mat M = warp.matrix(prev_feature->value.data());
-        cv::Mat reference;
-        sampleAffinePatch(previous_image, reference, M, PATCH_SIZE);
-
-        // Use previous state as initialization (and keep same color).
-        ColoredFeature feature = *prev_feature;
-        bool tracked = solveFlow(warp, PATCH_SIZE, reference, image, ddx_image,
-            ddy_image, feature.value.data(), options, ITERATION_LIMIT_IS_FATAL,
-            MAX_CONDITION);
-
-        if (tracked) {
-          double scale = feature.value.size / PATCH_SIZE;
-
-          if (scale >= MIN_SCALE) {
-            // Check appearance.
-            double residual = meanPixelDifference(warp, PATCH_SIZE, reference,
-                image, feature.value.data());
-
-            if (residual <= MAX_RESIDUAL) {
-              // Retain feature.
-              features.push_back(feature);
-            } else {
-              std::cerr << "not similar enough" << std::endl;
-            }
+          if (scale < MIN_SCALE) {
+            remove = true;
           } else {
-            std::cerr << "scale too small" << std::endl;
+            // Sample patch at new position in image.
+            cv::Mat M = warp.matrix(feature->state.data());
+            cv::Mat appearance;
+            sampleAffinePatch(image, appearance, M, PATCH_SIZE);
+
+            // Check that the feature looks similar.
+            double residual = averageResidual(feature->appearance, appearance);
+
+            if (residual > MAX_AVERAGE_RESIDUAL) {
+              remove = true;
+            } else {
+              // Keep the feature!
+              remove = false;
+              // Swap the image contents.
+              feature->appearance = appearance;
+            }
           }
         }
 
-        i += 1;
+        if (remove) {
+          feature = features.erase(feature);
+        } else {
+          ++feature;
+        }
       }
 
       std::cout << "tracked " << features.size() << " features" << std::endl;
     }
 
-    // Visualize.
+    // Visualize positions.
     for (FeatureList::const_iterator feature = features.begin();
          feature != features.end();
          ++feature) {
-      warp.draw(color_image, feature->value.data(), PATCH_SIZE, feature->color);
+      warp.draw(color_image, feature->state.data(), PATCH_SIZE, feature->color);
     }
 
     std::string output_filename = makeFilename(output_format, t);
@@ -195,7 +197,6 @@ int main(int argc, char** argv) {
     cv::imshow("frame", color_image);
     cv::waitKey(10);
 
-    image.copyTo(previous_image);
     t += 1;
   }
 
