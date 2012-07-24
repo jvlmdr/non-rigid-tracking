@@ -37,7 +37,6 @@ const double MIN_SCALE = 0.5;
 
 // Maximum average intensity difference as a fraction of the range.
 // (A value of 1 means anything is permitted.)
-const bool CHECK_RESIDUAL = true;
 const double MAX_AVERAGE_RESIDUAL = 0.1;
 
 const int MAX_NUM_FEATURES = 100;
@@ -154,6 +153,7 @@ int main(int argc, char** argv) {
 
           if (scale < MIN_SCALE) {
             remove = true;
+            std::cerr << "scale too small" << std::endl;
           } else {
             // Sample patch at new position in image.
             cv::Mat M = warp.matrix(feature->state.data());
@@ -165,6 +165,7 @@ int main(int argc, char** argv) {
 
             if (residual > MAX_AVERAGE_RESIDUAL) {
               remove = true;
+              std::cerr << "residual too large" << std::endl;
             } else {
               // Keep the feature!
               remove = false;

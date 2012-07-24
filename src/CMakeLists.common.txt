@@ -108,6 +108,7 @@ ADD_EXECUTABLE(track-rigid-bidir
   flow.cpp
   rigid_warp.cpp
   rigid_feature.cpp
+  keypoint.cpp
   random_color.cpp)
 TARGET_LINK_LIBRARIES(track-rigid-bidir ${OpenCV_LIBS})
 TARGET_LINK_LIBRARIES(track-rigid-bidir gflags)
