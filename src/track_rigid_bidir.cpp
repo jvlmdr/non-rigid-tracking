@@ -218,8 +218,6 @@ void trackFeatures(const std::vector<StaticFeature>& features,
           ++it;
         }
       }
-
-      std::cerr << "tracked " << active.size() << " features" << std::endl;
     }
 
     // Add each point to the track.
@@ -246,6 +244,9 @@ void trackFeatures(const std::vector<StaticFeature>& features,
     if (save) {
       cv::imwrite(makeFilename(save_format, t), color_image);
     }
+
+    std::cout << "frame " << t << ": " << active.size() << " features" <<
+      std::endl;
 
     if (reverse) {
       t -= 1;
