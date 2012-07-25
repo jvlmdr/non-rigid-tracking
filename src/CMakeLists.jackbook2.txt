@@ -11,7 +11,7 @@ LINK_DIRECTORIES("../klt")
 
 # Ceres
 INCLUDE_DIRECTORIES("/Users/jack/src/ceres-solver-1.2.3/include")
-LINK_DIRECTORIES("/Users/jack/src/ceres-solver-1.2.3/debug/internal/ceres")
+LINK_DIRECTORIES("/Users/jack/src/ceres-solver-1.2.3/build/release/internal/ceres")
 INCLUDE_DIRECTORIES("/usr/local/include/eigen3")
 FIND_LIBRARY(LAPACK_LIB NAMES vecLib)
 
