@@ -12,6 +12,14 @@ SET(OpenCV_LIBS opencv_core opencv_highgui opencv_imgproc
 #INCLUDE_DIRECTORIES(${OpenCV_INCLUDE_DIRS})
 #LINK_DIRECTORIES(${OpenCV_LINK_DIRS})
 
+# Ceres
+INCLUDE_DIRECTORIES("/home/jvalmadr/src/ceres-solver/include")
+LINK_DIRECTORIES("/home/jvalmadr/src/ceres-solver/release/internal/ceres")
+# Eigen
+INCLUDE_DIRECTORIES("/home/jvalmadr/local/include/eigen3")
+# BLAS and LAPACK
+SET(LAPACK_LIB blas lapack)
+
 # KLT
 INCLUDE_DIRECTORIES("../klt")
 LINK_DIRECTORIES("../klt")

@@ -101,7 +101,8 @@ TARGET_LINK_LIBRARIES(track-rigid gflags)
 TARGET_LINK_LIBRARIES(track-rigid glog)
 TARGET_LINK_LIBRARIES(track-rigid ceres)
 TARGET_LINK_LIBRARIES(track-rigid cxsparse)
-TARGET_LINK_LIBRARIES(track-rigid ${LAPACK_LIB} amd camd colamd ccolamd cholmod)
+TARGET_LINK_LIBRARIES(track-rigid cholmod ccolamd camd colamd amd)
+TARGET_LINK_LIBRARIES(track-rigid ${LAPACK_LIB})
 
 ADD_EXECUTABLE(track-rigid-bidir
   track_rigid_bidir.cpp
@@ -116,7 +117,8 @@ TARGET_LINK_LIBRARIES(track-rigid-bidir gflags)
 TARGET_LINK_LIBRARIES(track-rigid-bidir glog)
 TARGET_LINK_LIBRARIES(track-rigid-bidir ceres)
 TARGET_LINK_LIBRARIES(track-rigid-bidir cxsparse)
-TARGET_LINK_LIBRARIES(track-rigid-bidir ${LAPACK_LIB} amd camd colamd ccolamd cholmod)
+TARGET_LINK_LIBRARIES(track-rigid-bidir cholmod ccolamd camd colamd amd)
+TARGET_LINK_LIBRARIES(track-rigid-bidir ${LAPACK_LIB})
 
 ADD_EXECUTABLE(extract-sift-tracks
   extract_sift_tracks.cpp
