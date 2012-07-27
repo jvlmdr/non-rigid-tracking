@@ -8,14 +8,17 @@ WriteDescriptor::~WriteDescriptor() {}
 
 void WriteDescriptor::operator()(cv::FileStorage& file,
                                  const Descriptor& descriptor) {
+  file << "{";
+  file << "descriptor";
   descriptor.write(file);
+  file << "}";
 }
 
 ReadDescriptor::~ReadDescriptor() {}
 
 void ReadDescriptor::operator()(const cv::FileNode& node,
                                 Descriptor& descriptor) {
-  descriptor.read(node);
+  descriptor.read(node["descriptor"]);
 }
 
 namespace {

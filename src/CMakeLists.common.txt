@@ -138,3 +138,11 @@ ADD_EXECUTABLE(test-extract-sift
 TARGET_LINK_LIBRARIES(test-extract-sift ${OpenCV_LIBS})
 TARGET_LINK_LIBRARIES(test-extract-sift gflags)
 TARGET_LINK_LIBRARIES(test-extract-sift glog)
+
+ADD_EXECUTABLE(pca-descriptor
+  pca_descriptor.cpp
+  descriptor.cpp
+  random_color.cpp)
+TARGET_LINK_LIBRARIES(pca-descriptor ${OpenCV_LIBS})
+TARGET_LINK_LIBRARIES(pca-descriptor gflags)
+TARGET_LINK_LIBRARIES(pca-descriptor glog)

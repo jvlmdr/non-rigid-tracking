@@ -1,6 +1,7 @@
 #include <iostream>
 #include <numeric>
 #include <limits>
+#include <boost/bind.hpp>
 
 ////////////////////////////////////////////////////////////////////////////////
 // TrackList
@@ -14,6 +15,33 @@ TrackList_<T>::TrackList_(int size) : list_(size) {}
 template<class T>
 int firstFrame(const Track_<T>& track) {
   return track.begin()->first;
+}
+
+template<class T>
+T min(const T& a, const T& b) {
+  return std::min(a, b);
+}
+
+// Returns the first frame in the track.
+template<class T>
+int TrackList_<T>::findFirstFrame() const {
+  std::vector<int> indices;
+  std::transform(list_.begin(), list_.end(), std::back_inserter(indices),
+      firstFrame<T>);
+
+  return std::accumulate(indices.begin(), indices.end(),
+      std::numeric_limits<int>::max(), min<int>);
+}
+
+// Returns the number of points in all tracks.
+template<class T>
+int TrackList_<T>::countPoints() const {
+  std::vector<int> counts;
+
+  std::transform(list_.begin(), list_.end(), std::back_inserter(counts),
+      boost::bind(&Track_<T>::size, _1));
+
+  return std::accumulate(counts.begin(), counts.end(), int(0));
 }
 
 template<class T>
@@ -111,22 +139,6 @@ bool TrackList_<T>::load(const std::string& filename, Read<T>& read_point) {
 
   return true;
 
-}
-
-template<class T>
-T min(const T& a, const T& b) {
-  return std::min(a, b);
-}
-
-// Returns the first frame in the track.
-template<class T>
-int TrackList_<T>::findFirstFrame() const {
-  std::vector<int> indices;
-  std::transform(list_.begin(), list_.end(), std::back_inserter(indices),
-      firstFrame<T>);
-
-  return std::accumulate(indices.begin(), indices.end(),
-      std::numeric_limits<int>::max(), min<int>);
 }
 
 template<class T>

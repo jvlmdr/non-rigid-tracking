@@ -20,6 +20,14 @@ void extractRigidFeaturesFromKeypoints(
 }
 
 void extractDescriptorFromRow(const cv::Mat& row, Descriptor& descriptor) {
+  if (row.type() != cv::DataType<float>::type) {
+    throw std::runtime_error("expected 32-bit float");
+  }
+
+  if (row.total() != 128) {
+    throw std::runtime_error("expected 128-dimensional descriptor");
+  }
+
   std::copy(row.begin<float>(), row.end<float>(),
       std::back_inserter(descriptor.data));
 }
@@ -61,7 +69,8 @@ void makePyramid(const cv::Mat& byte_image,
 SiftExtractor::SiftExtractor(const cv::Mat& image,
                              int num_octave_layers,
                              double sigma)
-    : num_octave_layers_(num_octave_layers),
+    : pyramid_(),
+      num_octave_layers_(num_octave_layers),
       sigma_(sigma) {
   // Construct Gaussian pyramid.
   makePyramid(image, pyramid_, num_octave_layers_, sigma_);
@@ -76,7 +85,7 @@ void SiftExtractor::extractDescriptors(
       std::back_inserter(keypoints),
       boost::bind(&SiftExtractor::featureToRegisteredKeypoint, *this, _1));
 
-  // Note: This is not part of the API. Manually exposed by modifying header.
+  // Note: This is not part of the API. Manually exposed by modifying OpenCV.
   // Tested with OpenCV 2.4.1 only.
   cv::Mat descriptor_table = cv::Mat_<float>(keypoints.size(), 128);
   cv::calcSiftDescriptors(pyramid_, keypoints, descriptor_table,
@@ -99,14 +108,14 @@ void SiftExtractor::extractDescriptorFromKeypoint(const cv::KeyPoint& keypoint,
   std::vector<cv::KeyPoint> keypoints;
   keypoints.push_back(keypoint);
 
-  // Note: This is not part of the API. Manually exposed by modifying header.
+  // Note: This is not part of the API. Manually exposed by modifying OpenCV.
   // Tested with OpenCV 2.4.1 only.
   cv::Mat descriptor_table = cv::Mat_<float>(1, 128);
   cv::calcSiftDescriptors(pyramid_, keypoints, descriptor_table,
       num_octave_layers_);
 
   // Convert to our format.
-  extractDescriptorFromRow(descriptor_table, descriptor);
+  extractDescriptorFromRow(descriptor_table.row(0), descriptor);
 }
 
 void SiftExtractor::calculatePyramidPosition(double size,
@@ -138,6 +147,11 @@ void SiftExtractor::calculatePyramidPosition(double size,
     octave = 0;
     layer = 0;
   }
+
+  // It should never be above the limit.
+  if (octave >= pyramid_.size()) {
+    throw std::runtime_error("octave too large!");
+  }
 }
 
 // A "registered" keypoint is one that knows its octave and layer.
@@ -147,11 +161,11 @@ cv::KeyPoint SiftExtractor::featureToRegisteredKeypoint(
   float response = 0;
   int class_id = -1;
 
-  // Carry over.
   double x = feature.x;
   double y = feature.y;
   double size = feature.size;
-  double theta = feature.theta * 180. / M_PI;
+  // Angle must be between 0 and 360!
+  double theta = std::fmod(feature.theta, 2 * M_PI) * 180. / M_PI;
 
   // Find position in discretized scale space.
   int octave;

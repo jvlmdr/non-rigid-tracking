@@ -33,6 +33,9 @@ class TrackList_ {
     // Returns the first frame in the track.
     int findFirstFrame() const;
 
+    // Returns the number of points in all tracks.
+    int countPoints() const;
+
     // Saves a list of tracks to a file.
     bool save(const std::string& filename, Write<T>& write_point) const;
     // Loads a list of tracks from a file.
@@ -92,9 +95,6 @@ bool loadTracks(const std::string& filename,
                 cv::Size& size,
                 TrackList& tracks,
                 int* num_tracks);
-
-// Returns the first frame in any track.
-int findFirstFrame(const TrackList& tracks);
 
 ////////////////////////////////////////////////////////////////////////////////
 

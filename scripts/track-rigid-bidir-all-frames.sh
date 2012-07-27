@@ -3,9 +3,6 @@
 if [ $# -ne 6 ]
 then
   echo "usage: $0 image-format keypoints-format tracks-format max-frames frame-dir-format video-format"
-  echo ""
-  echo "Example"
-  echo "$0 input/my-video/%03d.png output/my-video/keypoints/%03d.yaml output/my-video/tracks/%03d.yaml"
   exit
 fi
 
