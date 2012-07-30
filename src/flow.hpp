@@ -51,10 +51,17 @@ class WarpTracker {
 
 ////////////////////////////////////////////////////////////////////////////////
 
+void sampleAffine(const cv::Mat& src,
+                  cv::Mat& dst,
+                  const cv::Mat& M,
+                  const cv::Size& size,
+                  bool invert);
+
 void sampleAffinePatch(const cv::Mat& src,
                        cv::Mat& dst,
                        const cv::Mat& M,
-                       int patch_size);
+                       int patch_width,
+                       bool invert);
 
 double averageResidual(const cv::Mat& A, const cv::Mat& B);
 

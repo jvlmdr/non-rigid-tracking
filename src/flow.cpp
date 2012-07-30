@@ -38,7 +38,7 @@ class WarpCost : public ceres::CostFunction {
       cv::Mat M = warp_->matrix(params[0]);
       // Sample image for x in regular grid.
       cv::Mat patch;
-      sampleAffinePatch(*I_, patch, M, patch_size_);
+      sampleAffinePatch(*I_, patch, M, patch_size_, false);
 
       // Compute residuals.
       cv::Mat error = cv::Mat_<double>(patch_size_, patch_size_, residuals);
@@ -53,8 +53,8 @@ class WarpCost : public ceres::CostFunction {
         // (for efficiency and hopefully correct downsampling)
         cv::Mat ddx_patch;
         cv::Mat ddy_patch;
-        sampleAffinePatch(*dIdx_, ddx_patch, M, patch_size_);
-        sampleAffinePatch(*dIdy_, ddy_patch, M, patch_size_);
+        sampleAffinePatch(*dIdx_, ddx_patch, M, patch_size_, false);
+        sampleAffinePatch(*dIdy_, ddy_patch, M, patch_size_, false);
 
         double offset = (patch_size_ - 1) / 2.;
 
@@ -168,6 +168,7 @@ WarpTracker::WarpTracker(const Warp& warp,
   options_.function_tolerance = function_tolerance;
   options_.gradient_tolerance = gradient_tolerance;
   options_.parameter_tolerance = parameter_tolerance;
+  options_.minimizer_progress_to_stdout = true;
 }
 
 void WarpTracker::feedImage(const cv::Mat& image) {
@@ -186,7 +187,7 @@ bool WarpTracker::track(double* feature) const {
   // Sample patch from previous image.
   cv::Mat M = warp_->matrix(feature);
   cv::Mat reference;
-  sampleAffinePatch(previous_image_, reference, M, patch_size_);
+  sampleAffinePatch(previous_image_, reference, M, patch_size_, false);
 
   bool ok = trackPatch(*warp_, patch_size_, reference, image_, ddx_image_,
       ddy_image_, feature, options_, iteration_limit_is_fatal_, max_condition_);
@@ -206,8 +207,8 @@ void warpAffine(const cv::Mat& src,
                 cv::Mat& dst,
                 const cv::Mat& M,
                 const cv::Size& size) {
-  if (src.type() != cv::DataType<uint8_t>::type) {
-    throw std::runtime_error("expected unsigned 8-bit integer");
+  if (src.type() != cv::DataType<double>::type) {
+    throw std::runtime_error("expected 64-bit floating point number");
   }
 
   dst.create(size.height, size.width, src.type());
@@ -222,7 +223,7 @@ void warpAffine(const cv::Mat& src,
 
       if (u >= 0 && u < src.cols && v >= 0 && v < src.rows) {
         // Non-inverted mapping!
-        dst.at<uint8_t>(y, x) = src.at<uint8_t>(v, u);
+        dst.at<double>(y, x) = src.at<double>(v, u);
       }
     }
   }
@@ -277,10 +278,19 @@ int twoByTwoEigenvalues(const cv::Mat& A, double* v1, double* v2) {
 void sampleAffinePatch(const cv::Mat& src,
                        cv::Mat& dst,
                        const cv::Mat& M,
-                       int patch_size) {
+                       int patch_width,
+                       bool invert) {
+  cv::Size size(patch_width, patch_width);
+  sampleAffine(src, dst, M, size, invert);
+}
+
+void sampleAffine(const cv::Mat& src,
+                  cv::Mat& dst,
+                  const cv::Mat& M,
+                  const cv::Size& size,
+                  bool invert) {
   // Size of patch.
-  cv::Size size(patch_size, patch_size);
-  double offset = (patch_size - 1) / 2.;
+  cv::Point2d offset((size.width - 1) / 2., (size.height - 1) / 2.);
 
   // The transformation takes the form dst(x) = src(A x + b).
   // However, we want this to be true for x' = x + c.
@@ -288,7 +298,7 @@ void sampleAffinePatch(const cv::Mat& src,
   // => A' = A
   //    b' = -A c + b        (by equating co-efficients)
   cv::Mat Q = M.clone();
-  cv::Mat c = (cv::Mat_<double>(3, 1) << -offset, -offset, 1.);
+  cv::Mat c = (cv::Mat_<double>(3, 1) << -offset.x, -offset.y, 1.);
   // Caution: Assignment of MatExpr to matrix of correct size.
   Q.col(2) = M * c;
 
@@ -297,16 +307,26 @@ void sampleAffinePatch(const cv::Mat& src,
   twoByTwoEigenvalues(M.colRange(0, 2), &lambda1, NULL);
 
   // If we are downsampling, use "area" interpolation.
-  int interpolation;
+  int interpolation_flags;
   if (lambda1 > 2) {
-    interpolation = cv::INTER_AREA;
+    interpolation_flags = cv::INTER_AREA;
   } else {
-    interpolation = cv::INTER_LINEAR;
+    interpolation_flags = cv::INTER_LINEAR;
   }
 
+  int invert_flags;
+  if (invert) {
+    // Remember our definition of inverted is the opposite to OpenCV's.
+    invert_flags = 0;
+  } else {
+    invert_flags = cv::WARP_INVERSE_MAP;
+  }
+
+  int flags = interpolation_flags | invert_flags;
+
   // Invert the warp. OpenCV doesn't seem to be doing what it says.
-  cv::warpAffine(src, dst, Q, size, cv::INTER_LINEAR | cv::WARP_INVERSE_MAP,
-      cv::BORDER_CONSTANT, cv::Scalar::all(0.));
+  cv::warpAffine(src, dst, Q, size, flags, cv::BORDER_CONSTANT,
+      cv::Scalar::all(0.));
   //warpAffine(src, dst, Q, size);
 }
 

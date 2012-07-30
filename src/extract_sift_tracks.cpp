@@ -57,18 +57,6 @@ std::string makeFilename(const std::string& format, int n) {
   return boost::str(boost::format(format) % (n + 1));
 }
 
-class ReadRigidFeature : public Read<RigidFeature> {
-  public:
-    ~ReadRigidFeature() {}
-
-    void operator()(const cv::FileNode& node, RigidFeature& feature) {
-      feature.x = static_cast<double>(node["x"]);
-      feature.y = static_cast<double>(node["y"]);
-      feature.size = static_cast<double>(node["size"]);
-      feature.theta = static_cast<double>(node["angle"]);
-    }
-};
-
 struct Feature {
   // This is "position" in a general sense. More like 2D pose.
   RigidFeature position;

@@ -131,7 +131,7 @@ int main(int argc, char** argv) {
            ++feature) {
         // Sample patch at new position in image.
         cv::Mat M = warp.matrix(feature->state.data());
-        sampleAffinePatch(image, feature->appearance, M, PATCH_SIZE);
+        sampleAffinePatch(image, feature->appearance, M, PATCH_SIZE, false);
       }
 
       std::cerr << "detected " << features.size() << " features" << std::endl;
@@ -158,7 +158,7 @@ int main(int argc, char** argv) {
             // Sample patch at new position in image.
             cv::Mat M = warp.matrix(feature->state.data());
             cv::Mat appearance;
-            sampleAffinePatch(image, appearance, M, PATCH_SIZE);
+            sampleAffinePatch(image, appearance, M, PATCH_SIZE, false);
 
             // Check that the feature looks similar.
             double residual = averageResidual(feature->appearance, appearance);

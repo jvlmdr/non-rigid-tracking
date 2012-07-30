@@ -92,20 +92,6 @@ struct TrackedFeature {
       : state(feature.state), color(feature.color), appearance() {}
 };
 
-class WriteRigidFeature : public Write<RigidFeature> {
-  public:
-    ~WriteRigidFeature() {}
-
-    void operator()(cv::FileStorage& file, const RigidFeature& x) {
-      file << "{:";
-      file << "x" << x.x;
-      file << "y" << x.y;
-      file << "size" << x.size;
-      file << "angle" << x.theta;
-      file << "}";
-    }
-};
-
 StaticFeature makeRandomColorFeature(const cv::KeyPoint& keypoint) {
   return StaticFeature(keypointToRigidFeature(keypoint),
       randomColor(SATURATION, BRIGHTNESS));
@@ -163,7 +149,8 @@ void trackFeatures(const std::vector<StaticFeature>& features,
 
         // Sample appearance.
         cv::Mat M = warp.matrix(feature->state.data());
-        sampleAffinePatch(image, active_feature.appearance, M, PATCH_SIZE);
+        sampleAffinePatch(image, active_feature.appearance, M, PATCH_SIZE,
+            false);
 
         i += 1;
       }
@@ -194,7 +181,7 @@ void trackFeatures(const std::vector<StaticFeature>& features,
             // Sample patch at new position in image.
             cv::Mat M = warp.matrix(feature.state.data());
             cv::Mat appearance;
-            sampleAffinePatch(image, appearance, M, PATCH_SIZE);
+            sampleAffinePatch(image, appearance, M, PATCH_SIZE, false);
 
             // Check that the feature looks similar.
             double residual = averageResidual(feature.appearance, appearance);

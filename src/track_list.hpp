@@ -8,21 +8,15 @@
 #include <boost/function.hpp>
 #include <opencv2/core/core.hpp>
 #include "track.hpp"
+#include "read.hpp"
+#include "write.hpp"
 
-template<class T>
-class Write {
-  public:
-    virtual ~Write() {}
-    virtual void operator()(cv::FileStorage& file, const T& x) = 0;
-};
-
-template<class T>
-class Read {
-  public:
-    virtual ~Read() {}
-    virtual void operator()(const cv::FileNode& node, T& x) = 0;
-};
-
+// List of features which each has some value at a small subset of frames.
+//
+// Provides:
+// O(1) lookup by feature index.
+// O(log n) lookup by frame index.
+// Ability to iterate through frames in order.
 template<class T>
 class TrackList_ {
   private:

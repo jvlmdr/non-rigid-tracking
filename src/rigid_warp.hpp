@@ -11,13 +11,13 @@ class RigidWarpFunction {
     bool operator()(const T* const x, const T* const p, T* q) const;
 
   private:
-    double patch_size_;
+    double resolution_;
 };
 
 class RigidWarp : public Warp {
   private:
-    // Need patch size to calculate 
-    int patch_size_;
+    // Need resolution of patch to calculate scale.
+    int resolution_;
 
     static const int NUM_PARAMS = 4;
     ceres::AutoDiffCostFunction<RigidWarpFunction, 2, 2, NUM_PARAMS> warp_;

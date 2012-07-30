@@ -148,3 +148,35 @@ ADD_EXECUTABLE(pca-descriptor
 TARGET_LINK_LIBRARIES(pca-descriptor ${OpenCV_LIBS})
 TARGET_LINK_LIBRARIES(pca-descriptor gflags)
 TARGET_LINK_LIBRARIES(pca-descriptor glog)
+
+ADD_EXECUTABLE(select-most-active-tracks
+  select_most_active_tracks.cpp
+  rigid_feature.cpp)
+TARGET_LINK_LIBRARIES(select-most-active-tracks ${OpenCV_LIBS})
+TARGET_LINK_LIBRARIES(select-most-active-tracks gflags)
+TARGET_LINK_LIBRARIES(select-most-active-tracks glog)
+
+ADD_EXECUTABLE(visualize-rigid-tracks
+  visualize_rigid_tracks.cpp
+  rigid_feature.cpp
+  rigid_warp.cpp
+  read_image.cpp
+  random_color.cpp)
+TARGET_LINK_LIBRARIES(visualize-rigid-tracks ${OpenCV_LIBS})
+TARGET_LINK_LIBRARIES(visualize-rigid-tracks gflags)
+TARGET_LINK_LIBRARIES(visualize-rigid-tracks glog)
+
+ADD_EXECUTABLE(track-rigid-test
+  track_rigid_test.cpp
+  read_image.cpp
+  flow.cpp
+  rigid_warp.cpp
+  rigid_feature.cpp
+  random_color.cpp)
+TARGET_LINK_LIBRARIES(track-rigid-test ${OpenCV_LIBS})
+TARGET_LINK_LIBRARIES(track-rigid-test gflags)
+TARGET_LINK_LIBRARIES(track-rigid-test glog)
+TARGET_LINK_LIBRARIES(track-rigid-test ceres)
+TARGET_LINK_LIBRARIES(track-rigid-test cxsparse)
+TARGET_LINK_LIBRARIES(track-rigid-test cholmod ccolamd camd colamd amd)
+TARGET_LINK_LIBRARIES(track-rigid-test ${LAPACK_LIB})

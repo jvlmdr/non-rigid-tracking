@@ -6,13 +6,13 @@ const int LINE_THICKNESS = 2;
 
 ////////////////////////////////////////////////////////////////////////////////
 
-RigidWarpFunction::RigidWarpFunction(double patch_size)
-    : patch_size_(patch_size) {}
+RigidWarpFunction::RigidWarpFunction(double resolution)
+    : resolution_(resolution) {}
 
 ////////////////////////////////////////////////////////////////////////////////
 
-RigidWarp::RigidWarp(int patch_size)
-    : patch_size_(patch_size), warp_(new RigidWarpFunction(patch_size)) {}
+RigidWarp::RigidWarp(int resolution)
+    : resolution_(resolution), warp_(new RigidWarpFunction(resolution)) {}
 
 RigidWarp::~RigidWarp() {}
 
@@ -40,7 +40,7 @@ int RigidWarp::numParams() const {
 cv::Mat RigidWarp::matrix(const double* params) const {
   const RigidFeature* p = reinterpret_cast<const RigidFeature*>(params);
 
-  double scale = p->size / double(patch_size_);
+  double scale = p->size / double(resolution_);
   cv::Mat M = (cv::Mat_<double>(2, 3) <<
       scale * std::cos(p->theta), scale * -std::sin(p->theta), p->x,
       scale * std::sin(p->theta), scale *  std::cos(p->theta), p->y);
