@@ -63,8 +63,11 @@ int main(int argc, char** argv) {
 
   std::string tracks_file = argv[1];
   std::string image_format = argv[2];
+  std::string output_format = FLAGS_output_format;
 
   bool ok;
+
+  std::cout << "loading tracks..." << std::endl;
 
   // Load tracks.
   TrackList_<RigidFeature> tracks;
@@ -74,6 +77,8 @@ int main(int argc, char** argv) {
     std::cerr << "could not load tracks" << std::endl;
     return 1;
   }
+
+  std::cout << "loaded tracks" << std::endl;
 
   // Make a list of random colors.
   typedef std::vector<cv::Scalar> ColorList;
@@ -107,8 +112,15 @@ int main(int argc, char** argv) {
     // Draw each one with its color.
     drawFeatures(color_image, features, colors);
 
-    cv::imshow("frame", color_image);
-    cv::waitKey(0);
+    if (FLAGS_save) {
+      std::string output_file = makeFilename(output_format, t);
+      cv::imwrite(output_file, color_image);
+    }
+
+    if (FLAGS_display) {
+      cv::imshow("tracks", color_image);
+      cv::waitKey(10);
+    }
 
     ++frame;
   }

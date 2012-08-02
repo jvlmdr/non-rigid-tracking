@@ -92,11 +92,13 @@ bool TrackList_<T>::save(const std::string& filename,
 template<class T>
 bool TrackList_<T>::load(const std::string& filename, Read<T>& read_point) {
   // Open file to read tracks.
+  std::cerr << "opening file..." << std::endl;
   cv::FileStorage file(filename, cv::FileStorage::READ);
   if (!file.isOpened()) {
     std::cerr << "could not open file " << filename << std::endl;
     return false;
   }
+  std::cerr << "opened file" << std::endl;
 
   // Map from integer IDs to track indices.
   typedef std::map<int, int> Lookup;

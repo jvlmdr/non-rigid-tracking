@@ -88,6 +88,9 @@ int main(int argc, char** argv) {
   cv::Mat alpha;
   pca.project(descriptors, alpha);
 
+  std::cout << descriptors << std::endl;
+  std::cout << alpha << std::endl;
+
   // Write out points in gnuplot format.
   {
     // Maintain overall descriptor index.

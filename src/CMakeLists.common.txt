@@ -40,6 +40,8 @@ ADD_EXECUTABLE(visualize-keypoints
   visualize_keypoints.cpp
   read_image.cpp
   keypoint.cpp
+  rigid_feature.cpp
+  rigid_warp.cpp
   random_color.cpp)
 TARGET_LINK_LIBRARIES(visualize-keypoints ${OpenCV_LIBS})
 TARGET_LINK_LIBRARIES(visualize-keypoints gflags)
@@ -76,6 +78,8 @@ ADD_EXECUTABLE(visualize-matches
   read_image.cpp
   keypoint.cpp
   draw_matches.cpp
+  rigid_feature.cpp
+  rigid_warp.cpp
   random_color.cpp)
 TARGET_LINK_LIBRARIES(visualize-matches ${OpenCV_LIBS})
 TARGET_LINK_LIBRARIES(visualize-matches gflags)
@@ -180,3 +184,21 @@ TARGET_LINK_LIBRARIES(track-rigid-test ceres)
 TARGET_LINK_LIBRARIES(track-rigid-test cxsparse)
 TARGET_LINK_LIBRARIES(track-rigid-test cholmod ccolamd camd colamd amd)
 TARGET_LINK_LIBRARIES(track-rigid-test ${LAPACK_LIB})
+
+ADD_EXECUTABLE(merge-rigid-tracks
+  merge_rigid_tracks.cpp
+  rigid_feature.cpp)
+TARGET_LINK_LIBRARIES(merge-rigid-tracks ${OpenCV_LIBS})
+TARGET_LINK_LIBRARIES(merge-rigid-tracks gflags)
+TARGET_LINK_LIBRARIES(merge-rigid-tracks glog)
+TARGET_LINK_LIBRARIES(merge-rigid-tracks ceres)
+TARGET_LINK_LIBRARIES(merge-rigid-tracks cxsparse)
+TARGET_LINK_LIBRARIES(merge-rigid-tracks cholmod ccolamd camd colamd amd)
+TARGET_LINK_LIBRARIES(merge-rigid-tracks ${LAPACK_LIB})
+
+ADD_EXECUTABLE(select-active-tracks
+  select_active_tracks.cpp
+  rigid_feature.cpp)
+TARGET_LINK_LIBRARIES(select-active-tracks ${OpenCV_LIBS})
+TARGET_LINK_LIBRARIES(select-active-tracks gflags)
+TARGET_LINK_LIBRARIES(select-active-tracks glog)

@@ -15,6 +15,10 @@
 #include "keypoint.hpp"
 #include "match.hpp"
 #include "random_color.hpp"
+#include "rigid_feature.hpp"
+#include "rigid_warp.hpp"
+
+const int PATCH_SIZE = 9;
 
 const double SATURATION = 0.99;
 const double BRIGHTNESS = 0.99;
@@ -25,16 +29,23 @@ DEFINE_bool(display, true, "Show in window?");
 
 typedef std::vector<cv::KeyPoint> KeypointList;
 
+// Converts a cv::KeyPoint to a RigidFeature.
+RigidFeature keypointToRigidFeature(const cv::KeyPoint& keypoint) {
+  double theta = keypoint.angle / 180. * CV_PI;
+  return RigidFeature(keypoint.pt.x, keypoint.pt.y, keypoint.size, theta);
+}
+
 // Renders a keypoint on top of an image with a random color.
 void drawKeypoint(cv::Mat& image, const cv::KeyPoint& keypoint) {
   // Generate a random color.
   cv::Scalar color = randomColor(SATURATION, BRIGHTNESS);
 
-  // Draw the keypoint in each image.
-  std::vector<cv::KeyPoint> single;
-  single.push_back(keypoint);
-  cv::drawKeypoints(image, single, image, color,
-      cv::DrawMatchesFlags::DRAW_RICH_KEYPOINTS);
+  // Convert to our format.
+  RigidFeature feature = keypointToRigidFeature(keypoint);
+
+  // Warp is just for drawing. This feels weird.
+  RigidWarp warp(PATCH_SIZE);
+  warp.draw(image, feature.data(), PATCH_SIZE, color);
 }
 
 // Renders all keypoints over an image with random colors.
