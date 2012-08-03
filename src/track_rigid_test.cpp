@@ -4,6 +4,7 @@
 #include <list>
 #include <iterator>
 #include <algorithm>
+#include <gflags/gflags.h>
 #include <boost/format.hpp>
 #include <boost/random.hpp>
 #include <opencv2/core/core.hpp>
