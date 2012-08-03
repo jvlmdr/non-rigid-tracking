@@ -10,7 +10,6 @@
 #include <opencv2/features2d/features2d.hpp>
 #include <opencv2/nonfree/nonfree.hpp>
 #include "read_image.hpp"
-#include "keypoint.hpp"
 #include "rigid_feature.hpp"
 #include "sift.hpp"
 #include "writer.hpp"
@@ -31,7 +30,7 @@ std::string usage(const char* argv0) {
     std::endl;
   usage << std::endl;
   usage << "Sample usage:" << std::endl;
-  usage << argv0 << " image descriptors" << std::endl;
+  usage << argv0 << " image features" << std::endl;
 
   return usage.str();
 }
@@ -108,7 +107,7 @@ int main(int argc, char** argv) {
   }
 
   std::string image_filename = argv[1];
-  std::string keypoints_filename = argv[2];
+  std::string features_filename = argv[2];
   double CONTRAST_THRESHOLD = FLAGS_contrast_threshold;
 
   // Read image.
@@ -117,7 +116,6 @@ int main(int argc, char** argv) {
   bool ok = readImage(image_filename, color_image, image);
   CHECK(ok) << "Could not read image";
 
-  // Extract features.
   LOG(INFO) << "Extracting features...";
 
   FeatureList features;
@@ -128,7 +126,7 @@ int main(int argc, char** argv) {
   // Save out to file.
   FeatureWriter feature_writer;
   VectorWriter<Feature> writer(feature_writer);
-  ok = save(keypoints_filename, features, writer);
+  ok = save(features_filename, features, writer);
 
   CHECK(ok) << "Could not save descriptors";
 
