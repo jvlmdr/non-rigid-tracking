@@ -35,6 +35,8 @@ ADD_EXECUTABLE(find-keypoints
   read_image.cpp
   keypoint.cpp)
 TARGET_LINK_LIBRARIES(find-keypoints ${OpenCV_LIBS})
+TARGET_LINK_LIBRARIES(find-keypoints gflags)
+TARGET_LINK_LIBRARIES(find-keypoints glog)
 
 ADD_EXECUTABLE(visualize-keypoints
   visualize_keypoints.cpp
@@ -202,3 +204,23 @@ ADD_EXECUTABLE(select-active-tracks
 TARGET_LINK_LIBRARIES(select-active-tracks ${OpenCV_LIBS})
 TARGET_LINK_LIBRARIES(select-active-tracks gflags)
 TARGET_LINK_LIBRARIES(select-active-tracks glog)
+
+ADD_EXECUTABLE(effect-of-sift-threshold
+  effect_of_sift_threshold.cpp
+  descriptor.cpp
+  match.cpp)
+TARGET_LINK_LIBRARIES(effect-of-sift-threshold ${OpenCV_LIBS})
+TARGET_LINK_LIBRARIES(effect-of-sift-threshold gflags)
+TARGET_LINK_LIBRARIES(effect-of-sift-threshold glog)
+
+ADD_EXECUTABLE(find-keypoints-and-extract-descriptors
+  find_keypoints_and_extract_descriptors.cpp
+  read_image.cpp
+  rigid_feature.cpp
+  rigid_warp.cpp
+  keypoint.cpp
+  descriptor.cpp
+  sift.cpp)
+TARGET_LINK_LIBRARIES(find-keypoints-and-extract-descriptors ${OpenCV_LIBS})
+TARGET_LINK_LIBRARIES(find-keypoints-and-extract-descriptors gflags)
+TARGET_LINK_LIBRARIES(find-keypoints-and-extract-descriptors glog)
