@@ -15,6 +15,7 @@
 #include <glog/logging.h>
 #include "descriptor.hpp"
 #include "random_color.hpp"
+#include "track_list.hpp"
 
 const int NUM_DIMENSIONS = 2;
 

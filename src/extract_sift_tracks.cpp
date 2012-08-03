@@ -15,6 +15,7 @@
 #include <gflags/gflags.h>
 #include <glog/logging.h>
 #include "read_image.hpp"
+#include "track_list.hpp"
 #include "warp.hpp"
 #include "rigid_warp.hpp"
 #include "rigid_feature.hpp"

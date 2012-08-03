@@ -21,6 +21,12 @@ void ReadDescriptor::operator()(const cv::FileNode& node,
   descriptor.read(node["descriptor"]);
 }
 
+DescriptorReader::~DescriptorReader() {}
+
+void DescriptorReader::read(const cv::FileNode& node, Descriptor& descriptor) {
+  descriptor.read(node["descriptor"]);
+}
+
 namespace {
 
 template<typename T>

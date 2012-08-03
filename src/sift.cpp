@@ -1,5 +1,6 @@
 #include "sift.hpp"
 #include <boost/bind.hpp>
+#include <stdexcept>
 
 const int SIFT_FIXPT_SCALE = 48;
 const double SIFT_INIT_SIGMA = 0.5;

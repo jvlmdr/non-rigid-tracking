@@ -4,7 +4,9 @@
 #include <opencv2/core/core.hpp>
 #include <string>
 #include <vector>
-#include "track_list.hpp"
+#include "read.hpp"
+#include "write.hpp"
+#include "reader.hpp"
 
 struct Descriptor {
   typedef std::vector<double> Data;
@@ -25,6 +27,12 @@ struct WriteDescriptor : public Write<Descriptor> {
 struct ReadDescriptor : public Read<Descriptor> {
   ~ReadDescriptor();
   void operator()(const cv::FileNode& node, Descriptor& descriptor);
+};
+
+class DescriptorReader : public Reader<Descriptor> {
+  public:
+    ~DescriptorReader();
+    void read(const cv::FileNode& node, Descriptor& descriptor);
 };
 
 // Saves a list of descriptors to a file.

@@ -13,6 +13,7 @@
 #include "descriptor.hpp"
 #include "keypoint.hpp"
 #include "match.hpp"
+#include "vector_reader.hpp"
 
 // List of descriptors.
 typedef std::vector<Descriptor> DescriptorList;
@@ -26,6 +27,7 @@ std::string makeFilename(const std::string& format, double threshold, int n) {
 
 void listToMatrix(const DescriptorList& list, cv::Mat& matrix) {
   int rows = list.size();
+  CHECK(rows != 0);
   int cols = list.front().data.size();
   matrix.create(rows, cols, cv::DataType<float>::type);
 
@@ -147,7 +149,7 @@ int main(int argc, char** argv) {
   google::ParseCommandLineFlags(&argc, &argv, true);
   google::InitGoogleLogging(argv[0]);
 
-  if (argc != 3) {
+  if (argc != 6) {
     google::ShowUsageWithFlags(argv[0]);
     return 1;
   }
@@ -158,21 +160,23 @@ int main(int argc, char** argv) {
   double threshold_step = boost::lexical_cast<double>(argv[4]);
   int num_thresholds = boost::lexical_cast<int>(argv[5]);
 
-  bool ok = true;
-
-  for (int i = 0; i < num_thresholds && ok; i += 1) {
+  // Really this should be farmed out MapReduce style.
+  // No machine available at the moment though so why bother.
+  for (int i = 0; i < num_thresholds; i += 1) {
     double threshold = base_threshold * std::pow(threshold_step, i);
 
     LOG(INFO) << "Threshold: " << threshold << std::endl;
 
+    int t = 0;
     double mean_num_descriptors = 0;
     double mean_num_exhaustive_matches = 0;
     double mean_exhaustive_time = 0;
     double mean_num_flann_matches = 0;
     double mean_flann_time = 0;
 
-    int t = 0;
-    while (ok) {
+    bool have_frames = true;
+
+    while (have_frames) {
       // Build filenames.
       std::string descriptors_file1 = makeFilename(descriptors_format1,
           threshold, t);
@@ -183,14 +187,22 @@ int main(int argc, char** argv) {
       DescriptorList descriptors1;
       DescriptorList descriptors2;
 
-      ok = loadDescriptors(descriptors_file1, descriptors1);
-      if (!ok) {
+      DescriptorReader descriptor_reader;
+      VectorReader<Descriptor> reader(descriptor_reader);
+
+      LOG(INFO) << "Loading descriptors from `" << descriptors_file1 << "'";
+      have_frames = load(descriptors_file1, descriptors1, reader);
+      if (!have_frames) {
         continue;
       }
-      ok = loadDescriptors(descriptors_file2, descriptors2);
-      if (!ok) {
+      LOG(INFO) << "Loaded " << descriptors1.size() << " descriptors";
+
+      LOG(INFO) << "Loading descriptors from `" << descriptors_file2 << "'";
+      have_frames = load(descriptors_file2, descriptors2, reader);
+      if (!have_frames) {
         continue;
       }
+      LOG(INFO) << "Loaded " << descriptors2.size() << " descriptors";
 
       double exhaustive_time;
       double flann_time;
@@ -200,7 +212,7 @@ int main(int argc, char** argv) {
       // Match the two lists of descriptors using brute force and FLANN.
       match(descriptors1, descriptors2, exhaustive_matches, false,
           exhaustive_time);
-      match(descriptors1, descriptors2, flann_matches, false, flann_time);
+      match(descriptors1, descriptors2, flann_matches, true, flann_time);
 
       mean_num_descriptors += descriptors1.size();
       mean_num_descriptors += descriptors2.size();
@@ -208,6 +220,8 @@ int main(int argc, char** argv) {
       mean_exhaustive_time += exhaustive_time;
       mean_num_flann_matches += flann_matches.size();
       mean_flann_time += flann_time;
+
+      t += 1;
     }
 
     mean_num_descriptors /= 2 * t;
