@@ -18,5 +18,5 @@ set terminal postscript eps color enhanced
 set output "$2"
 set size ratio -1
 
-plot "$data" using 1:2:3 notitle with lines lc rgb variable
+plot "$data" using 1:2:3 notitle with linespoints lc rgb variable pointtype 6
 EOF
