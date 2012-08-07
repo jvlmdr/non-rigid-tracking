@@ -73,6 +73,7 @@ ADD_EXECUTABLE(match-features
   match.cpp)
 TARGET_LINK_LIBRARIES(match-features ${OpenCV_LIBS})
 TARGET_LINK_LIBRARIES(match-features gflags)
+TARGET_LINK_LIBRARIES(match-features glog)
 
 ADD_EXECUTABLE(visualize-matches
   visualize_matches.cpp
@@ -82,9 +83,12 @@ ADD_EXECUTABLE(visualize-matches
   draw_matches.cpp
   rigid_feature.cpp
   rigid_warp.cpp
-  random_color.cpp)
+  random_color.cpp
+  match_reader.cpp
+  rigid_feature_reader.cpp)
 TARGET_LINK_LIBRARIES(visualize-matches ${OpenCV_LIBS})
 TARGET_LINK_LIBRARIES(visualize-matches gflags)
+TARGET_LINK_LIBRARIES(visualize-matches glog)
 
 ADD_EXECUTABLE(adjacent-matches-to-tracks
   adjacent_matches_to_tracks.cpp
@@ -224,3 +228,11 @@ ADD_EXECUTABLE(find-keypoints-and-extract-descriptors
 TARGET_LINK_LIBRARIES(find-keypoints-and-extract-descriptors ${OpenCV_LIBS})
 TARGET_LINK_LIBRARIES(find-keypoints-and-extract-descriptors gflags)
 TARGET_LINK_LIBRARIES(find-keypoints-and-extract-descriptors glog)
+
+ADD_EXECUTABLE(optimal-triangulation-test
+    optimal_triangulation_test.cpp
+    optimal_triangulation.cpp
+    roots.cpp)
+TARGET_LINK_LIBRARIES(optimal-triangulation-test ${OpenCV_LIBS})
+TARGET_LINK_LIBRARIES(optimal-triangulation-test glog)
+TARGET_LINK_LIBRARIES(optimal-triangulation-test gsl)

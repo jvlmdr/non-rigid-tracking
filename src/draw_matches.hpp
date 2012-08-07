@@ -3,12 +3,12 @@
 
 #include <vector>
 #include <opencv2/core/core.hpp>
-#include <opencv2/features2d/features2d.hpp>
 #include "match.hpp"
+#include "rigid_feature.hpp"
 
-void drawMatches(const std::vector<cv::KeyPoint>& keypoints1,
-                 const std::vector<cv::KeyPoint>& keypoints2,
-                 const MatchList& matches,
+void drawMatches(const std::vector<RigidFeature>& keypoints1,
+                 const std::vector<RigidFeature>& keypoints2,
+                 const std::vector<Match>& matches,
                  cv::Mat& image1,
                  cv::Mat& image2,
                  cv::Mat& render);

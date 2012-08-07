@@ -14,12 +14,16 @@
 #include "keypoint.hpp"
 #include "match.hpp"
 #include "draw_matches.hpp"
+#include "match_reader.hpp"
+#include "vector_reader.hpp"
+#include "rigid_feature.hpp"
+#include "rigid_feature_reader.hpp"
 
 DEFINE_string(output_file, "matches.png", "Location to save image.");
 DEFINE_bool(save, false, "Save to file?");
 DEFINE_bool(display, true, "Show matches?");
 
-typedef std::vector<cv::KeyPoint> KeypointList;
+typedef std::vector<RigidFeature> RigidFeatureList;
 
 int main(int argc, char** argv) {
   std::ostringstream usage;
@@ -30,6 +34,7 @@ int main(int argc, char** argv) {
 
   google::SetUsageMessage(usage.str());
   google::ParseCommandLineFlags(&argc, &argv, true);
+  google::InitGoogleLogging(argv[0]);
 
   if (argc != 6) {
     google::ShowUsageWithFlags(argv[0]);
@@ -44,10 +49,12 @@ int main(int argc, char** argv) {
   std::string output_file = FLAGS_output_file;
 
   bool ok;
+  MatchList matches;
 
   // Load matches.
-  MatchList matches;
-  ok = loadMatches(matches_file, matches);
+  MatchReader match_reader;
+  VectorReader<Match> match_list_reader(match_reader);
+  ok = load(matches_file, matches, match_list_reader);
   if (!ok) {
     std::cerr << "could not load matches" << std::endl;
     return 1;
@@ -68,15 +75,19 @@ int main(int argc, char** argv) {
     return 1;
   }
 
+  RigidFeatureList keypoints1;
+  RigidFeatureList keypoints2;
+
   // Load keypoints.
-  KeypointList keypoints1;
-  KeypointList keypoints2;
-  ok = loadKeypoints(keypoints_file1, keypoints1);
+  RigidFeatureReader feature_reader;
+  VectorReader<RigidFeature> feature_list_reader(feature_reader);
+
+  ok = load(keypoints_file1, keypoints1, feature_list_reader);
   if (!ok) {
     std::cerr << "could not load keypoints" << std::endl;
     return 1;
   }
-  ok = loadKeypoints(keypoints_file2, keypoints2);
+  ok = load(keypoints_file2, keypoints2, feature_list_reader);
   if (!ok) {
     std::cerr << "could not load keypoints" << std::endl;
     return 1;

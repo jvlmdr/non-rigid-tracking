@@ -8,29 +8,20 @@ const int PATCH_SIZE = 9;
 const double SATURATION = 0.99;
 const double BRIGHTNESS = 0.99;
 
-typedef std::vector<cv::KeyPoint> KeypointList;
-
-// Converts a cv::KeyPoint to a RigidFeature.
-RigidFeature keypointToRigidFeature(const cv::KeyPoint& keypoint) {
-  double theta = keypoint.angle / 180. * CV_PI;
-  return RigidFeature(keypoint.pt.x, keypoint.pt.y, keypoint.size, theta);
-}
+typedef std::vector<RigidFeature> RigidFeatureList;
 
 // Renders a keypoint on top of an image with a random color.
 void drawKeypoint(cv::Mat& image,
-                  const cv::KeyPoint& keypoint,
+                  const RigidFeature& feature,
                   const cv::Scalar& color) {
-  // Convert to our format.
-  RigidFeature feature = keypointToRigidFeature(keypoint);
-
   // Warp is just for drawing. This feels weird.
   RigidWarp warp(PATCH_SIZE);
   warp.draw(image, feature.data(), PATCH_SIZE, color);
 }
 
-void drawMatches(const KeypointList& keypoints1,
-                 const KeypointList& keypoints2,
-                 const MatchList& matches,
+void drawMatches(const std::vector<RigidFeature>& keypoints1,
+                 const std::vector<RigidFeature>& keypoints2,
+                 const std::vector<Match>& matches,
                  cv::Mat& image1,
                  cv::Mat& image2,
                  cv::Mat& render) {
