@@ -16,6 +16,12 @@ class VectorReader : public Reader<std::vector<T> > {
     Reader<T>* reader_;
 };
 
+// Loads a list of anything which has an appropriate Reader.
+template<class T>
+bool loadList(const std::string& filename,
+              std::vector<T>& list,
+              Reader<T>& reader);
+
 #include "vector_reader.inl"
 
 #endif

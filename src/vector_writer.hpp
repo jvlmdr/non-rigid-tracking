@@ -16,6 +16,12 @@ class VectorWriter : public Writer<std::vector<T> > {
     Writer<T>* writer_;
 };
 
+// Saves a list of anything which has an appropriate Writer.
+template<class T>
+bool saveList(const std::string& filename,
+              const std::vector<T>& list,
+              Writer<T>& writer);
+
 #include "vector_writer.inl"
 
 #endif

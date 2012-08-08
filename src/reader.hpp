@@ -3,6 +3,7 @@
 
 #include <opencv2/core/core.hpp>
 
+// Describes a way of deserializing T.
 template<class T>
 class Reader {
   public:

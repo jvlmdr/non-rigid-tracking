@@ -9,7 +9,7 @@ bool load(const std::string& filename, T& x, Reader<T>& reader) {
     return false;
   }
 
-  reader.read(file["root"], x);
+  reader.read(file.root(), x);
 
   return true;
 }

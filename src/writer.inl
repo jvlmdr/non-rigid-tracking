@@ -10,7 +10,6 @@ bool save(const std::string& filename, const T& x, Writer<T>& writer) {
     return false;
   }
 
-  file << "root";
   writer.write(file, x);
 
   return true;

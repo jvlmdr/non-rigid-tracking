@@ -237,8 +237,19 @@ TARGET_LINK_LIBRARIES(optimal-triangulation-test gsl)
 
 ADD_EXECUTABLE(evaluate-matches
     evaluate_matches.cpp
+    match_reader.cpp
     optimal_triangulation.cpp
     roots.cpp)
 TARGET_LINK_LIBRARIES(evaluate-matches ${OpenCV_LIBS})
+TARGET_LINK_LIBRARIES(evaluate-matches gflags)
 TARGET_LINK_LIBRARIES(evaluate-matches glog)
 TARGET_LINK_LIBRARIES(evaluate-matches gsl)
+
+ADD_EXECUTABLE(undistort
+    undistort.cpp
+    image_point_reader.cpp
+    image_point_writer.cpp
+    camera_properties_reader.cpp)
+TARGET_LINK_LIBRARIES(undistort ${OpenCV_LIBS})
+TARGET_LINK_LIBRARIES(undistort gflags)
+TARGET_LINK_LIBRARIES(undistort glog)
