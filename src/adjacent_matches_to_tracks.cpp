@@ -12,11 +12,14 @@
 #include "track_list.hpp"
 #include "keypoint.hpp"
 #include "match.hpp"
+#include "match_reader.hpp"
+#include "vector_reader.hpp"
+
+typedef std::vector<cv::KeyPoint> KeypointList;
 
 // Save keypoint index not whole descriptor.
 // OpenCV always reads the whole file at once.
 // That would be a lot of descriptors.
-
 struct IndexedPoint {
   int index;
   cv::Point2d point;
@@ -49,9 +52,6 @@ struct ReadIndexedPoint : public Read<IndexedPoint> {
     x.index = (int)node["index"];
   }
 };
-
-typedef std::map<int, int> Lookup;
-typedef std::vector<cv::KeyPoint> KeypointList;
 
 std::string makeFilename(const std::string& format, int n) {
   return boost::str(boost::format(format) % (n + 1));
@@ -86,6 +86,7 @@ int main(int argc, char** argv) {
   // Examine frames (u - 1, u).
   int u = 0;
 
+  typedef std::map<int, int> Lookup;
   Lookup previous_active_tracks;
   KeypointList previous_keypoints;
 
@@ -105,9 +106,13 @@ int main(int argc, char** argv) {
       std::cout << "(" << t << ", " << u << ")" << std::endl;
 
       // Load matches.
+      typedef std::vector<Match> MatchList;
       MatchList matches;
       std::string matches_file = makeFilename(matches_format, t);
-      ok = loadMatches(matches_file, matches);
+
+      MatchReader match_reader;
+      VectorReader<Match> match_list_reader(match_reader);
+      ok = load(matches_file, matches, match_list_reader);
       if (!ok) {
         continue;
       }

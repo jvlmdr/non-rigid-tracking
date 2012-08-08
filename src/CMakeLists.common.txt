@@ -69,15 +69,13 @@ TARGET_LINK_LIBRARIES(extract-hog ${OpenCV_LIBS})
 
 ADD_EXECUTABLE(match-features
   match_features.cpp
-  descriptor.cpp
-  match.cpp)
+  descriptor.cpp)
 TARGET_LINK_LIBRARIES(match-features ${OpenCV_LIBS})
 TARGET_LINK_LIBRARIES(match-features gflags)
 TARGET_LINK_LIBRARIES(match-features glog)
 
 ADD_EXECUTABLE(visualize-matches
   visualize_matches.cpp
-  match.cpp
   read_image.cpp
   keypoint.cpp
   draw_matches.cpp
@@ -92,12 +90,13 @@ TARGET_LINK_LIBRARIES(visualize-matches glog)
 
 ADD_EXECUTABLE(adjacent-matches-to-tracks
   adjacent_matches_to_tracks.cpp
-  match.cpp
   read_image.cpp
   keypoint.cpp
-  track_list.cpp)
+  track_list.cpp
+  match_reader.cpp)
 TARGET_LINK_LIBRARIES(adjacent-matches-to-tracks ${OpenCV_LIBS})
 TARGET_LINK_LIBRARIES(adjacent-matches-to-tracks gflags)
+TARGET_LINK_LIBRARIES(adjacent-matches-to-tracks glog)
 
 ADD_EXECUTABLE(track-rigid
   track_rigid.cpp
@@ -211,8 +210,7 @@ TARGET_LINK_LIBRARIES(select-active-tracks glog)
 
 ADD_EXECUTABLE(effect-of-sift-threshold
   effect_of_sift_threshold.cpp
-  descriptor.cpp
-  match.cpp)
+  descriptor.cpp)
 TARGET_LINK_LIBRARIES(effect-of-sift-threshold ${OpenCV_LIBS})
 TARGET_LINK_LIBRARIES(effect-of-sift-threshold gflags)
 TARGET_LINK_LIBRARIES(effect-of-sift-threshold glog)
@@ -236,3 +234,11 @@ ADD_EXECUTABLE(optimal-triangulation-test
 TARGET_LINK_LIBRARIES(optimal-triangulation-test ${OpenCV_LIBS})
 TARGET_LINK_LIBRARIES(optimal-triangulation-test glog)
 TARGET_LINK_LIBRARIES(optimal-triangulation-test gsl)
+
+ADD_EXECUTABLE(evaluate-matches
+    evaluate_matches.cpp
+    optimal_triangulation.cpp
+    roots.cpp)
+TARGET_LINK_LIBRARIES(evaluate-matches ${OpenCV_LIBS})
+TARGET_LINK_LIBRARIES(evaluate-matches glog)
+TARGET_LINK_LIBRARIES(evaluate-matches gsl)

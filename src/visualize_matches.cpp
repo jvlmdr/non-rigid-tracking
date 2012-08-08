@@ -24,6 +24,7 @@ DEFINE_bool(save, false, "Save to file?");
 DEFINE_bool(display, true, "Show matches?");
 
 typedef std::vector<RigidFeature> RigidFeatureList;
+typedef std::vector<Match> MatchList;
 
 int main(int argc, char** argv) {
   std::ostringstream usage;

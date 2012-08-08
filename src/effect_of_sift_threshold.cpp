@@ -15,11 +15,9 @@
 #include "match.hpp"
 #include "vector_reader.hpp"
 
-// List of descriptors.
 typedef std::vector<Descriptor> DescriptorList;
-
-// List of matches with detailed results.
 typedef std::vector<cv::DMatch> MatchResultList;
+typedef std::vector<Match> MatchList;
 
 std::string makeFilename(const std::string& format, double threshold, int n) {
   return boost::str(boost::format(format) % threshold % (n + 1));

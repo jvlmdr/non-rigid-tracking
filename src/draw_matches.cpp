@@ -9,6 +9,7 @@ const double SATURATION = 0.99;
 const double BRIGHTNESS = 0.99;
 
 typedef std::vector<RigidFeature> RigidFeatureList;
+typedef std::vector<Match> MatchList;
 
 // Renders a keypoint on top of an image with a random color.
 void drawKeypoint(cv::Mat& image,
