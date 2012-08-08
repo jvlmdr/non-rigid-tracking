@@ -233,7 +233,7 @@ ADD_EXECUTABLE(optimal-triangulation-test
     roots.cpp)
 TARGET_LINK_LIBRARIES(optimal-triangulation-test ${OpenCV_LIBS})
 TARGET_LINK_LIBRARIES(optimal-triangulation-test glog)
-TARGET_LINK_LIBRARIES(optimal-triangulation-test gsl)
+TARGET_LINK_LIBRARIES(optimal-triangulation-test gsl ${LAPACK_LIB})
 
 ADD_EXECUTABLE(evaluate-matches
     evaluate_matches.cpp
@@ -243,7 +243,7 @@ ADD_EXECUTABLE(evaluate-matches
 TARGET_LINK_LIBRARIES(evaluate-matches ${OpenCV_LIBS})
 TARGET_LINK_LIBRARIES(evaluate-matches gflags)
 TARGET_LINK_LIBRARIES(evaluate-matches glog)
-TARGET_LINK_LIBRARIES(evaluate-matches gsl)
+TARGET_LINK_LIBRARIES(evaluate-matches gsl ${LAPACK_LIB})
 
 ADD_EXECUTABLE(undistort
     undistort.cpp

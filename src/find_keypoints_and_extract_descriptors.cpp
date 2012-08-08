@@ -47,14 +47,12 @@ class FeatureWriter : public Writer<Feature> {
     ~FeatureWriter() {}
 
     void write(cv::FileStorage& file, const Feature& feature) {
-      file << "{";
       file << "x" << feature.position.x;
       file << "y" << feature.position.y;
       file << "size" << feature.position.size;
       file << "angle" << feature.position.theta;
       file << "descriptor";
       feature.descriptor.write(file);
-      file << "}";
     }
 };
 
