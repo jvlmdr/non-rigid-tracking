@@ -69,11 +69,13 @@ int main(int argc, char** argv) {
   std::vector<cv::Point2d> points;
   ImagePointReader point_reader;
   ok = loadList(distorted_points_file, points, point_reader);
+  CHECK(ok) << "Could not load points";
 
   // Load camera properties.
   CameraProperties camera;
   CameraPropertiesReader camera_reader;
   ok = load(camera_file, camera, camera_reader);
+  CHECK(ok) << "Could not load camera";
 
   // Build intrinsic matrix from camera.
   cv::Mat K = intrinsicMatrixFromCameraProperties(camera);
@@ -84,7 +86,8 @@ int main(int argc, char** argv) {
 
   // Write out undistorted points.
   ImagePointWriter point_writer;
-  saveList(undistorted_points_file, points, point_writer);
+  ok = saveList(undistorted_points_file, points, point_writer);
+  CHECK(ok) << "Could not save points";
 
   return 0;
 }

@@ -5,7 +5,9 @@ template<class T>
 VectorReader<T>::~VectorReader() {}
 
 template<class T>
-void VectorReader<T>::read(const cv::FileNode& node, std::vector<T>& list) {
+void VectorReader<T>::read(const cv::FileNode& parent, std::vector<T>& list) {
+  const cv::FileNode& node = parent["list"];
+
   cv::FileNodeIterator it;
   for (it = node.begin(); it != node.end(); ++it) {
     list.push_back(T());

@@ -18,11 +18,10 @@
 #include "writer.hpp"
 #include "vector_writer.hpp"
 
-DEFINE_double(contrast_threshold, 0.04, "Minimum contrast for SIFT detector.");
-DEFINE_bool(use_flann, false,
+DEFINE_bool(use_flann, true,
     "Use FLANN (fast but approximate) to find nearest neighbours.");
-DEFINE_double(second_best_ratio, 1.0,
-    "Maximum distance relative to second-best match. >= 1 has no effect.");
+//DEFINE_double(second_best_ratio, 1.0,
+//    "Maximum distance relative to second-best match. >= 1 has no effect.");
 
 typedef std::vector<Descriptor> DescriptorList;
 
@@ -55,13 +54,11 @@ MatchResultWriter::~MatchResultWriter() {}
 
 void MatchResultWriter::write(cv::FileStorage& file,
                               const MatchResult& result) {
-  file << "{";
   file << "index1" << result.index1;
   file << "index2" << result.index2;
   file << "dist" << result.dist;
   file << "second_dist1" << result.second_dist1;
   file << "second_dist2" << result.second_dist2;
-  file << "}";
 }
 
 typedef std::vector<MatchResult> MatchResultList;
@@ -208,7 +205,7 @@ int main(int argc, char** argv) {
   std::string descriptors_file1 = argv[1];
   std::string descriptors_file2 = argv[2];
   std::string matches_file = argv[3];
-  double min_relative_distance = FLAGS_second_best_ratio;
+  //double SECOND_BEST_RATIO = FLAGS_second_best_ratio;
 
   bool ok;
 
