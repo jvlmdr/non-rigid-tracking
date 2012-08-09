@@ -157,8 +157,9 @@ void buildParametrizedProjections(double t,
       (sqr(lambda2[0]) + sqr(lambda2[1])));
 }
 
-double findMinimumRealSolution(const std::vector<std::complex<double> >& solutions,
-                               const FundMatParams& fund_params) {
+double findMinimumRealSolution(
+    const std::vector<std::complex<double> >& solutions,
+    const FundMatParams& fund_params) {
   int n = solutions.size();
   double min = 0;
   int arg = 0;

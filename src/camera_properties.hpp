@@ -3,6 +3,8 @@
 
 #include <opencv2/core/core.hpp>
 
+// Reserve the name CameraIntrinsics for the K matrix.
+
 struct CameraProperties {
   cv::Size image_size;
   double focal_x;

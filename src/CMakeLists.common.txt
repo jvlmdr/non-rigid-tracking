@@ -230,7 +230,8 @@ TARGET_LINK_LIBRARIES(find-keypoints-and-extract-descriptors glog)
 ADD_EXECUTABLE(optimal-triangulation-test
     optimal_triangulation_test.cpp
     optimal_triangulation.cpp
-    roots.cpp)
+    roots.cpp
+    geometry.cpp)
 TARGET_LINK_LIBRARIES(optimal-triangulation-test ${OpenCV_LIBS})
 TARGET_LINK_LIBRARIES(optimal-triangulation-test glog)
 TARGET_LINK_LIBRARIES(optimal-triangulation-test gsl ${LAPACK_LIB})
@@ -265,3 +266,16 @@ ADD_EXECUTABLE(undistort-points
 TARGET_LINK_LIBRARIES(undistort-points ${OpenCV_LIBS})
 TARGET_LINK_LIBRARIES(undistort-points gflags)
 TARGET_LINK_LIBRARIES(undistort-points glog)
+
+ADD_EXECUTABLE(cameras-to-fund-mat
+    cameras_to_fund_mat.cpp
+    camera_pose.cpp
+    camera_pose_reader.cpp
+    world_point_reader.cpp
+    camera_properties.cpp
+    camera_properties_reader.cpp
+    geometry.cpp
+    matrix_writer.cpp)
+TARGET_LINK_LIBRARIES(cameras-to-fund-mat ${OpenCV_LIBS})
+TARGET_LINK_LIBRARIES(cameras-to-fund-mat gflags)
+TARGET_LINK_LIBRARIES(cameras-to-fund-mat glog)
