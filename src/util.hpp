@@ -5,7 +5,13 @@
 
 inline double sqr(double x);
 
-inline cv::Point2d convertPointFromHomogeneous2(const cv::Mat& X);
+// Differentiate between 2D and 3D points as "image" and "world" points.
+
+inline cv::Mat imagePointToHomogeneous(const cv::Point2d& x);
+inline cv::Point2d imagePointFromHomogeneous(const cv::Mat& X);
+
+inline cv::Mat worldPointToHomogeneous(const cv::Point3d& x);
+inline cv::Point3d worldPointFromHomogeneous(const cv::Mat& X);
 
 #include "util.inl"
 

@@ -245,11 +245,23 @@ TARGET_LINK_LIBRARIES(evaluate-matches gflags)
 TARGET_LINK_LIBRARIES(evaluate-matches glog)
 TARGET_LINK_LIBRARIES(evaluate-matches gsl ${LAPACK_LIB})
 
-ADD_EXECUTABLE(undistort
-    undistort.cpp
+ADD_EXECUTABLE(undistort-image
+    undistort_image.cpp
+    camera_properties.cpp
+    camera_properties_reader.cpp
+    distortion.cpp
+    read_image.cpp)
+TARGET_LINK_LIBRARIES(undistort-image ${OpenCV_LIBS})
+TARGET_LINK_LIBRARIES(undistort-image gflags)
+TARGET_LINK_LIBRARIES(undistort-image glog)
+
+ADD_EXECUTABLE(undistort-points
+    undistort_points.cpp
     image_point_reader.cpp
     image_point_writer.cpp
-    camera_properties_reader.cpp)
-TARGET_LINK_LIBRARIES(undistort ${OpenCV_LIBS})
-TARGET_LINK_LIBRARIES(undistort gflags)
-TARGET_LINK_LIBRARIES(undistort glog)
+    camera_properties.cpp
+    camera_properties_reader.cpp
+    distortion.cpp)
+TARGET_LINK_LIBRARIES(undistort-points ${OpenCV_LIBS})
+TARGET_LINK_LIBRARIES(undistort-points gflags)
+TARGET_LINK_LIBRARIES(undistort-points glog)

@@ -11,4 +11,7 @@ struct CameraProperties {
   double distort_w;
 };
 
+// Construct intrinsic matrix.
+cv::Mat intrinsicMatrixFromCameraProperties(const CameraProperties& camera);
+
 #endif

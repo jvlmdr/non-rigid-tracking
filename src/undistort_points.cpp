@@ -7,24 +7,44 @@
 #include "image_point_writer.hpp"
 #include "vector_reader.hpp"
 #include "vector_writer.hpp"
+#include "distortion.hpp"
 #include "camera_properties_reader.hpp"
+#include "read_image.hpp"
+#include "util.hpp"
 
-cv::Point2d subtract(const cv::Point2d& x, const cv::Point2d& y) {
-  return x - y;
-}
+struct Undistort {
+  cv::Mat K;
+  cv::Mat K_inv; // to avoid inverting every iteration
+  double w;
 
-cv::Point2d undistort(const cv::Point2d& x, double w) {
-  double rd = cv::norm(x);
-  double ru = std::tan(rd * w) / (2. * std::tan(w / 2.));
+  cv::Point2d operator()(cv::Point2d x) const {
+    // Undo intrinsics.
+    cv::Mat X = imagePointToHomogeneous(x);
+    X = K_inv * X;
 
-  return ru / rd * x;
-}
+    // Apply radial distortion.
+    x = imagePointFromHomogeneous(X);
+    x = undistort(x, w);
+
+    // Redo intrinsics.
+    X = imagePointToHomogeneous(x);
+    X = K * X;
+
+    return imagePointFromHomogeneous(X);
+  }
+
+  Undistort(const cv::Mat& K, double w) : K(), K_inv(), w(w) {
+    this->K = K.clone();
+    this->K_inv = K.inv();
+  }
+};
 
 void init(int& argc, char**& argv) {
   std::ostringstream usage;
   usage << "Removes lens distortion from a set of points." << std::endl;
   usage << std::endl;
-  usage << argv[0] << " distorted-points undistorted-points camera-properties" << std::endl;
+  usage << argv[0] << " distorted-points undistorted-points"
+      " camera-properties" << std::endl;
 
   google::SetUsageMessage(usage.str());
   google::ParseCommandLineFlags(&argc, &argv, true);
@@ -55,19 +75,12 @@ int main(int argc, char** argv) {
   CameraPropertiesReader camera_reader;
   ok = load(camera_file, camera, camera_reader);
 
-  // Intrinsics are applied effectively in this order:
-  //   diag(fx, fy) (x, y) + (x0, y0)
-  // Therefore undo principal point, then undistort.
-
-  // Subtract principal point.
-  std::transform(points.begin(), points.end(), points.begin(),
-      boost::bind(subtract, _1, camera.principal_point));
-
-  // TODO: Flip Y axis? Depends how camera matrices are defined.
+  // Build intrinsic matrix from camera.
+  cv::Mat K = intrinsicMatrixFromCameraProperties(camera);
 
   // Undistort.
   std::transform(points.begin(), points.end(), points.begin(),
-      boost::bind(undistort, _1, camera.distort_w));
+      Undistort(K, camera.distort_w));
 
   // Write out undistorted points.
   ImagePointWriter point_writer;

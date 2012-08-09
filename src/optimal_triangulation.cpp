@@ -221,8 +221,8 @@ double optimalTriangulation(cv::Point2d& x1,
   X2 = A2 * X2;
 
   // Return from homogeneous coordinates.
-  x1 = convertPointFromHomogeneous2(X1);
-  x2 = convertPointFromHomogeneous2(X2);
+  x1 = imagePointFromHomogeneous(X1);
+  x2 = imagePointFromHomogeneous(X2);
 
   return s;
 }
