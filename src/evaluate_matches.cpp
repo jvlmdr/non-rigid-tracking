@@ -7,6 +7,7 @@
 #include "match.hpp"
 #include "match_reader.hpp"
 #include "vector_reader.hpp"
+#include "matrix_reader.hpp"
 #include "optimal_triangulation.hpp"
 
 typedef std::vector<Match> MatchList;
@@ -52,6 +53,9 @@ int main(int argc, char** argv) {
 
   // Load fundamental matrix.
   cv::Mat F;
+  MatrixReader matrix_reader;
+  ok = load(fund_mat_file, F, matrix_reader);
+  CHECK(ok) << "Could not load fundamental matrix";
 
   // Place where all the scores will go.
   std::vector<double> residuals;

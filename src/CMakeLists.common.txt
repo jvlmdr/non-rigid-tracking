@@ -239,6 +239,7 @@ TARGET_LINK_LIBRARIES(optimal-triangulation-test gsl ${LAPACK_LIB})
 ADD_EXECUTABLE(evaluate-matches
     evaluate_matches.cpp
     match_reader.cpp
+    matrix_reader.cpp
     optimal_triangulation.cpp
     roots.cpp)
 TARGET_LINK_LIBRARIES(evaluate-matches ${OpenCV_LIBS})
