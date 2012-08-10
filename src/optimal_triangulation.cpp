@@ -16,7 +16,7 @@ cv::Mat imageTranslationMatrix(const cv::Point2d& p) {
 // x2^T F x1 = 0
 void computeEpipoles(const cv::Mat& F, cv::Mat& e1, cv::Mat& e2) {
   cv::SVD svd(F);
-  LOG(INFO) << "Singular values of F: " << svd.w;
+  //LOG(INFO) << "Singular values of F: " << svd.w;
   e1 = svd.vt.row(2).t();
   e2 = svd.u.col(2);
 }

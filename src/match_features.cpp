@@ -18,12 +18,12 @@
 #include "writer.hpp"
 #include "vector_writer.hpp"
 
+DEFINE_double(second_best_ratio, 1.0,
+    "Maximum distance relative to second-best match. >= 1 has no effect.");
 DEFINE_bool(use_flann, true,
     "Use FLANN (fast but approximate) to find nearest neighbours.");
-//DEFINE_double(second_best_ratio, 1.0,
-//    "Maximum distance relative to second-best match. >= 1 has no effect.");
-
-typedef std::vector<Descriptor> DescriptorList;
+DEFINE_bool(reciprocal, true,
+    "Require matches to be reciprocal between images.");
 
 // The result of a single match from one image to the other.
 typedef cv::DMatch SingleDirectedMatchResult;
@@ -44,32 +44,29 @@ struct MatchResult {
   double second_dist2;
 };
 
-class MatchResultWriter : public Writer<MatchResult> {
-  public:
-    ~MatchResultWriter();
-    void write(cv::FileStorage& file, const MatchResult& x);
-};
-
-MatchResultWriter::~MatchResultWriter() {}
-
-void MatchResultWriter::write(cv::FileStorage& file,
-                              const MatchResult& result) {
-  file << "index1" << result.index1;
-  file << "index2" << result.index2;
-  file << "dist" << result.dist;
-  file << "second_dist1" << result.second_dist1;
-  file << "second_dist2" << result.second_dist2;
-}
-
-typedef std::vector<MatchResult> MatchResultList;
-
 struct DirectedMatchResult {
   int match;
   double dist;
   double second_dist;
 };
 
+typedef std::vector<Descriptor> DescriptorList;
+typedef std::vector<MatchResult> MatchResultList;
 typedef std::vector<DirectedMatchResult> DirectedMatchResultList;
+
+// Writes a match result to a file.
+class MatchResultWriter : public Writer<MatchResult> {
+  public:
+    ~MatchResultWriter() {}
+
+    void write(cv::FileStorage& file, const MatchResult& result) {
+      file << "index1" << result.index1;
+      file << "index2" << result.index2;
+      file << "dist" << result.dist;
+      file << "second_dist1" << result.second_dist1;
+      file << "second_dist2" << result.second_dist2;
+    }
+};
 
 // Converts a pair of single matches to 
 DirectedMatchResult singleDirectedPairToMatchResult(
@@ -99,53 +96,21 @@ void listToMatrix(const DescriptorList& list, cv::Mat& matrix) {
   }
 }
 
-/*
-bool isNotDistinctive(const DirectedMatchResultList& matches, double ratio) {
-  DirectedMatchResultList::const_iterator it = matches.begin();
-  const cv::DMatch& first = *it;
-  ++it;
-  const cv::DMatch& second = *it;
+bool isNotDistinctive(const MatchResult& match, double ratio) {
+  // Pick nearest second-best match.
+  double second_dist = std::min(match.second_dist1, match.second_dist2);
 
-  // Note: Carefully crafted to handle case where both distance are zero.
-  // (No division. Non-strict comparison.)
-  return (first.distance >= ratio * second.distance);
-}
-*/
+  // The best match must be within a fraction of that.
+  double max_dist = ratio * second_dist;
 
-void findConsistentMatches(const DirectedMatchResultList& forward_matches,
-                           const DirectedMatchResultList& reverse_matches,
-                           MatchResultList& matches) {
-  matches.clear();
-
-  // Have two lists of pairs (i, j).
-  // Only keep pair (i, j) if there exists a pair (j, i) in the other list.
-  // The first index i is unique in both lists.
-
-  int num_forward_matches = forward_matches.size();
-
-  for (int i = 0; i < num_forward_matches; i += 1) {
-    // Get corresponding reverse match.
-    const DirectedMatchResult& forward = forward_matches[i];
-    const DirectedMatchResult& reverse = reverse_matches[forward.match];
-
-    if (reverse.match == i) {
-      // The reverse match points back. This match was consistent!
-      MatchResult match;
-      match.index1 = i;
-      match.index2 = forward.match;
-      match.dist = forward.dist;
-      match.second_dist1 = forward.second_dist;
-      match.second_dist2 = reverse.second_dist;
-
-      matches.push_back(match);
-    }
-  }
+  return !(match.dist <= max_dist);
 }
 
-void match(const DescriptorList& descriptors1,
-           const DescriptorList& descriptors2,
-           MatchResultList& matches,
-           bool use_flann) {
+void matchBothDirections(const DescriptorList& descriptors1,
+                         const DescriptorList& descriptors2,
+                         DirectedMatchResultList& forward_matches,
+                         DirectedMatchResultList& reverse_matches,
+                         bool use_flann) {
   // Load descriptors into matrices for cv::DescriptorMatcher.
   cv::Mat mat1;
   cv::Mat mat2;
@@ -170,20 +135,84 @@ void match(const DescriptorList& descriptors1,
   matcher->knnMatch(mat2, mat1, reverse_match_pairs, 2);
 
   // Convert pairs to match results.
-  DirectedMatchResultList forward_matches;
-  DirectedMatchResultList reverse_matches;
+  forward_matches.clear();
   std::transform(forward_match_pairs.begin(), forward_match_pairs.end(),
       std::back_inserter(forward_matches), singleDirectedPairToMatchResult);
+  reverse_matches.clear();
   std::transform(reverse_match_pairs.begin(), reverse_match_pairs.end(),
       std::back_inserter(reverse_matches), singleDirectedPairToMatchResult);
-
-  // Reduce to a consistent set.
-  findConsistentMatches(forward_matches, reverse_matches, matches);
-
-  LOG(INFO) << matches.size() << " consistent matches";
 }
 
-int main(int argc, char** argv) {
+MatchResult consistentMatchFromTwoDirected(const DirectedMatchResult& forward,
+                                           const DirectedMatchResult& reverse) {
+  MatchResult result;
+
+  result.index1 = reverse.match;
+  result.index2 = forward.match;
+  result.dist = forward.dist;
+  result.second_dist1 = forward.second_dist;
+  result.second_dist2 = reverse.second_dist;
+
+  return result;
+}
+
+void intersectionOfMatches(const DirectedMatchResultList& forward_matches,
+                           const DirectedMatchResultList& reverse_matches,
+                           MatchResultList& matches) {
+  matches.clear();
+
+  // Have two lists of pairs (i, j).
+  // Only keep pair (i, j) if there exists a pair (j, i) in the other list.
+  // The first index i is unique in both lists.
+
+  int num_forward_matches = forward_matches.size();
+
+  for (int i = 0; i < num_forward_matches; i += 1) {
+    // Get corresponding reverse match.
+    const DirectedMatchResult& forward = forward_matches[i];
+    const DirectedMatchResult& reverse = reverse_matches[forward.match];
+
+    if (reverse.match == i) {
+      // The reverse match points back. This match was consistent!
+      matches.push_back(consistentMatchFromTwoDirected(forward, reverse));
+    }
+  }
+}
+
+void unionOfMatches(const DirectedMatchResultList& forward_matches,
+                    const DirectedMatchResultList& reverse_matches,
+                    MatchResultList& matches) {
+  matches.clear();
+
+  // Have two lists of pairs (i, j).
+  // Add all pairs from reverse list.
+  // Only add (i, j) from forward list if (j, i) is not in reverse list.
+  // The first index i is unique in both lists.
+
+  int num_forward_matches = forward_matches.size();
+  int num_reverse_matches = reverse_matches.size();
+
+  for (int i = 0; i < num_reverse_matches; i += 1) {
+    // Get corresponding reverse match.
+    const DirectedMatchResult& reverse = reverse_matches[i];
+    const DirectedMatchResult& forward = forward_matches[reverse.match];
+
+    matches.push_back(consistentMatchFromTwoDirected(forward, reverse));
+  }
+
+  for (int i = 0; i < num_forward_matches; i += 1) {
+    // Get corresponding reverse match.
+    const DirectedMatchResult& forward = forward_matches[i];
+    const DirectedMatchResult& reverse = reverse_matches[forward.match];
+
+    if (reverse.match != i) {
+      // The reverse match doesn't point back. This is a new match.
+      matches.push_back(consistentMatchFromTwoDirected(forward, reverse));
+    }
+  }
+}
+
+void init(int& argc, char**& argv) {
   std::ostringstream usage;
   usage << "Computes matches between sets of descriptors." << std::endl;
   usage << std::endl;
@@ -196,6 +225,10 @@ int main(int argc, char** argv) {
   google::SetUsageMessage(usage.str());
   google::ParseCommandLineFlags(&argc, &argv, true);
   google::InitGoogleLogging(argv[0]);
+}
+
+int main(int argc, char** argv) {
+  init(argc, argv);
 
   if (argc != 4) {
     google::ShowUsageWithFlags(argv[0]);
@@ -205,7 +238,7 @@ int main(int argc, char** argv) {
   std::string descriptors_file1 = argv[1];
   std::string descriptors_file2 = argv[2];
   std::string matches_file = argv[3];
-  //double SECOND_BEST_RATIO = FLAGS_second_best_ratio;
+  double SECOND_BEST_RATIO = FLAGS_second_best_ratio;
 
   bool ok;
 
@@ -226,8 +259,31 @@ int main(int argc, char** argv) {
   CHECK(ok) << "Could not load descriptors";
   LOG(INFO) << "Loaded " << descriptors2.size() << " descriptors";
 
+  // Match in both directions.
+  DirectedMatchResultList forward_matches;
+  DirectedMatchResultList reverse_matches;
+  matchBothDirections(descriptors1, descriptors2, forward_matches,
+      reverse_matches, FLAGS_use_flann);
+
+  // Merge directional matches.
   MatchResultList matches;
-  match(descriptors1, descriptors2, matches, FLAGS_use_flann);
+  if (FLAGS_reciprocal) {
+    // Reduce to a consistent set.
+    intersectionOfMatches(forward_matches, reverse_matches, matches);
+    LOG(INFO) << "Found " << matches.size() << " reciprocal matches";
+  } else {
+    // Throw all matches together.
+    unionOfMatches(forward_matches, reverse_matches, matches);
+    LOG(INFO) << "Found " << matches.size() << " matches";
+  }
+
+  // Filter the matches by the distance ratio.
+  MatchResultList distinctive;
+  std::remove_copy_if(matches.begin(), matches.end(),
+      std::back_inserter(distinctive),
+      boost::bind(isNotDistinctive, _1, SECOND_BEST_RATIO));
+  matches.swap(distinctive);
+  LOG(INFO) << "Pruned to " << matches.size() << " distinctive matches";
 
   MatchResultWriter match_writer;
   VectorWriter<MatchResult> writer(match_writer);
