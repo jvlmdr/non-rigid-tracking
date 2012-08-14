@@ -222,19 +222,19 @@ void init(int& argc, char**& argv) {
   usage << "descriptors1, descriptors2 -- Input. Descriptors to match." <<
     std::endl;
   usage << "matches -- Output. Pairwise association of indices." << std::endl;
-
   google::SetUsageMessage(usage.str());
-  google::ParseCommandLineFlags(&argc, &argv, true);
+
   google::InitGoogleLogging(argv[0]);
+  google::ParseCommandLineFlags(&argc, &argv, true);
+
+  if (argc != 4) {
+    google::ShowUsageWithFlags(argv[0]);
+    std::exit(1);
+  }
 }
 
 int main(int argc, char** argv) {
   init(argc, argv);
-
-  if (argc != 4) {
-    google::ShowUsageWithFlags(argv[0]);
-    return 1;
-  }
 
   std::string descriptors_file1 = argv[1];
   std::string descriptors_file2 = argv[2];
@@ -284,9 +284,8 @@ int main(int argc, char** argv) {
   matches.swap(distinctive);
   LOG(INFO) << "Pruned to " << matches.size() << " distinctive matches";
 
-  MatchResultWriter match_writer;
-  VectorWriter<MatchResult> writer(match_writer);
-  ok = save(matches_file, matches, writer);
+  MatchResultWriter writer;
+  ok = saveList(matches_file, matches, writer);
   CHECK(ok) << "Could not save list of matches";
 
   return 0;
