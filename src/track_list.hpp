@@ -5,11 +5,7 @@
 #include <list>
 #include <map>
 #include <string>
-#include <boost/function.hpp>
-#include <opencv2/core/core.hpp>
 #include "track.hpp"
-#include "read.hpp"
-#include "write.hpp"
 
 // List of features which each has some value at a small subset of frames.
 //
@@ -17,6 +13,8 @@
 // O(1) lookup by feature index.
 // O(log n) lookup by frame index.
 // Ability to iterate through frames in order.
+//
+// TODO: Advantageous to enforce that tracks are ordered by their first frame?
 template<class T>
 class TrackList_ {
   private:
@@ -29,11 +27,6 @@ class TrackList_ {
 
     // Returns the number of points in all tracks.
     int countPoints() const;
-
-    // Saves a list of tracks to a file.
-    bool save(const std::string& filename, Write<T>& write_point) const;
-    // Loads a list of tracks from a file.
-    bool load(const std::string& filename, Read<T>& read_point);
 
     typedef typename List::iterator iterator;
     typedef typename List::const_iterator const_iterator;
@@ -76,20 +69,6 @@ class TrackList_ {
     List list_;
 };
 
-// Describes a collection of tracks from a single video sequence.
-typedef TrackList_<cv::Point2d> TrackList;
-
-// Saves a list of tracks to a file.
-bool saveTracks(const std::string& filename,
-                const cv::Size& size,
-                const TrackList& tracks);
-
-// Loads a list of tracks from a file.
-bool loadTracks(const std::string& filename,
-                cv::Size& size,
-                TrackList& tracks,
-                int* num_tracks);
-
 ////////////////////////////////////////////////////////////////////////////////
 
 // Iterates through a list of tracks one frame at a time.
@@ -128,20 +107,6 @@ class FrameIterator_ {
 
     // Updates the list of points in this frame and advances the cursor.
     void advance();
-};
-
-typedef FrameIterator_<cv::Point2d> FrameIterator;
-
-class WritePoint : public Write<cv::Point2d> {
-  public:
-    ~WritePoint() {}
-    void operator()(cv::FileStorage& file, const cv::Point2d& x);
-};
-
-class ReadPoint : public Read<cv::Point2d> {
-  public:
-    ~ReadPoint() {}
-   void operator()(const cv::FileNode& node, cv::Point2d& x);
 };
 
 #include "track_list.inl"

@@ -28,16 +28,16 @@ class KltTracker : public SerialTracker {
     // Returns the number of frames (so far).
     int numFrames() const;
     // Accesses the tracks.
-    const TrackList& tracks() const;
+    const TrackList_<cv::Point2d>& tracks() const;
 
     // Writes current frame to file storage.
     bool write(cv::FileStorage& out) const;
     // Returns the tracks which are currently active.
-    void activeTracks(std::vector<const Track*>& tracks) const;
+    void activeTracks(std::vector<const Track_<cv::Point2d>*>& tracks) const;
 
   private:
     // All tracks.
-    TrackList tracks_;
+    TrackList_<cv::Point2d> tracks_;
     // Active subset of tracks.
     typedef std::list<int> Subset;
     Subset active_;

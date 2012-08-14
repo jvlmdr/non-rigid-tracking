@@ -17,6 +17,8 @@
 #include "rigid_feature.hpp"
 #include "rigid_warp.hpp"
 #include "random_color.hpp"
+#include "rigid_feature_reader.hpp"
+#include "track_list_reader.hpp"
 
 const int PATCH_SIZE = 9;
 const double SATURATION = 0.99;
@@ -47,7 +49,7 @@ void drawFeatures(cv::Mat& image,
   }
 }
 
-int main(int argc, char** argv) {
+void init(int& argc, char**& argv) {
   std::ostringstream usage;
   usage << "Visualizes rigid-warp tracks." << std::endl;
   usage << std::endl;
@@ -55,6 +57,11 @@ int main(int argc, char** argv) {
 
   google::SetUsageMessage(usage.str());
   google::ParseCommandLineFlags(&argc, &argv, true);
+  google::InitGoogleLogging(argv[0]);
+}
+
+int main(int argc, char** argv) {
+  init(argc, argv);
 
   if (argc != 3) {
     google::ShowUsageWithFlags(argv[0]);
@@ -67,18 +74,12 @@ int main(int argc, char** argv) {
 
   bool ok;
 
-  std::cout << "loading tracks..." << std::endl;
-
   // Load tracks.
   TrackList_<RigidFeature> tracks;
-  ReadRigidFeature read;
-  ok = tracks.load(tracks_file, read);
-  if (!ok) {
-    std::cerr << "could not load tracks" << std::endl;
-    return 1;
-  }
-
-  std::cout << "loaded tracks" << std::endl;
+  RigidFeatureReader feature_reader;
+  ok = loadTrackList(tracks_file, tracks, feature_reader);
+  CHECK(ok) << "Could not load tracks";
+  LOG(INFO) << "Loaded " << tracks.size() << " tracks";
 
   // Make a list of random colors.
   typedef std::vector<cv::Scalar> ColorList;
@@ -99,10 +100,7 @@ int main(int argc, char** argv) {
     cv::Mat color_image;
     cv::Mat gray_image;
     ok = readImage(makeFilename(image_format, t), color_image, gray_image);
-    if (!ok) {
-      std::cerr << "could not read image" << std::endl;
-      return 1;
-    }
+    CHECK(ok) << "Could not read image";
 
     // Get the features.
     typedef std::map<int, RigidFeature> FeatureSet;

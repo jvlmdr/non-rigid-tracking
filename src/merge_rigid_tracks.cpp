@@ -1,4 +1,3 @@
-#include <iostream>
 #include <fstream>
 #include <string>
 #include <vector>
@@ -15,6 +14,10 @@
 #include <gflags/gflags.h>
 #include "track_list.hpp"
 #include "rigid_feature.hpp"
+#include "rigid_feature_reader.hpp"
+#include "rigid_feature_writer.hpp"
+#include "track_list_reader.hpp"
+#include "track_list_writer.hpp"
 
 typedef TrackList_<RigidFeature> RigidTrackList;
 typedef std::vector<RigidTrackList> TrackListList;
@@ -46,26 +49,27 @@ bool loadAllTracks(const std::string& tracks_format,
     RigidTrackList track_list;
 
     // Attempt to load tracks.
-    ReadRigidFeature read;
-    ok = track_list.load(tracks_file, read);
+    RigidFeatureReader feature_reader;
+    ok = loadTrackList(tracks_file, track_list, feature_reader);
     if (!ok) {
       // Failed.
       continue;
     }
 
+    LOG(INFO) << "Read " << track_list.size() << " tracks from `" <<
+        tracks_file << "'";
+
     // Put into list.
     track_lists.push_back(RigidTrackList());
     track_lists.back().swap(track_list);
 
-    std::cout << "." << std::flush;
     t += 1;
   }
-  std::cout << std::endl;
 
   return ok;
 }
 
-int main(int argc, char** argv) {
+void init(int& argc, char**& argv) {
   std::ostringstream usage;
   usage << "Merges rigid-warp tracks." << std::endl;
   usage << std::endl;
@@ -73,30 +77,29 @@ int main(int argc, char** argv) {
 
   google::SetUsageMessage(usage.str());
   google::ParseCommandLineFlags(&argc, &argv, true);
+  google::InitGoogleLogging(argv[0]);
 
   if (argc != 3) {
     google::ShowUsageWithFlags(argv[0]);
-    return 1;
+    std::exit(1);
   }
+}
+
+int main(int argc, char** argv) {
+  init(argc, argv);
 
   std::string tracks_format = argv[1];
   std::string merged_file = argv[2];
 
   bool ok;
 
-  std::cout << "loading all tracks" << std::endl;
-
   // Load tracks from every frame.
   TrackListList track_lists;
   ok = loadAllTracks(tracks_format, track_lists);
-  if (!ok) {
-    std::cerr << "could not load tracks" << std::endl;
-    return 1;
-  }
-  std::cout << "loaded " << track_lists.size() << " lists of tracks" << std::endl;
+  CHECK(ok) << "Could not load all tracks";
+  LOG(INFO) << "Loaded " << track_lists.size() << " lists of tracks";
 
   // Now combine all tracks.
-  // TODO: Advantageous to enforce that tracks are ordered by their first frame?
   RigidTrackList merged;
 
   for (TrackListList::const_iterator tracks = track_lists.begin();
@@ -110,12 +113,9 @@ int main(int argc, char** argv) {
     }
   }
 
-  WriteRigidFeature write;
-  ok = merged.save(merged_file, write);
-  if (!ok) {
-    std::cerr << "could not save tracks" << std::endl;
-    return 1;
-  }
+  RigidFeatureWriter feature_writer;
+  ok = saveTrackList(merged_file, merged, feature_writer);
+  CHECK(ok) << "Could not save tracks";
 
   return 0;
 }

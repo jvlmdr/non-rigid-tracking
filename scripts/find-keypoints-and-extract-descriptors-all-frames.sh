@@ -19,7 +19,6 @@ do
   echo $i
   ./find-keypoints-and-extract-descriptors $image $features \
     --contrast_threshold=$threshold --logtostderr=1
-  echo ""
 
   (( i += 1 ))
 done

@@ -16,6 +16,9 @@
 #include "tracker.hpp"
 #include "klt_tracker.hpp"
 
+#include "image_point_writer.hpp"
+#include "track_list_writer.hpp"
+
 // Size of window to track. Default: 7.
 const int WINDOW_SIZE = 7;
 // Minimum determinant to deem lost. Default: 0.01.
@@ -37,6 +40,8 @@ const int MARKER_THICKNESS = 2;
 const int TRAIL_LENGTH = 5;
 const int TRAIL_THICKNESS = 2;
 
+typedef Track_<cv::Point2d> Track;
+typedef TrackList_<cv::Point2d> TrackList;
 
 void drawTrack(cv::Mat& image, const Track& track) {
   // Get last point in track.
@@ -196,7 +201,9 @@ int main(int argc, char** argv) {
   shiftTracks(tracker.tracks(), shifted, first_frame);
 
   // Write out tracks.
-  saveTracks(tracks_filename, size, shifted);
+  ImagePointWriter writer;
+  bool ok = saveTrackList(tracks_filename, shifted, writer);
+  CHECK(ok) << "Could not save tracks";
 
   return 0;
 }

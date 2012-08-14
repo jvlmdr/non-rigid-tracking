@@ -20,10 +20,10 @@ do
   keypoints=`printf $keypoints_format $i`
   frame=`printf $frame_format $i`
 
-  ./visualize-keypoints $image $keypoints --nodisplay --save \
-    --output_file=$frame
+  ./visualize-keypoints $image $keypoints -nodisplay -save \
+    -output_file=$frame -logtostderr=1
 
   (( i += 1 ))
 done
 
-ffmpeg -y -i $frame_format $movie
+ffmpeg -y -sameq -i $frame_format $movie

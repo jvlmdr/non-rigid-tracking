@@ -39,9 +39,6 @@ class Track_ {
     Map map_;
 };
 
-// A track is a set of (t, x) pairs.
-typedef Track_<cv::Point2d> Track;
-
 ////////////////////////////////////////////////////////////////////////////////
 
 // A TrackCursor is an iterator that can check if it has reached the end.
@@ -61,8 +58,6 @@ struct TrackCursor_ {
   // Returns a cursor at the start of the track.
   static TrackCursor_ make(const Track_<T>& track);
 };
-
-typedef TrackCursor_<cv::Point2d> TrackCursor;
 
 #include "track.inl"
 

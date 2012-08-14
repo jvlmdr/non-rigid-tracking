@@ -7,13 +7,14 @@
 #include <boost/lexical_cast.hpp>
 #include <boost/format.hpp>
 #include <opencv2/core/core.hpp>
+#include <opencv2/features2d/features2d.hpp>
 #include <gflags/gflags.h>
 #include <glog/logging.h>
 #include "read_image.hpp"
 #include "descriptor.hpp"
-#include "keypoint.hpp"
 #include "match.hpp"
 #include "vector_reader.hpp"
+#include "descriptor_reader.hpp"
 
 typedef std::vector<Descriptor> DescriptorList;
 typedef std::vector<cv::DMatch> MatchResultList;
@@ -186,17 +187,18 @@ int main(int argc, char** argv) {
       DescriptorList descriptors2;
 
       DescriptorReader descriptor_reader;
-      VectorReader<Descriptor> reader(descriptor_reader);
 
       LOG(INFO) << "Loading descriptors from `" << descriptors_file1 << "'";
-      have_frames = load(descriptors_file1, descriptors1, reader);
+      have_frames = loadList(descriptors_file1, descriptors1,
+          descriptor_reader);
       if (!have_frames) {
         continue;
       }
       LOG(INFO) << "Loaded " << descriptors1.size() << " descriptors";
 
       LOG(INFO) << "Loading descriptors from `" << descriptors_file2 << "'";
-      have_frames = load(descriptors_file2, descriptors2, reader);
+      have_frames = loadList(descriptors_file2, descriptors2,
+          descriptor_reader);
       if (!have_frames) {
         continue;
       }

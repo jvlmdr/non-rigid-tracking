@@ -168,7 +168,6 @@ WarpTracker::WarpTracker(const Warp& warp,
   options_.function_tolerance = function_tolerance;
   options_.gradient_tolerance = gradient_tolerance;
   options_.parameter_tolerance = parameter_tolerance;
-  options_.minimizer_progress_to_stdout = true;
 }
 
 void WarpTracker::feedImage(const cv::Mat& image) {

@@ -10,47 +10,40 @@
 #include <gflags/gflags.h>
 #include "read_image.hpp"
 #include "track_list.hpp"
-#include "keypoint.hpp"
+#include "rigid_feature.hpp"
 #include "match.hpp"
 #include "match_reader.hpp"
 #include "vector_reader.hpp"
+#include "rigid_feature_writer.hpp"
+#include "track_list_writer.hpp"
+#include "rigid_feature_reader.hpp"
+#include "writer.hpp"
 
-typedef std::vector<cv::KeyPoint> KeypointList;
+typedef std::vector<RigidFeature> KeypointList;
 
-// Save keypoint index not whole descriptor.
+// Save index not whole descriptor.
 // OpenCV always reads the whole file at once.
 // That would be a lot of descriptors.
-struct IndexedPoint {
+struct IndexedFeature {
   int index;
-  cv::Point2d point;
+  RigidFeature feature;
 
-  IndexedPoint(int index, const cv::Point2d& point)
-      : index(index), point(point) {}
+  IndexedFeature(int index, const RigidFeature& feature)
+      : index(index), feature(feature) {}
 
   // Default constructor.
-  IndexedPoint() : index(-1), point() {}
+  IndexedFeature() : index(-1), feature() {}
 };
 
-struct WriteIndexedPoint : public Write<IndexedPoint> {
-  ~WriteIndexedPoint() {}
+struct IndexedFeatureWriter : public Writer<IndexedFeature> {
+  public:
+    ~IndexedFeatureWriter() {}
 
-  void operator()(cv::FileStorage& file, const IndexedPoint& x) {
-    file << "{:";
-    file << "x" << x.point.x;
-    file << "y" << x.point.y;
-    file << "index" << x.index;
-    file << "}";
-  }
-};
-
-struct ReadIndexedPoint : public Read<IndexedPoint> {
-  ~ReadIndexedPoint() {}
-
-  void operator()(const cv::FileNode& node, IndexedPoint& x) {
-    x.point.x = (double)node["x"];
-    x.point.y = (double)node["y"];
-    x.index = (int)node["index"];
-  }
+    void write(cv::FileStorage& file, const IndexedFeature& x) {
+      RigidFeatureWriter feature_writer;
+      file << "index" << x.index;
+      feature_writer.write(file, x.feature);
+    }
 };
 
 std::string makeFilename(const std::string& format, int n) {
@@ -80,7 +73,7 @@ int main(int argc, char** argv) {
   std::string keypoints_format = argv[2];
   std::string tracks_file = argv[3];
 
-  TrackList_<IndexedPoint> tracks;
+  TrackList_<IndexedFeature> tracks;
 
   bool ok = true;
   // Examine frames (u - 1, u).
@@ -94,7 +87,8 @@ int main(int argc, char** argv) {
     // Load keypoints.
     KeypointList keypoints;
     std::string keypoints_file = makeFilename(keypoints_format, u);
-    ok = loadKeypoints(keypoints_file, keypoints);
+    RigidFeatureReader feature_reader;
+    ok = loadList(keypoints_file, keypoints, feature_reader);
     if (!ok) {
       std::cerr << "could not load keypoints" << std::endl;
       continue;
@@ -131,13 +125,13 @@ int main(int argc, char** argv) {
         if (previous_track != previous_active_tracks.end()) {
           // It was: extend the track.
           int index = previous_track->second;
-          tracks[index][u] = IndexedPoint(b, keypoints[b].pt);
+          tracks[index][u] = IndexedFeature(b, keypoints[b]);
           active_tracks[b] = index;
         } else {
           // It wasn't: create a new track.
-          tracks.push_back(Track_<IndexedPoint>());
-          tracks.back()[t] = IndexedPoint(a, previous_keypoints[a].pt);
-          tracks.back()[u] = IndexedPoint(b, keypoints[b].pt);
+          tracks.push_back(Track_<IndexedFeature>());
+          tracks.back()[t] = IndexedFeature(a, previous_keypoints[a]);
+          tracks.back()[u] = IndexedFeature(b, keypoints[b]);
           active_tracks[b] = tracks.size() - 1;
         }
       }
@@ -150,12 +144,9 @@ int main(int argc, char** argv) {
   }
 
   // Write out matches.
-  WriteIndexedPoint write;
-  ok = tracks.save(tracks_file, write);
-  if (!ok) {
-    std::cerr << "could not save tracks to file" << std::endl;
-    return 1;
-  }
+  IndexedFeatureWriter writer;
+  ok = saveTrackList(tracks_file, tracks, writer);
+  CHECK(ok) << "Could not save tracks to file";
 
   return 0;
 }

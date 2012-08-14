@@ -11,11 +11,14 @@
 #include <opencv2/core/core.hpp>
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/features2d/features2d.hpp>
+#include <glog/logging.h>
 #include <gflags/gflags.h>
 #include "read_image.hpp"
 #include "track.hpp"
 #include "track_list.hpp"
 #include "random_color.hpp"
+#include "image_point_reader.hpp"
+#include "track_list_reader.hpp"
 
 const int MAX_TAIL_LENGTH = 10;
 const int POINT_RADIUS = 3;
@@ -27,21 +30,24 @@ DEFINE_string(output_format, "%d.png", "Location to save image.");
 DEFINE_bool(save, false, "Save to file?");
 DEFINE_bool(display, true, "Show in window?");
 
+typedef Track_<cv::Point2d> Track;
+typedef TrackList_<cv::Point2d> TrackList;
+
 std::string imageFilename(const std::string& format, int n) {
   return boost::str(boost::format(format) % (n + 1));
 }
 
 struct ColoredCursor {
-  TrackCursor cursor;
+  TrackCursor_<cv::Point2d> cursor;
   cv::Scalar color;
 
-  ColoredCursor(const TrackCursor& cursor, const cv::Scalar& color)
-      : cursor(cursor), color(color) {}
+  ColoredCursor(const TrackCursor_<cv::Point2d>& cursor,
+                const cv::Scalar& color) : cursor(cursor), color(color) {}
 
   ColoredCursor() : cursor(), color() {}
 
   static ColoredCursor make(const Track& track) {
-    return ColoredCursor(TrackCursor::make(track),
+    return ColoredCursor(TrackCursor_<cv::Point2d>::make(track),
         randomColor(SATURATION, BRIGHTNESS));
   }
 };
@@ -114,7 +120,7 @@ void drawTailRange(cv::Mat& image,
 }
 
 void drawTail(cv::Mat& image,
-              const TrackCursor& cursor,
+              const TrackCursor_<cv::Point2d>& cursor,
               const cv::Scalar& color,
               int start_t) {
   const Track::const_iterator& it = cursor.point;
@@ -136,7 +142,7 @@ void drawTail(cv::Mat& image,
 }
 
 void drawFeature(cv::Mat& image,
-                 const TrackCursor& cursor,
+                 const TrackCursor_<cv::Point2d>& cursor,
                  const cv::Scalar& color,
                  int start_t) {
   Track::const_iterator it = cursor.point;
@@ -194,10 +200,10 @@ int main(int argc, char** argv) {
 
   // Load tracks.
   TrackList_<cv::Point2d> tracks;
-  ReadPoint read;
-  std::cerr << "loading tracks..." << std::endl;
-  ok = tracks.load(tracks_file, read);
-  std::cerr << "done" << std::endl;
+  ImagePointReader reader;
+  ok = loadTrackList(tracks_file, tracks, reader);
+  CHECK(ok) << "Could not load tracks";
+  LOG(INFO) << "Loaded " << tracks.size() << " tracks";
 
   typedef std::list<ColoredCursor> CursorList;
   CursorList cursors(tracks.size());

@@ -18,9 +18,12 @@
 #include "rigid_warp.hpp"
 #include "rigid_feature.hpp"
 #include "flow.hpp"
-#include "keypoint.hpp"
 #include "track_list.hpp"
 #include "random_color.hpp"
+#include "vector_reader.hpp"
+#include "rigid_feature_reader.hpp"
+#include "rigid_feature_writer.hpp"
+#include "track_list_writer.hpp"
 
 DEFINE_int32(max_frames, std::numeric_limits<int>::max(),
     "Maximum number of frames to track in either direction.");
@@ -61,11 +64,6 @@ std::string makeFilename(const std::string& format, int n) {
   return boost::str(boost::format(format) % (n + 1));
 }
 
-RigidFeature keypointToRigidFeature(const cv::KeyPoint& keypoint) {
-  double theta = keypoint.angle / 180. * CV_PI;
-  return RigidFeature(keypoint.pt.x, keypoint.pt.y, keypoint.size, theta);
-}
-
 // A static feature has state and color.
 struct StaticFeature {
   RigidFeature state;
@@ -76,6 +74,8 @@ struct StaticFeature {
   StaticFeature(const RigidFeature& state, const cv::Scalar& color)
       : state(state), color(color) {}
 };
+
+typedef std::vector<StaticFeature> FeatureList;
 
 // A tracked feature has state, color and appearance.
 struct TrackedFeature {
@@ -92,9 +92,8 @@ struct TrackedFeature {
       : state(feature.state), color(feature.color), appearance() {}
 };
 
-StaticFeature makeRandomColorFeature(const cv::KeyPoint& keypoint) {
-  return StaticFeature(keypointToRigidFeature(keypoint),
-      randomColor(SATURATION, BRIGHTNESS));
+StaticFeature makeRandomColorFeature(const RigidFeature& feature) {
+  return StaticFeature(feature, randomColor(SATURATION, BRIGHTNESS));
 }
 
 void trackFeatures(const std::vector<StaticFeature>& features,
@@ -106,8 +105,6 @@ void trackFeatures(const std::vector<StaticFeature>& features,
                    bool display,
                    bool save,
                    const std::string& save_format) {
-  typedef std::vector<StaticFeature> FeatureList;
-
   int t = frame_number;
   int n = 0;
   bool ok = true;
@@ -246,6 +243,7 @@ void trackFeatures(const std::vector<StaticFeature>& features,
 
 int main(int argc, char** argv) {
   google::ParseCommandLineFlags(&argc, &argv, true);
+  google::InitGoogleLogging(argv[0]);
 
   if (argc < 4) {
     std::cerr << "usage: " << argv[0] << " image-format frame-number "
@@ -264,18 +262,13 @@ int main(int argc, char** argv) {
   std::string save_format = FLAGS_save_format;
 
   // Load keypoints (x, y, scale, theta).
-  typedef std::vector<cv::KeyPoint> KeypointList;
-  KeypointList keypoints;
-  bool ok = loadKeypoints(keypoints_file, keypoints);
-  if (!ok) {
-    std::cerr << "could not load keypoints" << std::endl;
-    return 1;
-  }
-
-  std::cerr << "loaded " << keypoints.size() << " keypoints" << std::endl;
+  std::vector<RigidFeature> keypoints;
+  RigidFeatureReader feature_reader;
+  bool ok = loadList(keypoints_file, keypoints, feature_reader);
+  CHECK(ok) << "Could not load features";
+  LOG(INFO) << "Loaded " << keypoints.size() << " features";
 
   // Convert to features.
-  typedef std::vector<StaticFeature> FeatureList;
   FeatureList features;
   std::transform(keypoints.begin(), keypoints.end(),
       std::back_inserter(features), makeRandomColorFeature);
@@ -287,8 +280,9 @@ int main(int argc, char** argv) {
   trackFeatures(features, tracks, image_format, frame_number, max_frames,
       true, display, save, save_format);
 
-  WriteRigidFeature write;
-  tracks.save(tracks_file, write);
+  RigidFeatureWriter feature_writer;
+  ok = saveTrackList(tracks_file, tracks, feature_writer);
+  CHECK(ok) << "Could not save tracks";
 
   return 0;
 }

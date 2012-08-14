@@ -11,7 +11,6 @@
 #include <gflags/gflags.h>
 #include "read_image.hpp"
 #include "descriptor.hpp"
-#include "keypoint.hpp"
 #include "match.hpp"
 #include "draw_matches.hpp"
 #include "match_reader.hpp"
@@ -54,12 +53,8 @@ int main(int argc, char** argv) {
 
   // Load matches.
   MatchReader match_reader;
-  VectorReader<Match> match_list_reader(match_reader);
-  ok = load(matches_file, matches, match_list_reader);
-  if (!ok) {
-    std::cerr << "could not load matches" << std::endl;
-    return 1;
-  }
+  ok = loadList(matches_file, matches, match_reader);
+  CHECK(ok) << "Could not load matches";
 
   // Load images.
   cv::Mat image1;

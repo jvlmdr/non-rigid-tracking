@@ -12,7 +12,10 @@
 #include "read_image.hpp"
 #include "rigid_feature.hpp"
 #include "sift.hpp"
+
 #include "writer.hpp"
+#include "rigid_feature_writer.hpp"
+#include "descriptor_writer.hpp"
 #include "vector_writer.hpp"
 
 const int MAX_NUM_FEATURES = 0;
@@ -47,12 +50,11 @@ class FeatureWriter : public Writer<Feature> {
     ~FeatureWriter() {}
 
     void write(cv::FileStorage& file, const Feature& feature) {
-      file << "x" << feature.position.x;
-      file << "y" << feature.position.y;
-      file << "size" << feature.position.size;
-      file << "angle" << feature.position.theta;
-      file << "descriptor";
-      feature.descriptor.write(file);
+      RigidFeatureWriter position_writer;
+      position_writer.write(file, feature.position);
+
+      DescriptorWriter descriptor_writer;
+      descriptor_writer.write(file, feature.descriptor);
     }
 };
 
@@ -123,9 +125,7 @@ int main(int argc, char** argv) {
 
   // Save out to file.
   FeatureWriter feature_writer;
-  VectorWriter<Feature> writer(feature_writer);
-  ok = save(features_filename, features, writer);
-
+  ok = saveList(features_filename, features, feature_writer);
   CHECK(ok) << "Could not save descriptors";
 
   return 0;

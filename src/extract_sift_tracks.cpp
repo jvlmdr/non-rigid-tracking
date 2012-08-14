@@ -22,6 +22,13 @@
 #include "descriptor.hpp"
 #include "sift.hpp"
 
+#include "rigid_feature_reader.hpp"
+#include "track_list_reader.hpp"
+#include "writer.hpp"
+#include "rigid_feature_writer.hpp"
+#include "descriptor_writer.hpp"
+#include "track_list_writer.hpp"
+
 // Size of window to track.
 const int PATCH_SIZE = 9;
 const int NUM_PIXELS = PATCH_SIZE * PATCH_SIZE;
@@ -65,31 +72,39 @@ struct Feature {
   Descriptor descriptor;
 };
 
-class WriteFeature : public Write<Feature> {
+class FeatureWriter : public Writer<Feature> {
   public:
-    ~WriteFeature() {}
+    ~FeatureWriter() {}
 
-    void operator()(cv::FileStorage& file, const Feature& feature) {
-      file << "{";
-      file << "x" << feature.position.x;
-      file << "y" << feature.position.y;
-      file << "size" << feature.position.size;
-      file << "angle" << feature.position.theta;
-      file << "descriptor";
-      feature.descriptor.write(file);
-      file << "}";
+    void write(cv::FileStorage& file, const Feature& feature) {
+      RigidFeatureWriter position_writer;
+      position_writer.write(file, feature.position);
+
+      DescriptorWriter descriptor_writer;
+      descriptor_writer.write(file, feature.descriptor);
     }
 };
 
-int main(int argc, char** argv) {
-  google::InitGoogleLogging(argv[0]);
-  google::ParseCommandLineFlags(&argc, &argv, true);
+void init(int& argc, char**& argv) {
+  std::ostringstream usage;
+  usage << "Extracts SIFT descriptors at every position in a track." <<
+      std::endl;
+  usage << std::endl;
+  usage << "Sample usage:" << std::endl;
+  usage << argv[0] << " tracks-file image-format descriptors-file" << std::endl;
 
-  if (argc < 4) {
-    std::cerr << "usage: " << argv[0] << " tracks-file image-format"
-      " descriptors-file" << std::endl;
-    return 1;
+  google::SetUsageMessage(usage.str());
+  google::ParseCommandLineFlags(&argc, &argv, true);
+  google::InitGoogleLogging(argv[0]);
+
+  if (argc != 4) {
+    google::ShowUsageWithFlags(argv[0]);
+    std::exit(1);
   }
+}
+
+int main(int argc, char** argv) {
+  init(argc, argv);
 
   std::string positions_file = argv[1];
   std::string image_format = argv[2];
@@ -97,8 +112,9 @@ int main(int argc, char** argv) {
 
   // Load tracks.
   TrackList_<RigidFeature> position_tracks;
-  ReadRigidFeature read_position;
-  position_tracks.load(positions_file, read_position);
+  RigidFeatureReader position_reader;
+  bool ok = loadTrackList(positions_file, position_tracks, position_reader);
+  CHECK(ok) << "Could not load tracks";
 
   int num_features = position_tracks.size();
 
@@ -146,8 +162,9 @@ int main(int argc, char** argv) {
     ++frame;
   }
 
-  WriteFeature write;
-  feature_tracks.save(descriptors_file, write);
+  FeatureWriter feature_writer;
+  ok = saveTrackList(descriptors_file, feature_tracks, feature_writer);
+  CHECK(ok) << "Could not save tracks";
 
   return 0;
 }

@@ -17,6 +17,8 @@
 #include "track.hpp"
 #include "track_list.hpp"
 #include "random_color.hpp"
+#include "image_point_reader.hpp"
+#include "track_list_reader.hpp"
 
 const int MAX_TAIL_LENGTH = 10;
 const int POINT_RADIUS = 3;
@@ -28,6 +30,8 @@ DEFINE_string(output_format, "%d.png", "Location to save image.");
 DEFINE_bool(save, false, "Save to file?");
 DEFINE_bool(display, true, "Show in window?");
 
+typedef TrackList_<cv::Point2d> TrackList;
+typedef Track_<cv::Point2d> Track;
 typedef std::vector<TrackList> TrackListList;
 
 std::string makeFilename(const std::string& format, int n) {
@@ -35,16 +39,16 @@ std::string makeFilename(const std::string& format, int n) {
 }
 
 struct ColoredCursor {
-  TrackCursor cursor;
+  TrackCursor_<cv::Point2d> cursor;
   cv::Scalar color;
 
-  ColoredCursor(const TrackCursor& cursor, const cv::Scalar& color)
-      : cursor(cursor), color(color) {}
+  ColoredCursor(const TrackCursor_<cv::Point2d>& cursor,
+                const cv::Scalar& color) : cursor(cursor), color(color) {}
 
   ColoredCursor() : cursor(), color() {}
 
   static ColoredCursor make(const Track& track) {
-    return ColoredCursor(TrackCursor::make(track),
+    return ColoredCursor(TrackCursor_<cv::Point2d>::make(track),
         randomColor(SATURATION, BRIGHTNESS));
   }
 };
@@ -117,7 +121,7 @@ void drawTailRange(cv::Mat& image,
 }
 
 void drawTail(cv::Mat& image,
-              const TrackCursor& cursor,
+              const TrackCursor_<cv::Point2d>& cursor,
               const cv::Scalar& color,
               int start_t) {
   const Track::const_iterator& it = cursor.point;
@@ -139,7 +143,7 @@ void drawTail(cv::Mat& image,
 }
 
 void drawFeature(cv::Mat& image,
-                 const TrackCursor& cursor,
+                 const TrackCursor_<cv::Point2d>& cursor,
                  const cv::Scalar& color,
                  int start_t) {
   Track::const_iterator it = cursor.point;
@@ -198,8 +202,8 @@ bool loadAllTracks(const std::string& tracks_format,
     track_lists.push_back(TrackList());
 
     // Attempt to load tracks.
-    cv::Size size;
-    ok = loadTracks(tracks_file, size, track_lists.back(), NULL);
+    ImagePointReader reader;
+    ok = loadTrackList(tracks_file, track_lists.back(), reader);
     if (!ok) {
       // Failed.
       continue;

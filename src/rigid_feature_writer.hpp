@@ -6,7 +6,7 @@
 
 class RigidFeatureWriter : public Writer<RigidFeature> {
   public:
-    ~RigidFeatureWriter()
+    ~RigidFeatureWriter();
     void write(cv::FileStorage& file, const RigidFeature& feature);
 };
 

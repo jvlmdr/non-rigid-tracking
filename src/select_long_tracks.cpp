@@ -1,4 +1,3 @@
-#include <iostream>
 #include <string>
 #include <vector>
 #include <list>
@@ -11,64 +10,45 @@
 #include "track_list.hpp"
 #include "rigid_feature.hpp"
 #include "rigid_feature_reader.hpp"
-#include "track_list_reader.hpp"
 #include "rigid_feature_writer.hpp"
+#include "track_list_reader.hpp"
 #include "track_list_writer.hpp"
 
 DEFINE_bool(top_n, false, "Select best n tracks (versus a threshold)");
 DEFINE_bool(fraction, false, "When top_n is enabled, selects top fraction");
 
-// Considers only (x, y) movement not rotation or scale.
-double measureAverageStep(const Track_<RigidFeature>& track) {
-  double distance = 0;
-  int n = 0;
-  cv::Point2d previous;
-
-  Track_<RigidFeature>::const_iterator point;
-  for (point = track.begin(); point != track.end(); ++point) {
-    // Get current position.
-    const RigidFeature& feature = point->second;
-    cv::Point2d current(feature.x, feature.y);
-
-    // If this is the first point, we have no previous measurement.
-    if (point != track.begin()) {
-      distance += cv::norm(current - previous);
-      n += 1;
-    }
-
-    previous = current;
-  }
-
-  return distance / n;
-}
-
 void init(int& argc, char**& argv) {
   std::ostringstream usage;
-  usage << "Selects all tracks whose motion is above a threshold." << std::endl;
+  usage << "Selects all tracks longer than a given threshold." << std::endl;
   usage << std::endl;
   usage << "Sample usage: " << argv[0] << " input-tracks output-tracks"
-    " min-distance-per-frame";
+    " threshold";
+
   google::SetUsageMessage(usage.str());
-
-  google::InitGoogleLogging(argv[0]);
   google::ParseCommandLineFlags(&argc, &argv, true);
+  google::InitGoogleLogging(argv[0]);
+}
 
-  if (argc != 4) {
-    google::ShowUsageWithFlags(argv[0]);
-    std::exit(1);
+struct ScoredIndex {
+  int index;
+  int score;
+
+  ScoredIndex(int index, int score) : index(index), score(score) {}
+
+  bool operator<(const ScoredIndex& other) const {
+    return score > other.score;
   }
-}
-
-bool greaterThan(double x, double y) {
-  return x > y;
-}
+};
 
 int main(int argc, char** argv) {
   init(argc, argv);
 
+  if (argc != 4) {
+    google::ShowUsageWithFlags(argv[0]);
+    return 1;
+  }
   std::string input_file = argv[1];
   std::string output_file = argv[2];
-  const char* threshold = argv[3];
 
   // Load tracks from file.
   TrackList_<RigidFeature> input_tracks;
@@ -77,44 +57,49 @@ int main(int argc, char** argv) {
   CHECK(ok) << "Could not load tracks";
 
   int num_tracks = input_tracks.size();
-  double min_distance_per_frame;
-
-  // Measure how much each point moved.
-  std::vector<double> distances;
-  std::transform(input_tracks.begin(), input_tracks.end(),
-      std::back_inserter(distances), measureAverageStep);
+  int min_track_length;
 
   // Take tracks as long as the n-th value or x-th percentile.
   // (To avoid non-deterministic behaviour.)
   if (FLAGS_top_n) {
-    // Sort tracks by how much they move.
-    std::vector<double> sorted_distances(distances);
-    std::sort(sorted_distances.begin(), sorted_distances.end(), greaterThan);
+    // Sort tracks by their length.
+    std::vector<ScoredIndex> scored;
+    for (int i = 0; i < int(input_tracks.size()); i += 1) {
+      const Track_<RigidFeature>& track = input_tracks[i];
+      int length = track.rbegin()->first - track.begin()->first + 1;
+      scored.push_back(ScoredIndex(i, length));
+    }
+    std::sort(scored.begin(), scored.end());
 
     int n;
     if (FLAGS_fraction) {
-      double x = boost::lexical_cast<double>(threshold);
+      double x = boost::lexical_cast<double>(argv[3]);
       CHECK(x >= 0);
       CHECK(x <= 1);
       n = static_cast<int>(x * (num_tracks - 1));
     } else {
-      n = boost::lexical_cast<int>(threshold);
+      n = boost::lexical_cast<int>(argv[3]);
       CHECK(n > 0);
     }
 
     n = std::min(n, num_tracks - 1);
-    min_distance_per_frame = sorted_distances[n];
+    min_track_length = scored[n].score;
   } else {
     // Simply read threshold from flag.
-    min_distance_per_frame = boost::lexical_cast<int>(threshold);
+    min_track_length = boost::lexical_cast<int>(argv[3]);
   }
 
   TrackList_<RigidFeature> output_tracks;
 
-  // Filter out distances which are too small.
-  for (int i = 0; i < num_tracks; i += 1) {
-    if (distances[i] >= min_distance_per_frame) {
-      output_tracks.push_back(input_tracks[i]);
+  for (TrackList_<RigidFeature>::const_iterator track = input_tracks.begin();
+       track != input_tracks.end();
+       ++track) {
+    // Measure track length.
+    int length = track->rbegin()->first - track->begin()->first + 1;
+
+    // Only keep if above threshold.
+    if (length >= min_track_length) {
+      output_tracks.push_back(*track);
     }
   }
 

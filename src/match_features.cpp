@@ -7,13 +7,14 @@
 #include <boost/bind.hpp>
 #include <boost/lexical_cast.hpp>
 #include <opencv2/core/core.hpp>
+#include <opencv2/features2d/features2d.hpp>
 #include <gflags/gflags.h>
 #include <glog/logging.h>
 #include "read_image.hpp"
 #include "descriptor.hpp"
-#include "keypoint.hpp"
 #include "match.hpp"
-#include "reader.hpp"
+
+#include "descriptor_reader.hpp"
 #include "vector_reader.hpp"
 #include "writer.hpp"
 #include "vector_writer.hpp"
@@ -247,15 +248,13 @@ int main(int argc, char** argv) {
   std::vector<Descriptor> descriptors2;
 
   DescriptorReader descriptor_reader;
-  VectorReader<Descriptor> reader(descriptor_reader);
-
   LOG(INFO) << "Loading descriptors from `" << descriptors_file1 << "'";
-  ok = load(descriptors_file1, descriptors1, reader);
+  ok = loadList(descriptors_file1, descriptors1, descriptor_reader);
   CHECK(ok) << "Could not load descriptors";
   LOG(INFO) << "Loaded " << descriptors1.size() << " descriptors";
 
   LOG(INFO) << "Loading descriptors from `" << descriptors_file2 << "'";
-  ok = load(descriptors_file2, descriptors2, reader);
+  ok = loadList(descriptors_file2, descriptors2, descriptor_reader);
   CHECK(ok) << "Could not load descriptors";
   LOG(INFO) << "Loaded " << descriptors2.size() << " descriptors";
 

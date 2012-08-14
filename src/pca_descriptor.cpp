@@ -17,6 +17,9 @@
 #include "random_color.hpp"
 #include "track_list.hpp"
 
+#include "descriptor_reader.hpp"
+#include "track_list_reader.hpp"
+
 const int NUM_DIMENSIONS = 2;
 
 const double SATURATION = 0.99;
@@ -26,16 +29,26 @@ std::string makeFilename(const std::string& format, int n) {
   return boost::str(boost::format(format) % (n + 1));
 }
 
-int main(int argc, char** argv) {
+void init(int& argc, char**& argv) {
+  std::ostringstream usage;
+  usage << "Performs PCA on a set of descriptor tracks." << std::endl;
+  usage << std::endl;
+  usage << argv[0] << " tracks-file" << std::endl;
+  usage << std::endl;
+  usage << "Features must have a \"descriptor\" attribute." << std::endl;
+  google::SetUsageMessage(usage.str());
+
   google::InitGoogleLogging(argv[0]);
   google::ParseCommandLineFlags(&argc, &argv, true);
 
-  if (argc < 2) {
-    std::cerr << "usage: " << argv[0] << " tracks-file" << std::endl;
-    std::cerr << std::endl;
-    std::cerr << "features must have a \"descriptor\" attribute" << std::endl;
-    return 1;
+  if (argc != 2) {
+    google::ShowUsageWithFlags(argv[0]);
+    std::exit(1);
   }
+}
+
+int main(int argc, char** argv) {
+  init(argc, argv);
 
   std::string tracks_file = argv[1];
 
@@ -44,13 +57,9 @@ int main(int argc, char** argv) {
 
   // Load tracks.
   DescriptorTrackList descriptor_tracks;
-  ReadDescriptor read_descriptor;
-  bool ok = descriptor_tracks.load(tracks_file, read_descriptor);
-
-  if (!ok) {
-    std::cerr << "could not load tracks" << std::endl;
-    return 1;
-  }
+  DescriptorReader descriptor_reader;
+  bool ok = loadTrackList(tracks_file, descriptor_tracks, descriptor_reader);
+  CHECK(ok) << "Could not load descriptor tracks";
 
   // Number of tracks.
   int num_tracks = descriptor_tracks.size();
