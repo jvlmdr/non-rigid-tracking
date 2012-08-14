@@ -26,18 +26,6 @@ const double SIGMA = 1.6;
 DEFINE_double(contrast_threshold, 0.04,
     "Constrast threshold for feature detection");
 
-std::string usage(const char* argv0) {
-  std::ostringstream usage;
-
-  usage << "Finds SIFT keypoints in an image and extracts descriptors." <<
-    std::endl;
-  usage << std::endl;
-  usage << "Sample usage:" << std::endl;
-  usage << argv0 << " image features" << std::endl;
-
-  return usage.str();
-}
-
 struct Feature {
   // This is "position" in a general sense. More like 2D pose.
   RigidFeature position;
@@ -96,15 +84,26 @@ void extractFeatures(const cv::Mat& image,
   }
 }
 
-int main(int argc, char** argv) {
-  google::SetUsageMessage(usage(argv[0]));
-  google::ParseCommandLineFlags(&argc, &argv, true);
+void init(int& argc, char**& argv) {
+  std::ostringstream usage;
+  usage << "Finds SIFT keypoints in an image and extracts descriptors." <<
+    std::endl;
+  usage << std::endl;
+  usage << "Sample usage:" << std::endl;
+  usage << argv[0] << " image features" << std::endl;
+  google::SetUsageMessage(usage.str());
+
   google::InitGoogleLogging(argv[0]);
+  google::ParseCommandLineFlags(&argc, &argv, true);
 
   if (argc != 3) {
     google::ShowUsageWithFlags(argv[0]);
-    return 1;
+    std::exit(1);
   }
+}
+
+int main(int argc, char** argv) {
+  init(argc, argv);
 
   std::string image_filename = argv[1];
   std::string features_filename = argv[2];
