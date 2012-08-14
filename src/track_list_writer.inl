@@ -1,7 +1,7 @@
 #include "track_writer.hpp"
 
 template<class T>
-TrackListWriter<T>::TrackListWriter(Writer<Track_<T> >& writer)
+TrackListWriter<T>::TrackListWriter(Writer<Track<T> >& writer)
     : writer_(&writer) {}
 
 template<class T>
@@ -9,8 +9,8 @@ TrackListWriter<T>::~TrackListWriter() {}
 
 template<class T>
 void TrackListWriter<T>::write(cv::FileStorage& file,
-                               const TrackList_<T>& tracks) {
-  typename TrackList_<T>::const_iterator it;
+                               const TrackList<T>& tracks) {
+  typename TrackList<T>::const_iterator it;
 
   file << "list";
   file << "[";
@@ -24,7 +24,7 @@ void TrackListWriter<T>::write(cv::FileStorage& file,
 
 template<class T>
 bool saveTrackList(const std::string& filename,
-                   const TrackList_<T>& tracks,
+                   const TrackList<T>& tracks,
                    Writer<T>& writer) {
   TrackWriter<T> track_writer(writer);
   TrackListWriter<T> list_writer(track_writer);

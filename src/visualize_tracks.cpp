@@ -30,8 +30,7 @@ DEFINE_string(output_format, "%d.png", "Location to save image.");
 DEFINE_bool(save, false, "Save to file?");
 DEFINE_bool(display, true, "Show in window?");
 
-typedef Track_<cv::Point2d> Track;
-typedef TrackList_<cv::Point2d> TrackList;
+typedef Track<cv::Point2d> PointTrack;
 
 std::string imageFilename(const std::string& format, int n) {
   return boost::str(boost::format(format) % (n + 1));
@@ -46,7 +45,7 @@ struct ColoredCursor {
 
   ColoredCursor() : cursor(), color() {}
 
-  static ColoredCursor make(const Track& track) {
+  static ColoredCursor make(const PointTrack& track) {
     return ColoredCursor(TrackCursor_<cv::Point2d>::make(track),
         randomColor(SATURATION, BRIGHTNESS));
   }
@@ -123,19 +122,19 @@ void drawTail(cv::Mat& image,
               const TrackCursor_<cv::Point2d>& cursor,
               const cv::Scalar& color,
               int start_t) {
-  const Track::const_iterator& it = cursor.point;
+  const PointTrack::const_iterator& it = cursor.point;
   int t = it->first;
 
   // Create either a forward or reverse iterator range.
   if (t < start_t) {
-    Track::const_iterator begin(it);
-    Track::const_iterator end = cursor.track->end();
+    PointTrack::const_iterator begin(it);
+    PointTrack::const_iterator end = cursor.track->end();
     end = findTailEnd(begin, end, t, start_t, MAX_TAIL_LENGTH);
     drawTailRange(image, color, begin, end);
   } else {
-    Track::const_reverse_iterator begin(it);
+    PointTrack::const_reverse_iterator begin(it);
     --begin;
-    Track::const_reverse_iterator end = cursor.track->rend();
+    PointTrack::const_reverse_iterator end = cursor.track->rend();
     end = findTailEnd(begin, end, t, start_t, MAX_TAIL_LENGTH);
     drawTailRange(image, color, begin, end);
   }
@@ -145,7 +144,7 @@ void drawFeature(cv::Mat& image,
                  const TrackCursor_<cv::Point2d>& cursor,
                  const cv::Scalar& color,
                  int start_t) {
-  Track::const_iterator it = cursor.point;
+  PointTrack::const_iterator it = cursor.point;
   int t = it->first;
 
   // Draw point.
@@ -159,7 +158,7 @@ void drawFeatureIfPresent(cv::Mat& image,
                           const ColoredCursor& cursor,
                           int t,
                           int start_t) {
-  Track::const_iterator it = cursor.cursor.point;
+  PointTrack::const_iterator it = cursor.cursor.point;
   int u = it->first;
 
   if (t == u) {
@@ -169,7 +168,7 @@ void drawFeatureIfPresent(cv::Mat& image,
 }
 
 void advanceIfEqual(int t, ColoredCursor& cursor) {
-  Track::const_iterator& iterator = cursor.cursor.point;
+  PointTrack::const_iterator& iterator = cursor.cursor.point;
   int u = iterator->first;
 
   if (t == u) {
@@ -199,7 +198,7 @@ int main(int argc, char** argv) {
   bool ok;
 
   // Load tracks.
-  TrackList_<cv::Point2d> tracks;
+  TrackList<cv::Point2d> tracks;
   ImagePointReader reader;
   ok = loadTrackList(tracks_file, tracks, reader);
   CHECK(ok) << "Could not load tracks";

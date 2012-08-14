@@ -16,10 +16,9 @@
 //
 // TODO: Advantageous to enforce that tracks are ordered by their first frame?
 template<class T>
-class TrackList_ {
+class TrackList {
   private:
-    typedef Track_<T> Track;
-    typedef std::vector<Track> List;
+    typedef std::vector<Track<T> > List;
 
   public:
     // Returns the first frame in the track.
@@ -38,22 +37,22 @@ class TrackList_ {
     typedef typename List::pointer pointer;
     typedef typename List::const_pointer const_pointer;
 
-    TrackList_();
-    TrackList_(int size);
+    TrackList();
+    TrackList(int size);
 
-    Track& operator[](int n);
-    const Track& operator[](int n) const;
+    Track<T>& operator[](int n);
+    const Track<T>& operator[](int n) const;
 
-    void push_back(const Track& x);
-    Track& back();
-    const Track& back() const;
-    Track& front();
-    const Track& front() const;
+    void push_back(const Track<T>& x);
+    Track<T>& back();
+    const Track<T>& back() const;
+    Track<T>& front();
+    const Track<T>& front() const;
 
     int size() const;
     bool empty() const;
     void clear();
-    void swap(TrackList_<T>& other);
+    void swap(TrackList<T>& other);
 
     iterator begin();
     const_iterator begin() const;
@@ -83,7 +82,7 @@ class FrameIterator_ {
     bool end() const;
 
     // Initializes at start of tracks.
-    FrameIterator_(const TrackList_<T>& tracks);
+    FrameIterator_(const TrackList<T>& tracks);
     // Copy constructor.
     FrameIterator_(const FrameIterator_& rhs);
 

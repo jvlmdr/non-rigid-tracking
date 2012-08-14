@@ -73,7 +73,7 @@ int main(int argc, char** argv) {
   std::string keypoints_format = argv[2];
   std::string tracks_file = argv[3];
 
-  TrackList_<IndexedFeature> tracks;
+  TrackList<IndexedFeature> tracks;
 
   bool ok = true;
   // Examine frames (u - 1, u).
@@ -129,7 +129,7 @@ int main(int argc, char** argv) {
           active_tracks[b] = index;
         } else {
           // It wasn't: create a new track.
-          tracks.push_back(Track_<IndexedFeature>());
+          tracks.push_back(Track<IndexedFeature>());
           tracks.back()[t] = IndexedFeature(a, previous_keypoints[a]);
           tracks.back()[u] = IndexedFeature(b, keypoints[b]);
           active_tracks[b] = tracks.size() - 1;

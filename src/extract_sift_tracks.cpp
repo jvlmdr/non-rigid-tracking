@@ -111,7 +111,7 @@ int main(int argc, char** argv) {
   std::string descriptors_file = argv[3];
 
   // Load tracks.
-  TrackList_<RigidFeature> position_tracks;
+  TrackList<RigidFeature> position_tracks;
   RigidFeatureReader position_reader;
   bool ok = loadTrackList(positions_file, position_tracks, position_reader);
   CHECK(ok) << "Could not load tracks";
@@ -119,7 +119,7 @@ int main(int argc, char** argv) {
   int num_features = position_tracks.size();
 
   // Where to put the result.
-  TrackList_<Feature> feature_tracks(num_features);
+  TrackList<Feature> feature_tracks(num_features);
 
   // Iterate over each frame in the track.
   FrameIterator_<RigidFeature> frame(position_tracks);

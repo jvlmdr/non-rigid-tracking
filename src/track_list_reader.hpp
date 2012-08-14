@@ -5,19 +5,19 @@
 #include "reader.hpp"
 
 template<class T>
-class TrackListReader : public Reader<TrackList_<T> > {
+class TrackListReader : public Reader<TrackList<T> > {
   public:
-    TrackListReader(Reader<Track_<T> >& reader);
+    TrackListReader(Reader<Track<T> >& reader);
     ~TrackListReader();
-    void read(const cv::FileNode& node, TrackList_<T>& tracks);
+    void read(const cv::FileNode& node, TrackList<T>& tracks);
 
   private:
-    Reader<Track_<T> >* reader_;
+    Reader<Track<T> >* reader_;
 };
 
 template<class T>
 bool loadTrackList(const std::string& filename,
-                   TrackList_<T>& tracks,
+                   TrackList<T>& tracks,
                    Reader<T>& reader);
 
 #include "track_list_reader.inl"

@@ -19,7 +19,7 @@ class Tracker {
     virtual int numFrames() const = 0;
     // Provides read access to all tracks.
     // Reference should be valid until non-const function called.
-    virtual const TrackList_<cv::Point2d>& tracks() const = 0;
+    virtual const TrackList<cv::Point2d>& tracks() const = 0;
 };
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -34,7 +34,7 @@ class SerialTracker : public Tracker {
     virtual bool write(cv::FileStorage& out) const = 0;
     // Outputs a list of tracks which are currently being tracked.
     virtual void activeTracks(
-        std::vector<const Track_<cv::Point2d>*>& tracks) const = 0;
+        std::vector<const Track<cv::Point2d>*>& tracks) const = 0;
 };
 
 #endif

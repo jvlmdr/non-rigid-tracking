@@ -75,7 +75,7 @@ int main(int argc, char** argv) {
   bool ok;
 
   // Load tracks.
-  TrackList_<RigidFeature> tracks;
+  TrackList<RigidFeature> tracks;
   RigidFeatureReader feature_reader;
   ok = loadTrackList(tracks_file, tracks, feature_reader);
   CHECK(ok) << "Could not load tracks";

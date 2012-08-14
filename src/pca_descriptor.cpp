@@ -52,8 +52,8 @@ int main(int argc, char** argv) {
 
   std::string tracks_file = argv[1];
 
-  typedef TrackList_<Descriptor> DescriptorTrackList;
-  typedef Track_<Descriptor> DescriptorTrack;
+  typedef TrackList<Descriptor> DescriptorTrackList;
+  typedef Track<Descriptor> DescriptorTrack;
 
   // Load tracks.
   DescriptorTrackList descriptor_tracks;

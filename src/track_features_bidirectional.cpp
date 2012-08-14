@@ -45,17 +45,17 @@ const int MARKER_THICKNESS = 2;
 const int TRAIL_LENGTH = 5;
 const int TRAIL_THICKNESS = 2;
 
-typedef Track_<cv::Point2d> Track;
-typedef TrackList_<cv::Point2d> TrackList;
+typedef Track<cv::Point2d> PointTrack;
+typedef TrackList<cv::Point2d> PointTrackList;
 
-void drawTrack(cv::Mat& image, const Track& track) {
+void drawTrack(cv::Mat& image, const PointTrack& track) {
   // Get last point in track.
   const cv::Point2d& pos = track.rbegin()->second;
   // Draw circle around point.
   cv::circle(image, pos, MARKER_RADIUS, MARKER_COLOR, MARKER_THICKNESS);
 
   // Draw trail from previous frames.
-  Track::const_reverse_iterator point = track.rbegin();
+  PointTrack::const_reverse_iterator point = track.rbegin();
   cv::Point2d prev = point->second;
   ++point;
   int n = 0;
@@ -68,8 +68,8 @@ void drawTrack(cv::Mat& image, const Track& track) {
   }
 }
 
-void drawTracks(cv::Mat& image, const std::vector<const Track*>& tracks) {
-  typedef std::vector<const Track*> TrackList;
+void drawTracks(cv::Mat& image, const std::vector<const PointTrack*>& tracks) {
+  typedef std::vector<const PointTrack*> TrackList;
   TrackList::const_iterator track;
 
   for (track = tracks.begin(); track != tracks.end(); ++track) {
@@ -88,8 +88,11 @@ cv::Point2d readPointFromFile(const cv::FileNode& node) {
   return cv::Point2d(x, y);
 }
 
-void shiftTrack(const Track& input, Track& output, int delta, bool reverse) {
-  Track::const_iterator point;
+void shiftTrack(const PointTrack& input,
+                PointTrack& output,
+                int delta,
+                bool reverse) {
+  PointTrack::const_iterator point;
   for (point = input.begin(); point != input.end(); ++point) {
     int t = point->first;
     const cv::Point2d& position = point->second;
@@ -102,13 +105,13 @@ void shiftTrack(const Track& input, Track& output, int delta, bool reverse) {
   }
 }
 
-void shiftTracks(const TrackList& input,
-                 TrackList& output,
+void shiftTracks(const PointTrackList& input,
+                 PointTrackList& output,
                  int delta) {
-  TrackList::const_iterator track;
+  PointTrackList::const_iterator track;
   for (track = input.begin(); track != input.end(); ++track) {
     // Create a new track.
-    output.push_back(Track());
+    output.push_back(PointTrack());
     // Copy with a shift.
     shiftTrack(*track, output.back(), delta, false);
   }
@@ -130,20 +133,20 @@ bool loadKeypoints(const std::string& filename,
   return true;
 }
 
-bool startsBefore(const Track& lhs, const Track& rhs) {
+bool startsBefore(const PointTrack& lhs, const PointTrack& rhs) {
   return lhs.begin()->first < rhs.begin()->first;
 }
 
-void fuseBidirectional(const TrackList& forward,
-                       const TrackList& backward,
-                       TrackList& fused,
+void fuseBidirectional(const PointTrackList& forward,
+                       const PointTrackList& backward,
+                       PointTrackList& fused,
                        int delta) {
-  TrackList::const_iterator forward_track = forward.begin();
-  TrackList::const_iterator backward_track = backward.begin();
+  PointTrackList::const_iterator forward_track = forward.begin();
+  PointTrackList::const_iterator backward_track = backward.begin();
 
   while (forward_track != forward.end()) {
     // Create a new track.
-    fused.push_back(Track());
+    fused.push_back(PointTrack());
 
     // Copy with a shift.
     shiftTrack(*forward_track, fused.back(), delta, false);
@@ -157,7 +160,7 @@ void fuseBidirectional(const TrackList& forward,
 // Returns number of frames tracked, including first.
 int track(const std::string& image_format,
           const std::vector<cv::Point2d>& points,
-          TrackList& tracks,
+          PointTrackList& tracks,
           int offset,
           bool reverse,
           int max_frames) {
@@ -190,7 +193,7 @@ int track(const std::string& image_format,
     tracker.feed(image);
 
     // Draw the points which are currently being tracked.
-    std::vector<const Track*> tracks;
+    std::vector<const PointTrack*> tracks;
     tracker.activeTracks(tracks);
     drawTracks(color_image, tracks);
 
@@ -218,19 +221,19 @@ int track(const std::string& image_format,
 
 ////////////////////////////////////////////////////////////////////////////////
 
-typedef std::map<int, Track*> TrackSubset;
+typedef std::map<int, PointTrack*> TrackSubset;
 
 bool tooShort(const TrackSubset::value_type& x) {
-  const Track* track = x.second;
+  const PointTrack* track = x.second;
   return (track->size() < TIME_WINDOW * 2 - 1);
 }
 
-double maxStep(const Track& track) {
+double maxStep(const PointTrack& track) {
   double max = 0.;
   cv::Point2d previous;
   bool first_point = true;
 
-  Track::const_iterator point;
+  PointTrack::const_iterator point;
   for (point = track.begin(); point != track.end(); ++point) {
     const cv::Point2d& current = point->second;
 
@@ -246,12 +249,12 @@ double maxStep(const Track& track) {
   return max;
 }
 
-double meanStep(const Track& track) {
+double meanStep(const PointTrack& track) {
   double mean = 0.;
   cv::Point2d previous;
   bool first_point = true;
 
-  Track::const_iterator point;
+  PointTrack::const_iterator point;
   for (point = track.begin(); point != track.end(); ++point) {
     const cv::Point2d& current = point->second;
 
@@ -270,7 +273,7 @@ double meanStep(const Track& track) {
 }
 
 bool tooStationary(const TrackSubset::value_type& x) {
-  const Track* track = x.second;
+  const PointTrack* track = x.second;
   return (meanStep(*track) < MIN_AVERAGE_STEP);
 }
 
@@ -314,17 +317,17 @@ int main(int argc, char** argv) {
   loadKeypoints(keypoints_filename, points);
 
   // Track forwards.
-  TrackList forward;
+  PointTrackList forward;
   std::cerr << "track forwards" << std::endl;
   track(image_format, points, forward, first_frame, false, TIME_WINDOW);
 
   // Track backwards.
-  TrackList backward;
+  PointTrackList backward;
   std::cerr << "track backwards" << std::endl;
   track(image_format, points, backward, first_frame, true, TIME_WINDOW);
 
   // Merge tracks.
-  TrackList tracks;
+  PointTrackList tracks;
   fuseBidirectional(forward, backward, tracks, 0);
 
   // Populate subset.

@@ -97,7 +97,7 @@ StaticFeature makeRandomColorFeature(const RigidFeature& feature) {
 }
 
 void trackFeatures(const std::vector<StaticFeature>& features,
-                   TrackList_<RigidFeature>& tracks,
+                   TrackList<RigidFeature>& tracks,
                    const std::string& image_format,
                    int frame_number,
                    int max_frames,
@@ -274,7 +274,7 @@ int main(int argc, char** argv) {
       std::back_inserter(features), makeRandomColorFeature);
 
   int num_features = features.size();
-  TrackList_<RigidFeature> tracks(num_features);
+  TrackList<RigidFeature> tracks(num_features);
   trackFeatures(features, tracks, image_format, frame_number, max_frames,
       false, display, save, save_format);
   trackFeatures(features, tracks, image_format, frame_number, max_frames,

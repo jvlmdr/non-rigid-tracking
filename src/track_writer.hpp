@@ -5,11 +5,11 @@
 #include "writer.hpp"
 
 template<class T>
-class TrackWriter : public Writer<Track_<T> > {
+class TrackWriter : public Writer<Track<T> > {
   public:
     TrackWriter(Writer<T>& writer);
     ~TrackWriter();
-    void write(cv::FileStorage& file, const Track_<T>& track);
+    void write(cv::FileStorage& file, const Track<T>& track);
 
   private:
     Writer<T>* writer_;

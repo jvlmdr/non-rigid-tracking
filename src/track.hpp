@@ -5,7 +5,7 @@
 #include <map>
 
 template<class T>
-class Track_ {
+class Track {
   private:
     typedef std::map<int, T> Map;
 
@@ -15,7 +15,7 @@ class Track_ {
     typedef typename Map::reverse_iterator reverse_iterator;
     typedef typename Map::const_reverse_iterator const_reverse_iterator;
 
-    Track_();
+    Track();
 
     T& operator[](int x);
     const_iterator find(int x) const;
@@ -45,18 +45,18 @@ class Track_ {
 // Don't C++ iterators have the ability to do this? Not for lists?
 template<class T>
 struct TrackCursor_ {
-  typedef typename Track_<T>::const_iterator Position;
+  typedef typename Track<T>::const_iterator Position;
 
-  const Track_<T>* track;
+  const Track<T>* track;
   Position point;
 
   TrackCursor_();
-  TrackCursor_(const Track_<T>& track, const Position& point);
+  TrackCursor_(const Track<T>& track, const Position& point);
 
   bool end() const;
 
   // Returns a cursor at the start of the track.
-  static TrackCursor_ make(const Track_<T>& track);
+  static TrackCursor_ make(const Track<T>& track);
 };
 
 #include "track.inl"

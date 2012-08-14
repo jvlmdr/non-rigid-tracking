@@ -40,17 +40,17 @@ const int MARKER_THICKNESS = 2;
 const int TRAIL_LENGTH = 5;
 const int TRAIL_THICKNESS = 2;
 
-typedef Track_<cv::Point2d> Track;
-typedef TrackList_<cv::Point2d> TrackList;
+typedef Track<cv::Point2d> PointTrack;
+typedef TrackList<cv::Point2d> PointTrackList;
 
-void drawTrack(cv::Mat& image, const Track& track) {
+void drawTrack(cv::Mat& image, const PointTrack& track) {
   // Get last point in track.
   const cv::Point2d& pos = track.rbegin()->second;
   // Draw circle around point.
   cv::circle(image, pos, MARKER_RADIUS, MARKER_COLOR, MARKER_THICKNESS);
 
   // Draw trail from previous frames.
-  Track::const_reverse_iterator point = track.rbegin();
+  PointTrack::const_reverse_iterator point = track.rbegin();
   cv::Point2d prev = point->second;
   ++point;
   int n = 0;
@@ -63,9 +63,9 @@ void drawTrack(cv::Mat& image, const Track& track) {
   }
 }
 
-void drawTracks(cv::Mat& image, const std::vector<const Track*>& tracks) {
-  typedef std::vector<const Track*> TrackList;
-  TrackList::const_iterator track;
+void drawTracks(cv::Mat& image, const std::vector<const PointTrack*>& tracks) {
+  typedef std::vector<const PointTrack*> PointTrackList;
+  PointTrackList::const_iterator track;
 
   for (track = tracks.begin(); track != tracks.end(); ++track) {
     drawTrack(image, **track);
@@ -83,10 +83,10 @@ cv::Point2d readPointFromFile(const cv::FileNode& node) {
   return cv::Point2d(x, y);
 }
 
-void shiftTrack(const Track& input, Track& output, int delta) {
+void shiftTrack(const PointTrack& input, PointTrack& output, int delta) {
   output.clear();
 
-  Track::const_iterator point;
+  PointTrack::const_iterator point;
   for (point = input.begin(); point != input.end(); ++point) {
     int t = point->first;
     const cv::Point2d& position = point->second;
@@ -95,13 +95,15 @@ void shiftTrack(const Track& input, Track& output, int delta) {
   }
 }
 
-void shiftTracks(const TrackList& input, TrackList& output, int delta) {
+void shiftTracks(const PointTrackList& input,
+                 PointTrackList& output,
+                 int delta) {
   output.clear();
 
-  TrackList::const_iterator track;
+  PointTrackList::const_iterator track;
   for (track = input.begin(); track != input.end(); ++track) {
     // Create a new track.
-    output.push_back(Track());
+    output.push_back(PointTrack());
     // Copy with a shift.
     shiftTrack(*track, output.back(), delta);
   }
@@ -176,7 +178,7 @@ int main(int argc, char** argv) {
     tracker.feed(image);
 
     // Draw the points which are currently being tracked.
-    std::vector<const Track*> tracks;
+    std::vector<const PointTrack*> tracks;
     tracker.activeTracks(tracks);
     drawTracks(color_image, tracks);
 
@@ -197,7 +199,7 @@ int main(int argc, char** argv) {
   }
 
   // Shift tracks in time so that they start at the first frame.
-  TrackList shifted;
+  PointTrackList shifted;
   shiftTracks(tracker.tracks(), shifted, first_frame);
 
   // Write out tracks.

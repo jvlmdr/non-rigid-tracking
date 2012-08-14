@@ -7,13 +7,13 @@
 // TrackList
 
 template<class T>
-TrackList_<T>::TrackList_() : list_() {}
+TrackList<T>::TrackList() : list_() {}
 
 template<class T>
-TrackList_<T>::TrackList_(int size) : list_(size) {}
+TrackList<T>::TrackList(int size) : list_(size) {}
 
 template<class T>
-int firstFrame(const Track_<T>& track) {
+int firstFrame(const Track<T>& track) {
   return track.begin()->first;
 }
 
@@ -24,7 +24,7 @@ T min(const T& a, const T& b) {
 
 // Returns the first frame in the track.
 template<class T>
-int TrackList_<T>::findFirstFrame() const {
+int TrackList<T>::findFirstFrame() const {
   std::vector<int> indices;
   std::transform(list_.begin(), list_.end(), std::back_inserter(indices),
       firstFrame<T>);
@@ -35,107 +35,107 @@ int TrackList_<T>::findFirstFrame() const {
 
 // Returns the number of points in all tracks.
 template<class T>
-int TrackList_<T>::countPoints() const {
+int TrackList<T>::countPoints() const {
   std::vector<int> counts;
 
   std::transform(list_.begin(), list_.end(), std::back_inserter(counts),
-      boost::bind(&Track_<T>::size, _1));
+      boost::bind(&Track<T>::size, _1));
 
   return std::accumulate(counts.begin(), counts.end(), int(0));
 }
 
 template<class T>
-Track_<T>& TrackList_<T>::operator[](int n) {
+Track<T>& TrackList<T>::operator[](int n) {
   return list_[n];
 }
 
 template<class T>
-const Track_<T>& TrackList_<T>::operator[](int n) const {
+const Track<T>& TrackList<T>::operator[](int n) const {
   return list_[n];
 }
 
 template<class T>
-void TrackList_<T>::push_back(const Track_<T>& x) {
+void TrackList<T>::push_back(const Track<T>& x) {
   list_.push_back(x);
 }
 
 template<class T>
-Track_<T>& TrackList_<T>::back() {
+Track<T>& TrackList<T>::back() {
   return list_.back();
 }
 
 template<class T>
-const Track_<T>& TrackList_<T>::back() const {
+const Track<T>& TrackList<T>::back() const {
   return list_.back();
 }
 
 template<class T>
-Track_<T>& TrackList_<T>::front() {
+Track<T>& TrackList<T>::front() {
   return list_.front();
 }
 
 template<class T>
-const Track_<T>& TrackList_<T>::front() const {
+const Track<T>& TrackList<T>::front() const {
   return list_.front();
 }
 
 template<class T>
-int TrackList_<T>::size() const {
+int TrackList<T>::size() const {
   return list_.size();
 }
 
 template<class T>
-bool TrackList_<T>::empty() const {
+bool TrackList<T>::empty() const {
   return list_.empty();
 }
 
 template<class T>
-void TrackList_<T>::clear() {
+void TrackList<T>::clear() {
   list_.clear();
 }
 
 template<class T>
-void TrackList_<T>::swap(TrackList_<T>& other) {
+void TrackList<T>::swap(TrackList<T>& other) {
   other.list_.swap(list_);
 }
 
 template<class T>
-typename TrackList_<T>::iterator TrackList_<T>::begin() {
+typename TrackList<T>::iterator TrackList<T>::begin() {
   return list_.begin();
 }
 
 template<class T>
-typename TrackList_<T>::const_iterator TrackList_<T>::begin() const {
+typename TrackList<T>::const_iterator TrackList<T>::begin() const {
   return list_.begin();
 }
 
 template<class T>
-typename TrackList_<T>::iterator TrackList_<T>::end() {
+typename TrackList<T>::iterator TrackList<T>::end() {
   return list_.end();
 }
 
 template<class T>
-typename TrackList_<T>::const_iterator TrackList_<T>::end() const {
+typename TrackList<T>::const_iterator TrackList<T>::end() const {
   return list_.end();
 }
 
 template<class T>
-typename TrackList_<T>::reverse_iterator TrackList_<T>::rbegin() {
+typename TrackList<T>::reverse_iterator TrackList<T>::rbegin() {
   return list_.rbegin();
 }
 
 template<class T>
-typename TrackList_<T>::const_reverse_iterator TrackList_<T>::rbegin() const {
+typename TrackList<T>::const_reverse_iterator TrackList<T>::rbegin() const {
   return list_.rbegin();
 }
 
 template<class T>
-typename TrackList_<T>::reverse_iterator TrackList_<T>::rend() {
+typename TrackList<T>::reverse_iterator TrackList<T>::rend() {
   return list_.rend();
 }
 
 template<class T>
-typename TrackList_<T>::const_reverse_iterator TrackList_<T>::rend() const {
+typename TrackList<T>::const_reverse_iterator TrackList<T>::rend() const {
   return list_.rend();
 }
 
@@ -144,10 +144,10 @@ typename TrackList_<T>::const_reverse_iterator TrackList_<T>::rend() const {
 
 // Initializes at start of tracks.
 template<class T>
-FrameIterator_<T>::FrameIterator_(const TrackList_<T>& tracks)
+FrameIterator_<T>::FrameIterator_(const TrackList<T>& tracks)
     : cursors_(), t_(0) {
   // Iterate through tracks.
-  typename TrackList_<T>::const_iterator track = tracks.begin();
+  typename TrackList<T>::const_iterator track = tracks.begin();
   // Monitor track index.
   int i = 0;
 

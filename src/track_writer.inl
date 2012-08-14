@@ -5,11 +5,11 @@ template<class T>
 TrackWriter<T>::~TrackWriter() {}
 
 template<class T>
-void TrackWriter<T>::write(cv::FileStorage& file, const Track_<T>& track) {
+void TrackWriter<T>::write(cv::FileStorage& file, const Track<T>& track) {
   file << "list";
   file << "[";
 
-  typename Track_<T>::const_iterator point;
+  typename Track<T>::const_iterator point;
   for (point = track.begin(); point != track.end(); ++point) {
     file << "{";
     file << "t" << point->first;

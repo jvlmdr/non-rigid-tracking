@@ -49,7 +49,7 @@ void KltTracker::init(const std::vector<cv::Point2d>& features,
 }
 
 // Accesses the tracks.
-const TrackList_<cv::Point2d>& KltTracker::tracks() const {
+const TrackList<cv::Point2d>& KltTracker::tracks() const {
   return tracks_;
 }
 
@@ -59,7 +59,7 @@ int KltTracker::numFrames() const {
 
 // Returns the tracks which are currently active.
 void KltTracker::activeTracks(
-    std::vector<const Track_<cv::Point2d>*>& tracks) const {
+    std::vector<const Track<cv::Point2d>*>& tracks) const {
   tracks.clear();
 
   Subset::const_iterator it;
@@ -80,10 +80,10 @@ void KltTracker::feed(const cv::Mat& image) {
     // Read out features.
     for (int i = 0; i < fl_->nFeatures; i += 1) {
       // Create a new track.
-      tracks_.push_back(Track_<cv::Point2d>());
+      tracks_.push_back(Track<cv::Point2d>());
 
       // Insert first point in track.
-      Track_<cv::Point2d>& track = tracks_.back();
+      Track<cv::Point2d>& track = tracks_.back();
       double x = fl_->feature[i]->x;
       double y = fl_->feature[i]->y;
       track[frame_number_] = cv::Point2d(x, y);
@@ -109,7 +109,7 @@ void KltTracker::feed(const cv::Mat& image) {
     while (index != active_.end()) {
       if (fl_->feature[*index]->val == KLT_TRACKED) {
         // Succesfully tracked, append to track.
-        Track_<cv::Point2d>& track = tracks_[*index];
+        Track<cv::Point2d>& track = tracks_[*index];
         double x = fl_->feature[*index]->x;
         double y = fl_->feature[*index]->y;
         track[frame_number_] = cv::Point2d(x, y);
@@ -134,7 +134,7 @@ bool KltTracker::write(cv::FileStorage& out) const {
 
   for (Subset::const_iterator it = active_.begin(); it != active_.end(); ++it) {
     // Get track.
-    const Track_<cv::Point2d>& track = tracks_[*it];
+    const Track<cv::Point2d>& track = tracks_[*it];
     // Get last point in track.
     const cv::Point2d& point = track.rbegin()->second;
 

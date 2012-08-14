@@ -5,19 +5,19 @@
 #include "writer.hpp"
 
 template<class T>
-class TrackListWriter : public Writer<TrackList_<T> > {
+class TrackListWriter : public Writer<TrackList<T> > {
   public:
-    TrackListWriter(Writer<Track_<T> >& writer);
+    TrackListWriter(Writer<Track<T> >& writer);
     ~TrackListWriter();
-    void write(cv::FileStorage& file, const TrackList_<T>& tracks);
+    void write(cv::FileStorage& file, const TrackList<T>& tracks);
 
   private:
-    Writer<Track_<T> >* writer_;
+    Writer<Track<T> >* writer_;
 };
 
 template<class T>
 bool saveTrackList(const std::string& filename,
-                   const TrackList_<T>& tracks,
+                   const TrackList<T>& tracks,
                    Writer<T>& writer);
 
 #include "track_list_writer.inl"

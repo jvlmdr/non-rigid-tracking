@@ -2,75 +2,75 @@
 // Track
 
 template<class T>
-Track_<T>::Track_() : map_() {}
+Track<T>::Track() : map_() {}
 
 template<class T>
-T& Track_<T>::operator[](int x) {
+T& Track<T>::operator[](int x) {
   return map_[x];
 }
 
 template<class T>
-typename Track_<T>::const_iterator Track_<T>::find(int x) const {
+typename Track<T>::const_iterator Track<T>::find(int x) const {
   return map_.find(x);
 }
 
 template<class T>
-typename Track_<T>::iterator Track_<T>::find(int x) {
+typename Track<T>::iterator Track<T>::find(int x) {
   return map_.find(x);
 }
 
 template<class T>
-int Track_<T>::size() const {
+int Track<T>::size() const {
   return map_.size();
 }
 
 template<class T>
-bool Track_<T>::empty() const {
+bool Track<T>::empty() const {
   return map_.empty();
 }
 
 template<class T>
-void Track_<T>::clear() {
+void Track<T>::clear() {
   map_.clear();
 }
 
 template<class T>
-typename Track_<T>::iterator Track_<T>::begin() {
+typename Track<T>::iterator Track<T>::begin() {
   return map_.begin();
 }
 
 template<class T>
-typename Track_<T>::const_iterator Track_<T>::begin() const {
+typename Track<T>::const_iterator Track<T>::begin() const {
   return map_.begin();
 }
 
 template<class T>
-typename Track_<T>::iterator Track_<T>::end() {
+typename Track<T>::iterator Track<T>::end() {
   return map_.end();
 }
 
 template<class T>
-typename Track_<T>::const_iterator Track_<T>::end() const {
+typename Track<T>::const_iterator Track<T>::end() const {
   return map_.end();
 }
 
 template<class T>
-typename Track_<T>::reverse_iterator Track_<T>::rbegin() {
+typename Track<T>::reverse_iterator Track<T>::rbegin() {
   return map_.rbegin();
 }
 
 template<class T>
-typename Track_<T>::const_reverse_iterator Track_<T>::rbegin() const {
+typename Track<T>::const_reverse_iterator Track<T>::rbegin() const {
   return map_.rbegin();
 }
 
 template<class T>
-typename Track_<T>::reverse_iterator Track_<T>::rend() {
+typename Track<T>::reverse_iterator Track<T>::rend() {
   return map_.rend();
 }
 
 template<class T>
-typename Track_<T>::const_reverse_iterator Track_<T>::rend() const {
+typename Track<T>::const_reverse_iterator Track<T>::rend() const {
   return map_.rend();
 }
 
@@ -81,12 +81,12 @@ template<class T>
 TrackCursor_<T>::TrackCursor_() : track(NULL), point() {}
 
 template<class T>
-TrackCursor_<T>::TrackCursor_(const Track_<T>& track,
+TrackCursor_<T>::TrackCursor_(const Track<T>& track,
                               const Position& point)
     : track(&track), point(point) {}
 
 template<class T>
-TrackCursor_<T> TrackCursor_<T>::make(const Track_<T>& track) {
+TrackCursor_<T> TrackCursor_<T>::make(const Track<T>& track) {
   return TrackCursor_(track, track.begin());
 }
 

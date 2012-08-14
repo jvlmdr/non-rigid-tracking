@@ -5,7 +5,7 @@ template<class T>
 TrackReader<T>::~TrackReader() {}
 
 template<class T>
-void TrackReader<T>::read(const cv::FileNode& parent, Track_<T>& track) {
+void TrackReader<T>::read(const cv::FileNode& parent, Track<T>& track) {
   const cv::FileNode& node = parent["list"];
   track.clear();
 

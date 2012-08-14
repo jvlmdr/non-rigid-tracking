@@ -19,7 +19,7 @@
 #include "track_list_reader.hpp"
 #include "track_list_writer.hpp"
 
-typedef TrackList_<RigidFeature> RigidTrackList;
+typedef TrackList<RigidFeature> RigidTrackList;
 typedef std::vector<RigidTrackList> TrackListList;
 
 std::string makeFilename(const std::string& format, int n) {

@@ -51,7 +51,7 @@ int main(int argc, char** argv) {
   std::string output_file = argv[2];
 
   // Load tracks from file.
-  TrackList_<RigidFeature> input_tracks;
+  TrackList<RigidFeature> input_tracks;
   RigidFeatureReader feature_reader;
   bool ok = loadTrackList(input_file, input_tracks, feature_reader);
   CHECK(ok) << "Could not load tracks";
@@ -65,7 +65,7 @@ int main(int argc, char** argv) {
     // Sort tracks by their length.
     std::vector<ScoredIndex> scored;
     for (int i = 0; i < int(input_tracks.size()); i += 1) {
-      const Track_<RigidFeature>& track = input_tracks[i];
+      const Track<RigidFeature>& track = input_tracks[i];
       int length = track.rbegin()->first - track.begin()->first + 1;
       scored.push_back(ScoredIndex(i, length));
     }
@@ -89,9 +89,9 @@ int main(int argc, char** argv) {
     min_track_length = boost::lexical_cast<int>(argv[3]);
   }
 
-  TrackList_<RigidFeature> output_tracks;
+  TrackList<RigidFeature> output_tracks;
 
-  for (TrackList_<RigidFeature>::const_iterator track = input_tracks.begin();
+  for (TrackList<RigidFeature>::const_iterator track = input_tracks.begin();
        track != input_tracks.end();
        ++track) {
     // Measure track length.
