@@ -262,3 +262,10 @@ ADD_EXECUTABLE(match-tracks-using-mean
   descriptor_reader.cpp)
 TARGET_LINK_LIBRARIES(match-tracks-using-mean glog gflags)
 TARGET_LINK_LIBRARIES(match-tracks-using-mean ${OpenCV_LIBS})
+
+ADD_EXECUTABLE(exhaustive-matches-to-tracks
+  exhaustive_matches_to_tracks.cpp
+  read_lines.cpp
+  match_reader.cpp)
+TARGET_LINK_LIBRARIES(exhaustive-matches-to-tracks glog gflags)
+TARGET_LINK_LIBRARIES(exhaustive-matches-to-tracks ${OpenCV_LIBS})
