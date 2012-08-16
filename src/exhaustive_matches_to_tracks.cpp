@@ -11,55 +11,54 @@
 #include <glog/logging.h>
 #include <gflags/gflags.h>
 #include "match.hpp"
-#include "track_list.hpp"
+#include "multiview_track.hpp"
+#include "multiview_track_list.hpp"
 
 #include "match_reader.hpp"
 #include "vector_reader.hpp"
 #include "read_lines.hpp"
+#include "default_writer.hpp"
+#include "multiview_track_writer.hpp"
+#include "multiview_track_list_writer.hpp"
 
-// A video frame is identified by (view, time).
-struct FrameIndex {
-  int view;
-  int time;
-
-  // Defines an ordering over frame indices.
-  bool operator<(const FrameIndex& other) const {
-    return (view < other.view) || (view == other.view && time < other.time);
-  }
-
-  FrameIndex(int view, int time) : view(view), time(time) {}
-};
-
-// TODO: A better name?
+// Identifies a feature in a multiview video.
+// TODO: Need a better name?
 struct FeatureIndex {
   int view;
   int time;
-  int feature;
+  int id;
 
-  bool operator<(const FeatureIndex& other) const {
-    if (view < other.view) {
+  FeatureIndex();
+  FeatureIndex(int view, int time, int id);
+  FeatureIndex(const Frame& frame, int id);
+
+  // Defines an ordering over feature indices.
+  bool operator<(const FeatureIndex& other) const;
+};
+
+FeatureIndex::FeatureIndex() : view(-1), time(-1), id(-1) {}
+
+FeatureIndex::FeatureIndex(int view, int time, int id)
+    : view(view), time(time), id(id) {}
+
+FeatureIndex::FeatureIndex(const Frame& frame, int id)
+    : view(frame.view), time(frame.time), id(id) {}
+
+bool FeatureIndex::operator<(const FeatureIndex& other) const {
+  if (view < other.view) {
+    return true;
+  } else if (other.view < view) {
+    return false;
+  } else {
+    if (time < other.time) {
       return true;
-    } else if (other.view < view) {
+    } else if (other.time < time) {
       return false;
     } else {
-      if (time < other.time) {
-        return true;
-      } else if (other.time < time) {
-        return false;
-      } else {
-        return feature < other.feature;
-      }
+      return id < other.id;
     }
   }
-
-  FeatureIndex() : view(-1), time(-1), feature(-1) {}
-
-  FeatureIndex(int view, int time, int feature)
-      : view(view), time(time), feature(feature) {}
-
-  FeatureIndex(const FrameIndex& frame, int feature)
-      : view(frame.view), time(frame.time), feature(feature) {}
-};
+}
 
 typedef boost::adjacency_list<boost::setS,
                               boost::vecS,
@@ -67,25 +66,25 @@ typedef boost::adjacency_list<boost::setS,
                               FeatureIndex>
         MatchGraph;
 typedef std::map<FeatureIndex, MatchGraph::vertex_descriptor> VertexLookup;
-
 typedef std::vector<FeatureIndex> FeatureList;
 
-std::ostream& operator<<(std::ostream& stream, const FeatureIndex& index) {
-  return stream << "(" << index.view << ", " << index.time << ", " <<
-      index.feature << ")";
+std::ostream& operator<<(std::ostream& stream, const FeatureIndex& feature) {
+  return stream << "(" << feature.view << ", " << feature.time << ", " <<
+      feature.id << ")";
 }
 
 void init(int& argc, char**& argv) {
   std::ostringstream usage;
   usage << "Reduces matches to consistent tracks." << std::endl;
   usage << std::endl;
-  usage << argv[0] << " matches-format view-names num-frames" << std::endl;
+  usage << argv[0] << " matches-format view-names num-frames tracks" <<
+      std::endl;
   google::SetUsageMessage(usage.str());
 
   google::InitGoogleLogging(argv[0]);
   google::ParseCommandLineFlags(&argc, &argv, true);
 
-  if (argc != 4) {
+  if (argc != 5) {
     google::ShowUsageWithFlags(argv[0]);
     std::exit(1);
   }
@@ -153,8 +152,8 @@ void loadAllMatches(const std::string& matches_format,
       num_matches += match_list.size();
 
       // Add matches to map.
-      FrameIndex frame1(v1, t1);
-      FrameIndex frame2(v2, t2);
+      Frame frame1(v1, t1);
+      Frame frame2(v2, t2);
 
       for (std::vector<Match>::const_iterator match = match_list.begin();
            match != match_list.end();
@@ -176,12 +175,12 @@ void loadAllMatches(const std::string& matches_format,
 }
 
 bool isConsistent(const FeatureList& features) {
-  std::set<FrameIndex> frames;
+  std::set<Frame> frames;
 
   for (FeatureList::const_iterator feature = features.begin();
        feature != features.end();
        ++feature) {
-    FrameIndex frame(feature->view, feature->time);
+    Frame frame(feature->view, feature->time);
 
     if (frames.find(frame) != frames.end()) {
       // Frame already exists in set.
@@ -194,18 +193,34 @@ bool isConsistent(const FeatureList& features) {
   return true;
 }
 
+void convertFeaturesToTrack(const FeatureList& features,
+                            MultiviewTrack<int>& track,
+                            int num_views) {
+  // Reset multiview track.
+  track.reset(num_views);
+
+  // Assumes features are consistent.
+  for (FeatureList::const_iterator feature = features.begin();
+       feature != features.end();
+       ++feature) {
+    track.add(Frame(feature->view, feature->time), feature->id);
+  }
+}
+
 int main(int argc, char** argv) {
   init(argc, argv);
 
   std::string matches_format = argv[1];
   std::string view_names_file = argv[2];
   int num_frames = boost::lexical_cast<int>(argv[3]);
+  std::string tracks_file = argv[4];
 
   bool ok;
 
   std::vector<std::string> view_names;
   ok = readLines(view_names_file, view_names);
   CHECK(ok) << "Could not load view names";
+  int num_views = view_names.size();
 
   //
   MatchGraph graph;
@@ -221,38 +236,55 @@ int main(int argc, char** argv) {
   LOG(INFO) << "Found " << num_components << " connected components";
 
   // Group features into subgraphs.
-  std::list<FeatureList> subgraphs(num_components);
+  std::list<FeatureList> subsets(num_components);
 
   {
     // Build lookup table.
-    std::vector<FeatureList*> subgraph_map(num_components);
+    std::vector<FeatureList*> subset_map(num_components);
 
-    std::list<FeatureList>::iterator subgraph = subgraphs.begin();
+    std::list<FeatureList>::iterator subset = subsets.begin();
     for (int i = 0; i < num_components; i += 1) {
-      subgraph_map[i] = &(*subgraph);
-      ++subgraph;
+      subset_map[i] = &(*subset);
+      ++subset;
     }
 
     // Put features into their components.
     for (int i = 0; i < num_vertices; i += 1) {
-      subgraph_map[labels[i]]->push_back(graph[i]);
+      subset_map[labels[i]]->push_back(graph[i]);
     }
   }
 
   // Sort through components and ensure that they are consistent.
   {
-    std::list<FeatureList>::iterator subgraph = subgraphs.begin();
-    while (subgraph != subgraphs.end()) {
-      if (!isConsistent(*subgraph)) {
+    std::list<FeatureList>::iterator subset = subsets.begin();
+    while (subset != subsets.end()) {
+      if (!isConsistent(*subset)) {
         // Inconsistent. Remove it.
-        subgraphs.erase(subgraph++);
+        subsets.erase(subset++);
       } else {
         // Consistent. Keep it.
-        ++subgraph;
+        ++subset;
       }
     }
   }
-  LOG(INFO) << "Pruned to " << subgraphs.size() << " consistent subgraphs";
+  LOG(INFO) << "Pruned to " << subsets.size() << " consistent subsets";
+
+  // Convert to tracks!
+  MultiviewTrackList<int> tracks;
+  for (std::list<FeatureList>::const_iterator subset = subsets.begin();
+       subset != subsets.end();
+       ++subset) {
+    MultiviewTrack<int> track;
+    convertFeaturesToTrack(*subset, track, num_views);
+
+    // Add to list.
+    tracks.add(track);
+  }
+
+  // Save track list.
+  DefaultWriter<int> writer;
+  ok = saveMultiviewTrackList(tracks_file, tracks, writer);
+  CHECK(ok) << "Could not save tracks";
 
   return 0;
 }

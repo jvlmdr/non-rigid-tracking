@@ -268,6 +268,7 @@ TARGET_LINK_LIBRARIES(match-tracks-using-mean ${OpenCV_LIBS})
 ADD_EXECUTABLE(exhaustive-matches-to-tracks
   exhaustive_matches_to_tracks.cpp
   read_lines.cpp
-  match_reader.cpp)
+  match_reader.cpp
+  multiview_track.cpp)
 TARGET_LINK_LIBRARIES(exhaustive-matches-to-tracks glog gflags)
 TARGET_LINK_LIBRARIES(exhaustive-matches-to-tracks ${OpenCV_LIBS})
