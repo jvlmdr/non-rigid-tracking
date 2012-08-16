@@ -175,70 +175,24 @@ void loadAllMatches(const std::string& matches_format,
   }
 }
 
-/*
-void findConnectedSubgraphs(MatchList& matches,
-                            std::vector<FeatureList>& subgraphs) {
-  subgraphs.clear();
+bool isConsistent(const FeatureList& features) {
+  std::set<FrameIndex> frames;
 
-  // TODO: There exists some library to do this?
+  for (FeatureList::const_iterator feature = features.begin();
+       feature != features.end();
+       ++feature) {
+    FrameIndex frame(feature->view, feature->time);
 
-  while (!matches.empty()) {
-    // Build list of connected nodes.
-    FeatureList connected;
-
-    // Waiting list for nodes to examine.
-    std::stack<FeatureIndex> waiting;
-    // Add first match to the list of features to look at.
-    waiting.push(matches.begin()->first);
-
-    while (!waiting.empty()) {
-      // Remove element from waiting list.
-      FeatureIndex feature1 = waiting.top();
-      waiting.pop();
-      // Add to subgraph.
-      connected.push_back(feature1);
-
-      // Find matches for this feature.
-      MatchList::iterator forward_match = matches.find(feature1);
-      // If there are none, then skip.
-      if (forward_match == matches.end()) {
-        continue;
-      }
-
-      // If there are matches, then iterate through them.
-      FeatureSet& forward_matches = forward_match->second;
-
-      for (FeatureSet::const_iterator feature2 = forward_matches.begin();
-           feature2 != forward_matches.end();
-           ++feature2) {
-        // Add each to the waiting list.
-        waiting.push(*feature2);
-
-        // Find the reverse match (it should be guaranteed to exist).
-        MatchList::iterator reverse_match = matches.find(*feature2);
-        CHECK(reverse_match != matches.end());
-        FeatureSet& reverse_matches = reverse_match->second;
-        // Find and erase the match back the other way.
-        int num_erased = reverse_matches.erase(feature1);
-        CHECK(num_erased == 1);
-
-        // If that was the last match for that feature, remove it entirely.
-        // No empty lists allowed.
-        if (reverse_matches.empty()) {
-          matches.erase(reverse_match);
-        }
-      }
-
-      matches.erase(forward_match);
+    if (frames.find(frame) != frames.end()) {
+      // Frame already exists in set.
+      return false;
     }
 
-    LOG(INFO) << "Found connected set of " << connected.size() << " features";
-
-    subgraphs.push_back(FeatureList());
-    subgraphs.back().swap(connected);
+    frames.insert(frame);
   }
+
+  return true;
 }
-*/
 
 int main(int argc, char** argv) {
   init(argc, argv);
@@ -266,21 +220,39 @@ int main(int argc, char** argv) {
   int num_components = boost::connected_components(graph, &labels[0]);
   LOG(INFO) << "Found " << num_components << " connected components";
 
-  std::vector<FeatureList> subgraphs(num_components);
-  // Put features into their components.
-  for (int i = 0; i < num_vertices; i += 1) {
-    subgraphs[labels[i]].push_back(graph[i]);
+  // Group features into subgraphs.
+  std::list<FeatureList> subgraphs(num_components);
+
+  {
+    // Build lookup table.
+    std::vector<FeatureList*> subgraph_map(num_components);
+
+    std::list<FeatureList>::iterator subgraph = subgraphs.begin();
+    for (int i = 0; i < num_components; i += 1) {
+      subgraph_map[i] = &(*subgraph);
+      ++subgraph;
+    }
+
+    // Put features into their components.
+    for (int i = 0; i < num_vertices; i += 1) {
+      subgraph_map[labels[i]]->push_back(graph[i]);
+    }
   }
 
-  for (int i = 0; i < num_components; i += 1) {
-    LOG(INFO) << "Found component with " << subgraphs[i].size() << " features";
+  // Sort through components and ensure that they are consistent.
+  {
+    std::list<FeatureList>::iterator subgraph = subgraphs.begin();
+    while (subgraph != subgraphs.end()) {
+      if (!isConsistent(*subgraph)) {
+        // Inconsistent. Remove it.
+        subgraphs.erase(subgraph++);
+      } else {
+        // Consistent. Keep it.
+        ++subgraph;
+      }
+    }
   }
-
-  /*
-  // Now reduce to consistent matches.
-  TrackList<int> tracks;
-  findConsistentTracks(matches, tracks);
-  */
+  LOG(INFO) << "Pruned to " << subgraphs.size() << " consistent subgraphs";
 
   return 0;
 }
