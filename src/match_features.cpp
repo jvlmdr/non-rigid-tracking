@@ -1,4 +1,3 @@
-#include <iostream>
 #include <string>
 #include <vector>
 #include <list>
@@ -248,15 +247,15 @@ int main(int argc, char** argv) {
   std::vector<Descriptor> descriptors2;
 
   DescriptorReader descriptor_reader;
-  LOG(INFO) << "Loading descriptors from `" << descriptors_file1 << "'";
+  DLOG(INFO) << "Loading descriptors from `" << descriptors_file1 << "'";
   ok = loadList(descriptors_file1, descriptors1, descriptor_reader);
   CHECK(ok) << "Could not load descriptors";
-  LOG(INFO) << "Loaded " << descriptors1.size() << " descriptors";
+  DLOG(INFO) << "Loaded " << descriptors1.size() << " descriptors";
 
-  LOG(INFO) << "Loading descriptors from `" << descriptors_file2 << "'";
+  DLOG(INFO) << "Loading descriptors from `" << descriptors_file2 << "'";
   ok = loadList(descriptors_file2, descriptors2, descriptor_reader);
   CHECK(ok) << "Could not load descriptors";
-  LOG(INFO) << "Loaded " << descriptors2.size() << " descriptors";
+  DLOG(INFO) << "Loaded " << descriptors2.size() << " descriptors";
 
   // Match in both directions.
   DirectedMatchResultList forward_matches;
@@ -269,11 +268,11 @@ int main(int argc, char** argv) {
   if (FLAGS_reciprocal) {
     // Reduce to a consistent set.
     intersectionOfMatches(forward_matches, reverse_matches, matches);
-    LOG(INFO) << "Found " << matches.size() << " reciprocal matches";
+    DLOG(INFO) << "Found " << matches.size() << " reciprocal matches";
   } else {
     // Throw all matches together.
     unionOfMatches(forward_matches, reverse_matches, matches);
-    LOG(INFO) << "Found " << matches.size() << " matches";
+    DLOG(INFO) << "Found " << matches.size() << " matches";
   }
 
   // Filter the matches by the distance ratio.
@@ -282,7 +281,7 @@ int main(int argc, char** argv) {
       std::back_inserter(distinctive),
       boost::bind(isNotDistinctive, _1, SECOND_BEST_RATIO));
   matches.swap(distinctive);
-  LOG(INFO) << "Pruned to " << matches.size() << " distinctive matches";
+  DLOG(INFO) << "Pruned to " << matches.size() << " distinctive matches";
 
   MatchResultWriter writer;
   ok = saveList(matches_file, matches, writer);
