@@ -6,6 +6,8 @@
 #include <boost/lexical_cast.hpp>
 #include <boost/format.hpp>
 #include <boost/bind.hpp>
+#include <boost/graph/adjacency_list.hpp>
+#include <boost/graph/connected_components.hpp>
 #include <glog/logging.h>
 #include <gflags/gflags.h>
 #include "match.hpp"
@@ -14,11 +16,6 @@
 #include "match_reader.hpp"
 #include "vector_reader.hpp"
 #include "read_lines.hpp"
-
-class FeatureIndex;
-typedef std::set<FeatureIndex> FeatureSet;
-typedef std::map<FeatureIndex, FeatureSet> MatchList;
-typedef std::vector<FeatureIndex> FeatureList;
 
 // A video frame is identified by (view, time).
 struct FrameIndex {
@@ -55,18 +52,23 @@ struct FeatureIndex {
     }
   }
 
+  FeatureIndex() : view(-1), time(-1), feature(-1) {}
+
   FeatureIndex(int view, int time, int feature)
       : view(view), time(time), feature(feature) {}
 
   FeatureIndex(const FrameIndex& frame, int feature)
       : view(frame.view), time(frame.time), feature(feature) {}
-
-  // Implicit constructor from mapping of frame to feature.
-  //FeatureIndex(const FeaturePerFrame::value_type& mapping)
-  //    : view(mapping.first.view),
-  //      time(mapping.first.time),
-  //      feature(mapping.second) {}
 };
+
+typedef boost::adjacency_list<boost::setS,
+                              boost::vecS,
+                              boost::undirectedS,
+                              FeatureIndex>
+        MatchGraph;
+typedef std::map<FeatureIndex, MatchGraph::vertex_descriptor> VertexLookup;
+
+typedef std::vector<FeatureIndex> FeatureList;
 
 std::ostream& operator<<(std::ostream& stream, const FeatureIndex& index) {
   return stream << "(" << index.view << ", " << index.time << ", " <<
@@ -98,25 +100,35 @@ std::string makeFilename(const std::string& format,
       boost::format(format) % view1 % view2 % (t1 + 1) % (t2 + 1));
 }
 
-void addMatch(MatchList& matches,
-              const FrameIndex& frame1,
-              const FrameIndex& frame2,
-              const Match& match) {
-  // Add mappings in both directions.
-  FeatureIndex feature1(frame1, match.first);
-  FeatureIndex feature2(frame2, match.second);
+MatchGraph::vertex_descriptor findOrInsert(MatchGraph& graph,
+                                           VertexLookup& vertices,
+                                           const FeatureIndex& feature) {
+  MatchGraph::vertex_descriptor vertex;
 
-  matches[feature1].insert(feature2);
-  matches[feature2].insert(feature1);
+  // Try to find feature in lookup map.
+  VertexLookup::const_iterator mapping = vertices.find(feature);
+
+  if (mapping != vertices.end()) {
+    // Found the vertex, it already exists.
+    vertex = mapping->second;
+  } else {
+    // Did not find it, create an entry.
+    vertex = boost::add_vertex(feature, graph);
+    vertices[feature] = vertex;
+  }
+
+  return vertex;
 }
 
 void loadAllMatches(const std::string& matches_format,
                     const std::vector<std::string>& views,
                     int num_frames,
-                    MatchList& matches) {
+                    MatchGraph& graph) {
   int num_views = views.size();
   int n = num_views * num_frames;
   int num_matches = 0;
+
+  VertexLookup vertices;
 
   for (int i1 = 0; i1 < n; i1 += 1) {
     // Match all unique pairs.
@@ -143,14 +155,27 @@ void loadAllMatches(const std::string& matches_format,
       // Add matches to map.
       FrameIndex frame1(v1, t1);
       FrameIndex frame2(v2, t2);
-      std::for_each(match_list.begin(), match_list.end(),
-          boost::bind(addMatch, boost::ref(matches), frame1, frame2, _1));
+
+      for (std::vector<Match>::const_iterator match = match_list.begin();
+           match != match_list.end();
+           ++match) {
+        FeatureIndex feature1(frame1, match->first);
+        FeatureIndex feature2(frame2, match->second);
+
+        // Find existing vertex for feature, or insert one.
+        MatchGraph::vertex_descriptor vertex1;
+        MatchGraph::vertex_descriptor vertex2;
+        vertex1 = findOrInsert(graph, vertices, feature1);
+        vertex2 = findOrInsert(graph, vertices, feature2);
+
+        // Add vertex to graph.
+        boost::add_edge(vertex1, vertex2, graph);
+      }
     }
   }
-
-  LOG(INFO) << "Loaded " << num_matches << " matches";
 }
 
+/*
 void findConnectedSubgraphs(MatchList& matches,
                             std::vector<FeatureList>& subgraphs) {
   subgraphs.clear();
@@ -213,6 +238,7 @@ void findConnectedSubgraphs(MatchList& matches,
     subgraphs.back().swap(connected);
   }
 }
+*/
 
 int main(int argc, char** argv) {
   init(argc, argv);
@@ -227,13 +253,28 @@ int main(int argc, char** argv) {
   ok = readLines(view_names_file, view_names);
   CHECK(ok) << "Could not load view names";
 
-  int num_views = view_names.size();
+  //
+  MatchGraph graph;
+  loadAllMatches(matches_format, view_names, num_frames, graph);
+  int num_vertices = boost::num_vertices(graph);
+  int num_edges = boost::num_edges(graph);
+  LOG(INFO) << "Loaded " << num_edges << " matches between " << num_vertices <<
+      " features";
 
-  MatchList matches;
-  loadAllMatches(matches_format, view_names, num_frames, matches);
+  // Find connected components of graph.
+  std::vector<int> labels(num_vertices);
+  int num_components = boost::connected_components(graph, &labels[0]);
+  LOG(INFO) << "Found " << num_components << " connected components";
 
-  std::vector<FeatureList> subgraphs;
-  findConnectedSubgraphs(matches, subgraphs);
+  std::vector<FeatureList> subgraphs(num_components);
+  // Put features into their components.
+  for (int i = 0; i < num_vertices; i += 1) {
+    subgraphs[labels[i]].push_back(graph[i]);
+  }
+
+  for (int i = 0; i < num_components; i += 1) {
+    LOG(INFO) << "Found component with " << subgraphs[i].size() << " features";
+  }
 
   /*
   // Now reduce to consistent matches.
