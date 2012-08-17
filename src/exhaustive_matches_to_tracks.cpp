@@ -270,7 +270,7 @@ int main(int argc, char** argv) {
   LOG(INFO) << "Pruned to " << subsets.size() << " consistent subsets";
 
   // Convert to tracks!
-  MultiviewTrackList<int> tracks;
+  MultiviewTrackList<int> tracks(num_views);
   for (std::list<FeatureList>::const_iterator subset = subsets.begin();
        subset != subsets.end();
        ++subset) {

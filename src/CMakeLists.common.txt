@@ -272,3 +272,10 @@ ADD_EXECUTABLE(exhaustive-matches-to-tracks
   multiview_track.cpp)
 TARGET_LINK_LIBRARIES(exhaustive-matches-to-tracks glog gflags)
 TARGET_LINK_LIBRARIES(exhaustive-matches-to-tracks ${OpenCV_LIBS})
+
+ADD_EXECUTABLE(visualize-multiview-tracks
+  visualize_multiview_tracks.cpp
+  read_lines.cpp
+  multiview_track.cpp)
+TARGET_LINK_LIBRARIES(visualize-multiview-tracks glog gflags)
+TARGET_LINK_LIBRARIES(visualize-multiview-tracks ${OpenCV_LIBS})

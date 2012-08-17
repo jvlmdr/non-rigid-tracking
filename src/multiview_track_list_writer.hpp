@@ -5,14 +5,14 @@
 #include "writer.hpp"
 
 template<class T>
-class MultiviewTrackListWriter : public Writer<MultiviewTrackListWriter<T> > {
+class MultiviewTrackListWriter : public Writer<MultiviewTrackList<T> > {
   public:
-    MultiviewTrackListWriter(Writer<MultiviewTrackWriter<T> >& writer);
+    MultiviewTrackListWriter(Writer<MultiviewTrack<T> >& writer);
     ~MultiviewTrackListWriter();
     void write(cv::FileStorage& file, const MultiviewTrackList<T>& tracks);
 
   private:
-    Writer<MultiviewTrackWriter<T> >* writer_;
+    Writer<MultiviewTrack<T> >* writer_;
 };
 
 template<class T>

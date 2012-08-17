@@ -24,6 +24,8 @@ void MultiviewTrackList<T>::swap(MultiviewTrackList<T>& other) {
 
 template<class T>
 void MultiviewTrackList<T>::add(MultiviewTrack<T>& track) {
+  CHECK(num_views_ == track.numViews());
+
   // Swap into list.
   tracks_.push_back(MultiviewTrack<T>());
   tracks_.back().swap(track);
