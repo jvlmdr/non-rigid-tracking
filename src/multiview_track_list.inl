@@ -1,4 +1,5 @@
 #include <algorithm>
+#include <glog/logging.h>
 
 template<class T>
 MultiviewTrackList<T>::MultiviewTrackList()
@@ -58,4 +59,112 @@ int MultiviewTrackList<T>::numViews() const {
 template<class T>
 int MultiviewTrackList<T>::numFrames() const {
   return num_frames_;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+
+template<class T>
+SingleViewTimeIterator<T>::SingleViewTimeIterator()
+    : tracks_(NULL), view_(-1), time_(0), cursors_() {}
+
+template<class T>
+SingleViewTimeIterator<T>::SingleViewTimeIterator(
+    const MultiviewTrackList<T>& tracks,
+    int view)
+    : tracks_(&tracks), view_(view), time_(0), cursors_() {
+  // Populate cursor list.
+  typename std::vector<MultiviewTrack<T> >::const_iterator multiview_track;
+  for (multiview_track = tracks_->tracks().begin();
+       multiview_track != tracks_->tracks().end();
+       ++multiview_track) {
+    // Add cursor at beginning of track for given view.
+    cursors_.push_back(multiview_track->track(view_).begin());
+  }
+}
+
+template<class T>
+void SingleViewTimeIterator<T>::next() {
+  // Iterate through cursors and feature tracks.
+  // Need tracks to check if iterator has reached end.
+  typename CursorList::iterator cursor;
+  typename std::vector<MultiviewTrack<T> >::const_iterator track;
+  
+  cursor = cursors_.begin();
+  track = tracks_->tracks().begin();
+
+  while (cursor != cursors_.end()) {
+    // Has this track ended already?
+    if (*cursor != track->track(view_).end()) {
+      // Track has not ended.
+      // Did the next observation occur at this frame?
+      if ((*cursor)->first == time_) {
+        // It did. Advance the cursor.
+        ++(*cursor);
+      }
+    }
+
+    ++cursor;
+    ++track;
+  }
+
+  time_ += 1;
+}
+
+template<class T>
+bool SingleViewTimeIterator<T>::end() const {
+  // Iterate through cursors and feature tracks.
+  // Need tracks to check if iterator has reached end.
+  typename CursorList::const_iterator cursor;
+  typename std::vector<MultiviewTrack<T> >::const_iterator track;
+  
+  cursor = cursors_.begin();
+  track = tracks_->tracks().begin();
+
+  while (cursor != cursors_.end()) {
+    // Has this track ended already?
+    if (*cursor != track->track(view_).end()) {
+      // Track has not ended.
+      return false;
+    }
+
+    ++cursor;
+    ++track;
+  }
+
+  return true;
+}
+
+template<class T>
+int SingleViewTimeIterator<T>::time() const {
+  return time_;
+}
+
+template<class T>
+void SingleViewTimeIterator<T>::get(std::map<int, T>& points) const {
+  points.clear();
+
+  // Iterate through cursors and feature tracks.
+  // Need tracks to check if iterator has reached end.
+  typename CursorList::const_iterator cursor;
+  typename std::vector<MultiviewTrack<T> >::const_iterator track;
+  
+  cursor = cursors_.begin();
+  track = tracks_->tracks().begin();
+  int index = 0;
+
+  while (cursor != cursors_.end()) {
+    // Has this track ended already?
+    if (*cursor != track->track(view_).end()) {
+      // Track has not ended.
+      // Did the next observation occur at this frame?
+      if ((*cursor)->first == time_) {
+        // It did. Copy out the point.
+        points[index] = (*cursor)->second;
+      }
+    }
+
+    ++cursor;
+    ++track;
+    index += 1;
+  }
 }

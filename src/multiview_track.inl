@@ -1,3 +1,5 @@
+#include <glog/logging.h>
+
 template<class T>
 MultiviewTrack<T>::MultiviewTrack() : tracks_(), num_frames_(0) {}
 
@@ -43,4 +45,18 @@ int MultiviewTrack<T>::numViews() const {
 template<class T>
 int MultiviewTrack<T>::numFrames() const {
   return num_frames_;
+}
+
+template<class T>
+bool MultiviewTrack<T>::empty() const {
+  int num_views = tracks.size();
+
+  for (int i = 0; i < num_views; i += 1) {
+    // If any view's track is non-empty, then the multi-view track is non-empty.
+    if (!tracks_[i].empty()) {
+      return false;
+    }
+  }
+
+  return true;
 }

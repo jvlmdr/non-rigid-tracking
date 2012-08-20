@@ -16,7 +16,8 @@ struct Frame {
   bool operator<(const Frame& other) const;
 };
 
-// Assume the number of views is known but the number of frames is unknown.
+// Describes observations of a feature in multiple views at multiple times.
+// Assumes the number of views is known but the number of frames is unknown.
 template<class T>
 class MultiviewTrack {
   public:
@@ -33,6 +34,7 @@ class MultiviewTrack {
 
     int numViews() const;
     int numFrames() const;
+    bool empty() const;
 
   private:
     std::vector<Track<T> > tracks_;
