@@ -52,8 +52,6 @@ void RigidWarp::draw(cv::Mat& image,
                      const double* params,
                      int width,
                      const cv::Scalar& color) const {
-  const RigidFeature* p = reinterpret_cast<const RigidFeature*>(params);
-
   double radius = width / 2.;
   cv::Point2d c(0, 0);
   cv::Point2d i(radius, 0);
