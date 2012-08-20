@@ -11,7 +11,8 @@
 #include <glog/logging.h>
 #include "read_image.hpp"
 #include "descriptor.hpp"
-#include "match.hpp"
+#include "match_result.hpp"
+#include "match_result_writer.hpp"
 
 #include "descriptor_reader.hpp"
 #include "vector_reader.hpp"
@@ -30,20 +31,6 @@ typedef cv::DMatch SingleDirectedMatchResult;
 // A pair of single matches.
 typedef std::vector<SingleDirectedMatchResult> SingleDirectedMatchResultPair;
 
-// The result of a consistent match.
-//
-// Contains:
-// Indices of matching features.
-// Distance between matching features.
-// Distance to each feature's second-nearest match.
-struct MatchResult {
-  int index1;
-  int index2;
-  double dist;
-  double second_dist1;
-  double second_dist2;
-};
-
 struct DirectedMatchResult {
   int match;
   double dist;
@@ -53,20 +40,6 @@ struct DirectedMatchResult {
 typedef std::vector<Descriptor> DescriptorList;
 typedef std::vector<MatchResult> MatchResultList;
 typedef std::vector<DirectedMatchResult> DirectedMatchResultList;
-
-// Writes a match result to a file.
-class MatchResultWriter : public Writer<MatchResult> {
-  public:
-    ~MatchResultWriter() {}
-
-    void write(cv::FileStorage& file, const MatchResult& result) {
-      file << "index1" << result.index1;
-      file << "index2" << result.index2;
-      file << "dist" << result.dist;
-      file << "second_dist1" << result.second_dist1;
-      file << "second_dist2" << result.second_dist2;
-    }
-};
 
 // Converts a pair of single matches to 
 DirectedMatchResult singleDirectedPairToMatchResult(

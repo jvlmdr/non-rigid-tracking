@@ -46,7 +46,8 @@ TARGET_LINK_LIBRARIES(visualize-keypoints ${OpenCV_LIBS})
 
 ADD_EXECUTABLE(match-features
   match_features.cpp
-  descriptor_reader.cpp)
+  descriptor_reader.cpp
+  match_result_writer.cpp)
 TARGET_LINK_LIBRARIES(match-features glog gflags)
 TARGET_LINK_LIBRARIES(match-features ${OpenCV_LIBS})
 
@@ -282,3 +283,10 @@ ADD_EXECUTABLE(visualize-multiview-tracks
   read_image.cpp)
 TARGET_LINK_LIBRARIES(visualize-multiview-tracks glog gflags)
 TARGET_LINK_LIBRARIES(visualize-multiview-tracks ${OpenCV_LIBS})
+
+ADD_EXECUTABLE(select-distinctive-matches
+  select_distinctive_matches.cpp
+  match_result_reader.cpp
+  match_result_writer.cpp)
+TARGET_LINK_LIBRARIES(select-distinctive-matches glog gflags)
+TARGET_LINK_LIBRARIES(select-distinctive-matches ${OpenCV_LIBS})
