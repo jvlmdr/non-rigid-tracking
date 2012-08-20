@@ -27,6 +27,10 @@ DEFINE_string(output_format, "%d.png", "Location to save image.");
 DEFINE_bool(save, false, "Save to file?");
 DEFINE_bool(display, true, "Show in window?");
 
+std::string makeTimeFilename(const std::string& format, int time) {
+  return boost::str(boost::format(format) % (time + 1));
+}
+
 std::string makeFrameFilename(const std::string& format,
                               const std::string& view,
                               int time) {
@@ -103,14 +107,24 @@ int main(int argc, char** argv) {
     colors.push_back(randomColor(BRIGHTNESS, SATURATION));
   }
 
+  // Set up one time iterator per view.
+  std::vector<SingleViewTimeIterator<int> > iterators;
   for (int view = 0; view < num_views; view += 1) {
-    // Iterate through time for one view.
-    SingleViewTimeIterator<int> time_iterator(tracks, view);
+    iterators.push_back(SingleViewTimeIterator<int>(tracks, view));
+  }
 
-    for (int time = 0; time < num_frames; time += 1) {
+  // Iterate through time.
+  for (int time = 0; time < num_frames; time += 1) {
+    // Composite into a single large color image.
+    cv::Mat collage;
+
+    LOG(INFO) << time;
+
+    // Iterate through views.
+    for (int view = 0; view < num_views; view += 1) {
       // Get a list of points, indexed by feature number.
       std::map<int, int> feature_ids;
-      time_iterator.get(feature_ids);
+      iterators[view].get(feature_ids);
 
       // Load features for this frame.
       std::vector<RigidFeature> frame_keypoints;
@@ -128,6 +142,13 @@ int main(int argc, char** argv) {
       ok = readImage(image_file, image, gray_image);
       CHECK(ok) << "Could not load image";
 
+      if (collage.empty()) {
+        collage = cv::Mat_<cv::Vec3b>(image.rows, image.cols * num_views);
+      }
+      cv::Mat viewport = collage.colRange(image.cols * view,
+                                          image.cols * (view + 1));
+      image.copyTo(viewport);
+
       // Look up each keypoint by index.
       std::map<int, RigidFeature> keypoints;
       std::map<int, int>::const_iterator id;
@@ -136,23 +157,24 @@ int main(int argc, char** argv) {
       }
 
       // Visualize.
-      drawFeatures(image, keypoints, colors);
+      drawFeatures(viewport, keypoints, colors);
 
-      if (FLAGS_save) {
-        std::string output_file = makeFrameFilename(FLAGS_output_format,
-            views[view], time);
-        cv::imwrite(output_file, image);
-      }
-
-      if (FLAGS_display) {
-        cv::imshow("tracks", image);
-        cv::waitKey(10);
-      }
-
-      time_iterator.next();
+      iterators[view].next();
     }
 
-    CHECK(time_iterator.end()) << "Did not reach end of tracks";
+    if (FLAGS_save) {
+      std::string output_file = makeTimeFilename(FLAGS_output_format, time);
+      cv::imwrite(output_file, collage);
+    }
+
+    if (FLAGS_display) {
+      cv::imshow("tracks", collage);
+      cv::waitKey(10);
+    }
+  }
+
+  for (int view = 0; view < num_views; view += 1) {
+    CHECK(iterators[view].end()) << "Did not reach end of tracks";
   }
 
   return 0;
