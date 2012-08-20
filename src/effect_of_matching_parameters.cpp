@@ -11,7 +11,7 @@
 #include <glog/logging.h>
 #include "read_lines.hpp"
 #include "vector_reader.hpp"
-#include "number_reader.hpp"
+#include "default_reader.hpp"
 #include "lexical_cast_parser.hpp"
 #include "stats.hpp"
 
@@ -41,7 +41,7 @@ void reduceResidualsOverFrames(const std::string& residuals_format,
                                double max_residual) {
   int i = 0;
   bool finished = false;
-  NumberReader reader;
+  DefaultReader<double> reader;
 
   // Take mean over all frames.
   double num_matches = 0;

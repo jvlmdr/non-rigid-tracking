@@ -205,7 +205,6 @@ ADD_EXECUTABLE(evaluate-matches
     match_reader.cpp
     matrix_reader.cpp
     image_point_reader.cpp
-    number_writer.cpp
     optimal_triangulation.cpp
     roots.cpp)
 TARGET_LINK_LIBRARIES(evaluate-matches glog gflags)
@@ -246,7 +245,6 @@ TARGET_LINK_LIBRARIES(cameras-to-fund-mat ${OpenCV_LIBS})
 ADD_EXECUTABLE(effect-of-matching-parameters
   effect_of_matching_parameters.cpp
   read_lines.cpp
-  number_reader.cpp
   stats.cpp)
 TARGET_LINK_LIBRARIES(effect-of-matching-parameters glog gflags)
 TARGET_LINK_LIBRARIES(effect-of-matching-parameters ${OpenCV_LIBS})

@@ -11,7 +11,7 @@
 #include "matrix_reader.hpp"
 #include "optimal_triangulation.hpp"
 #include "vector_writer.hpp"
-#include "number_writer.hpp"
+#include "default_writer.hpp"
 
 typedef std::vector<Match> MatchList;
 
@@ -85,7 +85,7 @@ int main(int argc, char** argv) {
     residuals.push_back(residual);
   }
 
-  NumberWriter number_writer;
+  DefaultWriter<double> number_writer;
   saveList(residuals_file, residuals, number_writer);
 
   return 0;
