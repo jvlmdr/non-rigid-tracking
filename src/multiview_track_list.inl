@@ -168,3 +168,76 @@ void SingleViewTimeIterator<T>::get(std::map<int, T>& points) const {
     index += 1;
   }
 }
+
+////////////////////////////////////////////////////////////////////////////////
+
+template<class T>
+MultiViewTimeIterator<T>::MultiViewTimeIterator()
+    : tracks_(NULL), views_(), time_(0) {}
+
+template<class T>
+MultiViewTimeIterator<T>::MultiViewTimeIterator(
+    const MultiviewTrackList<T>& tracks)
+    : tracks_(&tracks), views_(), time_(0) {
+  // Populate iterators.
+  for (int view = 0; view < tracks_->numViews(); view += 1) {
+    views_.push_back(SingleViewTimeIterator<T>(*tracks_, view));
+  }
+}
+
+template<class T>
+void MultiViewTimeIterator<T>::next() {
+  typename IteratorList::iterator view;
+  for (view = views_.begin(); view != views_.end(); ++view) {
+    view->next();
+  }
+
+  time_ += 1;
+}
+
+template<class T>
+bool MultiViewTimeIterator<T>::end() const {
+  typename IteratorList::const_iterator view;
+  for (view = views_.begin(); view != views_.end(); ++view) {
+    // If any single view iterator hasn't ended, then neither have we.
+    if (!view->end()) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+template<class T>
+int MultiViewTimeIterator<T>::time() const {
+  return time_;
+}
+
+template<class T>
+void MultiViewTimeIterator<T>::get(
+    std::map<int, std::map<int, T> >& features) const {
+  features.clear();
+
+  typename IteratorList::const_iterator view;
+  int i = 0;
+
+  for (view = views_.begin(); view != views_.end(); ++view) {
+    // Extract the features from this view.
+    std::map<int, T> subset;
+    view->get(subset);
+
+    // Copy them into the multi-view data structure.
+    typename std::map<int, T>::const_iterator feature;
+    for (feature = subset.begin(); feature != subset.end(); ++feature) {
+      features[feature->first][i] = feature->second;
+    }
+
+    i += 1;
+  }
+}
+
+template<class T>
+void MultiViewTimeIterator<T>::getView(int view,
+                                       std::map<int, T>& points) const {
+  views_[view].get(points);
+}

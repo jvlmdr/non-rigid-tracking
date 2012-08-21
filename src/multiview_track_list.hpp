@@ -58,6 +58,31 @@ class SingleViewTimeIterator {
     CursorList cursors_;
 };
 
+template<class T>
+class MultiViewTimeIterator {
+  public:
+    MultiViewTimeIterator();
+    MultiViewTimeIterator(const MultiviewTrackList<T>& tracks);
+
+    // Advance to next time instant.
+    void next();
+    // Reached the end of the tracks?
+    bool end() const;
+    // Current time index.
+    int time() const;
+    // Populates a map of feature -> (a map of view -> point).
+    void get(std::map<int, std::map<int, T> >& points) const;
+    // Populates a map of feature -> point for a single view.
+    void getView(int view, std::map<int, T>& points) const;
+
+  private:
+    typedef std::vector<SingleViewTimeIterator<T> > IteratorList;
+
+    const MultiviewTrackList<T>* tracks_;
+    IteratorList views_;
+    int time_;
+};
+
 #include "multiview_track_list.inl"
 
 #endif
