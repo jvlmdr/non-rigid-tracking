@@ -36,6 +36,9 @@ class MultiviewTrack {
     int numFrames() const;
     bool empty() const;
 
+    // Returns the number of views in which the feature was present.
+    int numViewsPresent() const;
+
   private:
     std::vector<Track<T> > tracks_;
     int num_frames_;
