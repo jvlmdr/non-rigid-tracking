@@ -49,7 +49,7 @@ int MultiviewTrack<T>::numFrames() const {
 
 template<class T>
 bool MultiviewTrack<T>::empty() const {
-  int num_views = tracks.size();
+  int num_views = tracks_.size();
 
   for (int i = 0; i < num_views; i += 1) {
     // If any view's track is non-empty, then the multi-view track is non-empty.
