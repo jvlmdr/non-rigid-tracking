@@ -13,16 +13,17 @@
 #include "descriptor.hpp"
 #include "match.hpp"
 #include "draw_matches.hpp"
-#include "match_reader.hpp"
+#include "similarity_feature.hpp"
+
 #include "vector_reader.hpp"
-#include "rigid_feature.hpp"
-#include "rigid_feature_reader.hpp"
+#include "match_reader.hpp"
+#include "similarity_feature_reader.hpp"
 
 DEFINE_string(output_file, "matches.png", "Location to save image.");
 DEFINE_bool(save, false, "Save to file?");
 DEFINE_bool(display, true, "Show matches?");
 
-typedef std::vector<RigidFeature> RigidFeatureList;
+typedef std::vector<SimilarityFeature> SimilarityFeatureList;
 typedef std::vector<Match> MatchList;
 
 int main(int argc, char** argv) {
@@ -71,19 +72,18 @@ int main(int argc, char** argv) {
     return 1;
   }
 
-  RigidFeatureList keypoints1;
-  RigidFeatureList keypoints2;
+  SimilarityFeatureList keypoints1;
+  SimilarityFeatureList keypoints2;
 
   // Load keypoints.
-  RigidFeatureReader feature_reader;
-  VectorReader<RigidFeature> feature_list_reader(feature_reader);
+  SimilarityFeatureReader feature_reader;
 
-  ok = load(keypoints_file1, keypoints1, feature_list_reader);
+  ok = loadList(keypoints_file1, keypoints1, feature_reader);
   if (!ok) {
     std::cerr << "could not load keypoints" << std::endl;
     return 1;
   }
-  ok = load(keypoints_file2, keypoints2, feature_list_reader);
+  ok = loadList(keypoints_file2, keypoints2, feature_reader);
   if (!ok) {
     std::cerr << "could not load keypoints" << std::endl;
     return 1;

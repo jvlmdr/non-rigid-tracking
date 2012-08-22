@@ -11,18 +11,16 @@
 #include <opencv2/core/core.hpp>
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/features2d/features2d.hpp>
-#include <glog/logging.h>
 #include <gflags/gflags.h>
 #include "read_image.hpp"
-#include "track.hpp"
 #include "track_list.hpp"
+#include "similarity_feature.hpp"
+#include "similarity_warp.hpp"
 #include "random_color.hpp"
-#include "image_point_reader.hpp"
+#include "similarity_feature_reader.hpp"
 #include "track_list_reader.hpp"
 
-const int MAX_TAIL_LENGTH = 10;
-const int POINT_RADIUS = 3;
-const int TAIL_THICKNESS = 1;
+const int PATCH_SIZE = 9;
 const double SATURATION = 0.99;
 const double BRIGHTNESS = 0.99;
 
@@ -30,229 +28,99 @@ DEFINE_string(output_format, "%d.png", "Location to save image.");
 DEFINE_bool(save, false, "Save to file?");
 DEFINE_bool(display, true, "Show in window?");
 
-typedef Track<cv::Point2d> PointTrack;
-
-std::string imageFilename(const std::string& format, int n) {
+std::string makeFilename(const std::string& format, int n) {
   return boost::str(boost::format(format) % (n + 1));
 }
 
-struct ColoredCursor {
-  TrackCursor_<cv::Point2d> cursor;
-  cv::Scalar color;
+void drawFeatures(cv::Mat& image,
+                  const std::map<int, SimilarityFeature>& features,
+                  const std::vector<cv::Scalar>& colors) {
+  typedef std::map<int, SimilarityFeature> FeatureSet;
+  typedef std::vector<cv::Scalar> ColorList;
 
-  ColoredCursor(const TrackCursor_<cv::Point2d>& cursor,
-                const cv::Scalar& color) : cursor(cursor), color(color) {}
+  SimilarityWarp warp(PATCH_SIZE);
 
-  ColoredCursor() : cursor(), color() {}
+  FeatureSet::const_iterator mapping;
+  for (mapping = features.begin(); mapping != features.end(); ++mapping) {
+    int index = mapping->first;
+    const SimilarityFeature& feature = mapping->second;
 
-  static ColoredCursor make(const PointTrack& track) {
-    return ColoredCursor(TrackCursor_<cv::Point2d>::make(track),
-        randomColor(SATURATION, BRIGHTNESS));
-  }
-};
-
-template<class TrackPointIterator>
-TrackPointIterator findTailEnd(TrackPointIterator begin,
-                               TrackPointIterator end,
-                               const int t,
-                               const int start_t,
-                               const int max_length) {
-  // Check if current frame is before or after start frame.
-  int n = 0;
-
-  // Loop variables.
-  TrackPointIterator it = begin;
-  bool found = false;
-
-  while (it != end && !found) {
-    // Get timestamp of this frame.
-    int u = it->first;
-
-    if (std::abs(t - u) >= max_length) {
-      // Reached maximum tail length.
-      found = true;
-    } else {
-      bool passed_start;
-
-      if (t < start_t) {
-        passed_start = (u > start_t);
-      } else if (t > start_t) {
-        passed_start = (u < start_t);
-      } else {
-        passed_start = (u != start_t);
-      }
-
-      if (passed_start) {
-        found = true;
-      }
-    }
-
-    if (!found) {
-      ++it;
-      n += 1;
-    }
-  }
-
-  return it;
-}
-
-template<class TrackPointIterator>
-void drawTailRange(cv::Mat& image,
-                   const cv::Scalar& color,
-                   TrackPointIterator begin,
-                   TrackPointIterator end) {
-  TrackPointIterator it = begin;
-  bool first = true;
-  cv::Point2d previous;
-
-  for (it = begin; it != end; ++it) {
-    const cv::Point2d& current = it->second;
-
-    // Can't draw anything in the first frame.
-    if (!first) {
-      cv::line(image, previous, current, color, TAIL_THICKNESS);
-    }
-
-    previous = current;
-    first = false;
+    warp.draw(image, feature.data(), PATCH_SIZE, colors[index]);
   }
 }
 
-void drawTail(cv::Mat& image,
-              const TrackCursor_<cv::Point2d>& cursor,
-              const cv::Scalar& color,
-              int start_t) {
-  const PointTrack::const_iterator& it = cursor.point;
-  int t = it->first;
-
-  // Create either a forward or reverse iterator range.
-  if (t < start_t) {
-    PointTrack::const_iterator begin(it);
-    PointTrack::const_iterator end = cursor.track->end();
-    end = findTailEnd(begin, end, t, start_t, MAX_TAIL_LENGTH);
-    drawTailRange(image, color, begin, end);
-  } else {
-    PointTrack::const_reverse_iterator begin(it);
-    --begin;
-    PointTrack::const_reverse_iterator end = cursor.track->rend();
-    end = findTailEnd(begin, end, t, start_t, MAX_TAIL_LENGTH);
-    drawTailRange(image, color, begin, end);
-  }
-}
-
-void drawFeature(cv::Mat& image,
-                 const TrackCursor_<cv::Point2d>& cursor,
-                 const cv::Scalar& color,
-                 int start_t) {
-  PointTrack::const_iterator it = cursor.point;
-  int t = it->first;
-
-  // Draw point.
-  cv::circle(image, it->second, POINT_RADIUS, color, -1);
-
-  // Draw tail.
-  drawTail(image, cursor, color, start_t);
-}
-
-void drawFeatureIfPresent(cv::Mat& image,
-                          const ColoredCursor& cursor,
-                          int t,
-                          int start_t) {
-  PointTrack::const_iterator it = cursor.cursor.point;
-  int u = it->first;
-
-  if (t == u) {
-    // Cursor points to this frame. Draw feature.
-    drawFeature(image, cursor.cursor, cursor.color, start_t);
-  }
-}
-
-void advanceIfEqual(int t, ColoredCursor& cursor) {
-  PointTrack::const_iterator& iterator = cursor.cursor.point;
-  int u = iterator->first;
-
-  if (t == u) {
-    ++iterator;
-  }
-}
-
-int main(int argc, char** argv) {
+void init(int& argc, char**& argv) {
   std::ostringstream usage;
-  usage << "Visualizes tracks outwards from a given frame." << std::endl;
+  usage << "Visualizes rigid-warp tracks." << std::endl;
   usage << std::endl;
-  usage << argv[0] << " image-format tracks frame-number" << std::endl;
+  usage << argv[0] << " tracks image-format";
 
   google::SetUsageMessage(usage.str());
   google::ParseCommandLineFlags(&argc, &argv, true);
+  google::InitGoogleLogging(argv[0]);
+}
 
-  if (argc != 4) {
+int main(int argc, char** argv) {
+  init(argc, argv);
+
+  if (argc != 3) {
     google::ShowUsageWithFlags(argv[0]);
     return 1;
   }
 
-  std::string image_format = argv[1];
-  std::string tracks_file = argv[2];
-  int initial_frame = boost::lexical_cast<int>(argv[3]);
+  std::string tracks_file = argv[1];
+  std::string image_format = argv[2];
   std::string output_format = FLAGS_output_format;
 
   bool ok;
 
   // Load tracks.
-  TrackList<cv::Point2d> tracks;
-  ImagePointReader reader;
-  ok = loadTrackList(tracks_file, tracks, reader);
+  TrackList<SimilarityFeature> tracks;
+  SimilarityFeatureReader feature_reader;
+  ok = loadTrackList(tracks_file, tracks, feature_reader);
   CHECK(ok) << "Could not load tracks";
   LOG(INFO) << "Loaded " << tracks.size() << " tracks";
 
-  typedef std::list<ColoredCursor> CursorList;
-  CursorList cursors(tracks.size());
-  std::transform(tracks.begin(), tracks.end(), cursors.begin(),
-      ColoredCursor::make);
+  // Make a list of random colors.
+  typedef std::vector<cv::Scalar> ColorList;
+  ColorList colors;
+  for (int i = 0; i < int(tracks.size()); i += 1) {
+    colors.push_back(randomColor(BRIGHTNESS, SATURATION));
+  }
 
-  // Find the index of the first frame.
-  int t = tracks.findFirstFrame();
+  // Iterate through frames in which track was observed.
+  FrameIterator_<SimilarityFeature> frame(tracks);
+  frame.seekToStart();
 
-  // Visualize frames until we have no tracks left to draw.
-  while (!cursors.empty()) {
-    // Load image from file.
-    cv::Mat image;
+  while (!frame.end()) {
+    // Get the current time.
+    int t = frame.t();
+
+    // Load the image.
+    cv::Mat color_image;
     cv::Mat gray_image;
-    std::string image_file = imageFilename(image_format, t);
-    ok = readImage(image_file, image, gray_image);
-    if (!ok) {
-      throw std::runtime_error("could not read image");
-    }
+    ok = readImage(makeFilename(image_format, t), color_image, gray_image);
+    CHECK(ok) << "Could not read image";
 
-    // Draw the points that appear in this frame.
-    std::for_each(cursors.begin(), cursors.end(),
-        boost::bind(drawFeatureIfPresent, boost::ref(image), _1, t,
-          initial_frame));
+    // Get the features.
+    typedef std::map<int, SimilarityFeature> FeatureSet;
+    FeatureSet features;
+    frame.getPoints(features);
+
+    // Draw each one with its color.
+    drawFeatures(color_image, features, colors);
 
     if (FLAGS_save) {
-      std::string output_file = imageFilename(output_format, t);
-      cv::imwrite(output_file, image);
+      std::string output_file = makeFilename(output_format, t);
+      cv::imwrite(output_file, color_image);
     }
 
     if (FLAGS_display) {
-      cv::imshow("tracks", image);
+      cv::imshow("tracks", color_image);
       cv::waitKey(10);
     }
 
-    // Advance cursors.
-    std::for_each(cursors.begin(), cursors.end(),
-        boost::bind(advanceIfEqual, t, _1));
-
-    // Remove cursors which have ended.
-    CursorList::iterator it = cursors.begin();
-    while (it != cursors.end()) {
-      if (it->cursor.point == it->cursor.track->end()) {
-        it = cursors.erase(it);
-      } else {
-        ++it;
-      }
-    }
-
-    t += 1;
+    ++frame;
   }
 
   return 0;

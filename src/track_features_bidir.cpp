@@ -14,15 +14,15 @@
 #include <ceres/ceres.h>
 #include "read_image.hpp"
 #include "warp.hpp"
-#include "rigid_warp.hpp"
-#include "rigid_feature.hpp"
+#include "similarity_warp.hpp"
+#include "similarity_feature.hpp"
 #include "flow.hpp"
 #include "track_list.hpp"
 #include "random_color.hpp"
 
 #include "vector_reader.hpp"
-#include "rigid_feature_reader.hpp"
-#include "rigid_feature_writer.hpp"
+#include "similarity_feature_reader.hpp"
+#include "similarity_feature_writer.hpp"
 #include "track_list_writer.hpp"
 
 DEFINE_int32(max_frames, -1,
@@ -60,12 +60,12 @@ std::string makeFilename(const std::string& format, int n) {
 
 // A static feature has state and color.
 struct StaticFeature {
-  RigidFeature state;
+  SimilarityFeature state;
   cv::Scalar color;
 
   StaticFeature() : state(), color() {}
 
-  StaticFeature(const RigidFeature& state, const cv::Scalar& color)
+  StaticFeature(const SimilarityFeature& state, const cv::Scalar& color)
       : state(state), color(color) {}
 };
 
@@ -73,20 +73,20 @@ typedef std::vector<StaticFeature> FeatureList;
 
 // A tracked feature has state, color and appearance.
 struct TrackedFeature {
-  RigidFeature state;
+  SimilarityFeature state;
   cv::Scalar color;
   cv::Mat appearance;
 
   TrackedFeature() : state(), color(), appearance() {}
 
-  TrackedFeature(const RigidFeature& state, const cv::Scalar& color)
+  TrackedFeature(const SimilarityFeature& state, const cv::Scalar& color)
       : state(state), color(color), appearance() {}
 
   explicit TrackedFeature(const StaticFeature& feature)
       : state(feature.state), color(feature.color), appearance() {}
 };
 
-StaticFeature makeRandomColorFeature(const RigidFeature& feature) {
+StaticFeature makeRandomColorFeature(const SimilarityFeature& feature) {
   return StaticFeature(feature, randomColor(SATURATION, BRIGHTNESS));
 }
 
@@ -112,7 +112,7 @@ void init(int& argc, char**& argv) {
 }
 
 void trackFeatures(const std::vector<StaticFeature>& features,
-                   TrackList<RigidFeature>& tracks,
+                   TrackList<SimilarityFeature>& tracks,
                    const std::string& image_format,
                    int frame_number,
                    int max_frames,
@@ -124,7 +124,7 @@ void trackFeatures(const std::vector<StaticFeature>& features,
   int n = 0;
   bool ok = true;
 
-  RigidWarp warp(PATCH_RESOLUTION);
+  SimilarityWarp warp(PATCH_RESOLUTION);
   WarpTracker tracker(warp, PATCH_RESOLUTION, MAX_NUM_ITERATIONS,
       FUNCTION_TOLERANCE, GRADIENT_TOLERANCE, PARAMETER_TOLERANCE,
       ITERATION_LIMIT_IS_FATAL, MAX_CONDITION);
@@ -265,8 +265,8 @@ int main(int argc, char** argv) {
   }
 
   // Load initial keypoints (x, y, scale, theta).
-  std::vector<RigidFeature> keypoints;
-  RigidFeatureReader feature_reader;
+  std::vector<SimilarityFeature> keypoints;
+  SimilarityFeatureReader feature_reader;
   bool ok = loadList(keypoints_file, keypoints, feature_reader);
   CHECK(ok) << "Could not load keypoints";
   LOG(INFO) << "Loaded " << keypoints.size() << " keypoints";
@@ -277,7 +277,7 @@ int main(int argc, char** argv) {
       std::back_inserter(features), makeRandomColorFeature);
 
   int num_features = features.size();
-  TrackList<RigidFeature> tracks(num_features);
+  TrackList<SimilarityFeature> tracks(num_features);
 
   // Track forwards.
   trackFeatures(features, tracks, image_format, frame_number, max_frames, false,
@@ -287,7 +287,7 @@ int main(int argc, char** argv) {
   trackFeatures(features, tracks, image_format, frame_number, max_frames, true,
       FLAGS_display, FLAGS_save, FLAGS_save_format);
 
-  RigidFeatureWriter feature_writer;
+  SimilarityFeatureWriter feature_writer;
   ok = saveTrackList(tracks_file, tracks, feature_writer);
   CHECK(ok) << "Could not save tracks";
 

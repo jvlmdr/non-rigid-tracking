@@ -18,8 +18,8 @@
 #include "tracker.hpp"
 #include "random_color.hpp"
 #include "warp.hpp"
-#include "rigid_warp.hpp"
-#include "rigid_feature.hpp"
+#include "similarity_warp.hpp"
+#include "similarity_feature.hpp"
 #include "flow.hpp"
 
 // Size of window to track.
@@ -81,9 +81,9 @@ int main(int argc, char** argv) {
   integer_image.convertTo(image, cv::DataType<double>::type, 1. / 255.);
 
   // Create a warp for sampling patches at the correct resolution.
-  RigidWarp patch_warp(PATCH_SIZE);
+  SimilarityWarp patch_warp(PATCH_SIZE);
   // Create a warp for applying the same transform to the input image.
-  RigidWarp image_warp(INITIAL_SIZE);
+  SimilarityWarp image_warp(INITIAL_SIZE);
 
   // Create tracker using specified warp.
   WarpTracker tracker(patch_warp, PATCH_SIZE, MAX_NUM_ITERATIONS,
@@ -96,7 +96,7 @@ int main(int argc, char** argv) {
   int width = image.cols;
   int height = image.rows;
 
-  RigidFeature feature((width - 1) / 2., (height - 1) / 2., INITIAL_SIZE, 0);
+  SimilarityFeature feature((width - 1) / 2., (height - 1) / 2., INITIAL_SIZE, 0);
   cv::Scalar ground_truth_color(0x00, 0xCC, 0x00);
   cv::Scalar test_color(0x00, 0x00, 0xFF);
 
@@ -116,7 +116,7 @@ int main(int argc, char** argv) {
     double delta_size = dist(gen) * SIGMA_SIZE;
     double delta_theta = dist(gen) * SIGMA_THETA;
 
-    RigidFeature perturbed(feature);
+    SimilarityFeature perturbed(feature);
     perturbed.x += delta_x;
     perturbed.y += delta_y;
     perturbed.size += delta_size;

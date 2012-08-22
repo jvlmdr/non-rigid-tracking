@@ -1,11 +1,11 @@
-#ifndef RIGID_WARP_HPP_
-#define RIGID_WARP_HPP_
+#ifndef SIMILARITY_WARP_HPP_
+#define SIMILARITY_WARP_HPP_
 
 #include "warp.hpp"
 
-class RigidWarpFunction {
+class SimilarityWarpFunction {
   public:
-    explicit RigidWarpFunction(double patch_size);
+    explicit SimilarityWarpFunction(double patch_size);
 
     template<class T>
     bool operator()(const T* const x, const T* const p, T* q) const;
@@ -14,17 +14,17 @@ class RigidWarpFunction {
     double resolution_;
 };
 
-class RigidWarp : public Warp {
+class SimilarityWarp : public Warp {
   private:
     // Need resolution of patch to calculate scale.
     int resolution_;
 
     static const int NUM_PARAMS = 4;
-    ceres::AutoDiffCostFunction<RigidWarpFunction, 2, 2, NUM_PARAMS> warp_;
+    ceres::AutoDiffCostFunction<SimilarityWarpFunction, 2, 2, NUM_PARAMS> warp_;
 
   public:
-    RigidWarp(int patch_size);
-    ~RigidWarp();
+    SimilarityWarp(int patch_size);
+    ~SimilarityWarp();
 
     cv::Point2d evaluate(const cv::Point2d& position,
                          const double* params,
@@ -40,6 +40,6 @@ class RigidWarp : public Warp {
               const cv::Scalar& color) const;
 };
 
-#include "rigid_warp.inl"
+#include "similarity_warp.inl"
 
 #endif

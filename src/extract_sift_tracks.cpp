@@ -17,15 +17,15 @@
 #include "read_image.hpp"
 #include "track_list.hpp"
 #include "warp.hpp"
-#include "rigid_warp.hpp"
-#include "rigid_feature.hpp"
+#include "similarity_warp.hpp"
+#include "similarity_feature.hpp"
 #include "descriptor.hpp"
 #include "sift.hpp"
 
-#include "rigid_feature_reader.hpp"
+#include "similarity_feature_reader.hpp"
 #include "track_list_reader.hpp"
 #include "writer.hpp"
-#include "rigid_feature_writer.hpp"
+#include "similarity_feature_writer.hpp"
 #include "descriptor_writer.hpp"
 #include "track_list_writer.hpp"
 
@@ -67,7 +67,7 @@ std::string makeFilename(const std::string& format, int n) {
 
 struct Feature {
   // This is "position" in a general sense. More like 2D pose.
-  RigidFeature position;
+  SimilarityFeature position;
   // Fixed-size representation of appearance.
   Descriptor descriptor;
 };
@@ -77,7 +77,7 @@ class FeatureWriter : public Writer<Feature> {
     ~FeatureWriter() {}
 
     void write(cv::FileStorage& file, const Feature& feature) {
-      RigidFeatureWriter position_writer;
+      SimilarityFeatureWriter position_writer;
       position_writer.write(file, feature.position);
 
       DescriptorWriter descriptor_writer;
@@ -111,8 +111,8 @@ int main(int argc, char** argv) {
   std::string descriptors_file = argv[3];
 
   // Load tracks.
-  TrackList<RigidFeature> position_tracks;
-  RigidFeatureReader position_reader;
+  TrackList<SimilarityFeature> position_tracks;
+  SimilarityFeatureReader position_reader;
   bool ok = loadTrackList(positions_file, position_tracks, position_reader);
   CHECK(ok) << "Could not load tracks";
 
@@ -122,12 +122,12 @@ int main(int argc, char** argv) {
   TrackList<Feature> feature_tracks(num_features);
 
   // Iterate over each frame in the track.
-  FrameIterator_<RigidFeature> frame(position_tracks);
+  FrameIterator_<SimilarityFeature> frame(position_tracks);
   frame.seekToStart();
 
   while (!frame.end()) {
     // Get features in this frame.
-    typedef std::map<int, RigidFeature> FeatureSet;
+    typedef std::map<int, SimilarityFeature> FeatureSet;
     FeatureSet positions;
     frame.getPoints(positions);
 
@@ -152,7 +152,7 @@ int main(int argc, char** argv) {
          it != positions.end();
          ++it) {
       int i = it->first;
-      const RigidFeature& position = it->second;
+      const SimilarityFeature& position = it->second;
 
       Feature& feature = (feature_tracks[i][t] = Feature());
       feature.position = position;

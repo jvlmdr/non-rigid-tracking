@@ -13,14 +13,14 @@
 #include <opencv2/features2d/features2d.hpp>
 #include <gflags/gflags.h>
 #include "track_list.hpp"
-#include "rigid_feature.hpp"
-#include "rigid_feature_reader.hpp"
-#include "rigid_feature_writer.hpp"
+#include "similarity_feature.hpp"
+#include "similarity_feature_reader.hpp"
+#include "similarity_feature_writer.hpp"
 #include "track_list_reader.hpp"
 #include "track_list_writer.hpp"
 
-typedef TrackList<RigidFeature> RigidTrackList;
-typedef std::vector<RigidTrackList> TrackListList;
+typedef TrackList<SimilarityFeature> SimilarityTrackList;
+typedef std::vector<SimilarityTrackList> TrackListList;
 
 std::string makeFilename(const std::string& format, int n) {
   return boost::str(boost::format(format) % (n + 1));
@@ -46,10 +46,10 @@ bool loadAllTracks(const std::string& tracks_format,
     }
 
     // Add an empty track list.
-    RigidTrackList track_list;
+    SimilarityTrackList track_list;
 
     // Attempt to load tracks.
-    RigidFeatureReader feature_reader;
+    SimilarityFeatureReader feature_reader;
     ok = loadTrackList(tracks_file, track_list, feature_reader);
     if (!ok) {
       // Failed.
@@ -60,7 +60,7 @@ bool loadAllTracks(const std::string& tracks_format,
         tracks_file << "'";
 
     // Put into list.
-    track_lists.push_back(RigidTrackList());
+    track_lists.push_back(SimilarityTrackList());
     track_lists.back().swap(track_list);
 
     t += 1;
@@ -100,20 +100,20 @@ int main(int argc, char** argv) {
   LOG(INFO) << "Loaded " << track_lists.size() << " lists of tracks";
 
   // Now combine all tracks.
-  RigidTrackList merged;
+  SimilarityTrackList merged;
 
   for (TrackListList::const_iterator tracks = track_lists.begin();
        tracks != track_lists.end();
        ++tracks) {
     // Add each track to the full list.
-    for (RigidTrackList::const_iterator track = tracks->begin();
+    for (SimilarityTrackList::const_iterator track = tracks->begin();
          track != tracks->end();
          ++track) {
       merged.push_back(*track);
     }
   }
 
-  RigidFeatureWriter feature_writer;
+  SimilarityFeatureWriter feature_writer;
   ok = saveTrackList(merged_file, merged, feature_writer);
   CHECK(ok) << "Could not save tracks";
 

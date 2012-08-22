@@ -10,11 +10,11 @@
 #include <opencv2/features2d/features2d.hpp>
 #include <opencv2/nonfree/nonfree.hpp>
 #include "read_image.hpp"
-#include "rigid_feature.hpp"
+#include "similarity_feature.hpp"
 #include "sift.hpp"
 
 #include "writer.hpp"
-#include "rigid_feature_writer.hpp"
+#include "similarity_feature_writer.hpp"
 #include "descriptor_writer.hpp"
 #include "vector_writer.hpp"
 
@@ -28,7 +28,7 @@ DEFINE_double(contrast_threshold, 0.04,
 
 struct Feature {
   // This is "position" in a general sense. More like 2D pose.
-  RigidFeature position;
+  SimilarityFeature position;
   // Fixed-size representation of appearance.
   Descriptor descriptor;
 };
@@ -38,7 +38,7 @@ class FeatureWriter : public Writer<Feature> {
     ~FeatureWriter() {}
 
     void write(cv::FileStorage& file, const Feature& feature) {
-      RigidFeatureWriter position_writer;
+      SimilarityFeatureWriter position_writer;
       position_writer.write(file, feature.position);
 
       DescriptorWriter descriptor_writer;
@@ -71,7 +71,7 @@ void extractFeatures(const cv::Mat& image,
   // Convert to features.
   for (int i = 0; i < num_features; i += 1) {
     Feature feature;
-    feature.position = keypointToRigidFeature(keypoints[i]);
+    feature.position = keypointToSimilarityFeature(keypoints[i]);
 
     // Copy descriptor contents.
     cv::Mat row = descriptors.row(i);

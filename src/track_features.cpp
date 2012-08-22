@@ -5,207 +5,201 @@
 #include <iterator>
 #include <algorithm>
 #include <boost/format.hpp>
-#include <boost/lexical_cast.hpp>
-
 #include <opencv2/core/core.hpp>
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
-
+#include <opencv2/features2d/features2d.hpp>
+#include <opencv2/nonfree/nonfree.hpp>
+#include <ceres/ceres.h>
 #include "read_image.hpp"
 #include "track.hpp"
 #include "tracker.hpp"
-#include "klt_tracker.hpp"
+#include "random_color.hpp"
+#include "warp.hpp"
+#include "similarity_warp.hpp"
+#include "similarity_feature.hpp"
+#include "flow.hpp"
 
-#include "image_point_writer.hpp"
-#include "track_list_writer.hpp"
+// Size of window to track.
+const int PATCH_SIZE = 9;
+const int NUM_PIXELS = PATCH_SIZE * PATCH_SIZE;
 
-// Size of window to track. Default: 7.
-const int WINDOW_SIZE = 7;
-// Minimum determinant to deem lost. Default: 0.01.
-const double MIN_DETERMINANT = 0.01;
-// Maximum number of iterations. Default: 10.
-const int MAX_ITERATIONS = 20;
-// Minimum step size to deem converged. Default: 0.1.
-const double MIN_DISPLACEMENT = 0.1;
-// Maximum residual to deem lost. Default: 10.0.
-const double MAX_RESIDUAL = 10.0;
-// Consistency checking mode. Default: -1.
-// -1: none, 0: translation, 1: similarity, 2: affine
-const int CONSISTENCY_MODE = 2;
+// Lucas-Kanade optimization settings.
+const int MAX_NUM_ITERATIONS = 100;
+const double FUNCTION_TOLERANCE = 1e-4;
+const double GRADIENT_TOLERANCE = 0;
+const double PARAMETER_TOLERANCE = 1e-4;
+const bool ITERATION_LIMIT_IS_FATAL = false;
+const double MAX_CONDITION = 1000;
 
-// Visualization settings.
-const cv::Scalar MARKER_COLOR(0xFF, 0x00, 0x00);
-const int MARKER_RADIUS = 2;
-const int MARKER_THICKNESS = 2;
-const int TRAIL_LENGTH = 5;
-const int TRAIL_THICKNESS = 2;
+// Do not want to sample below one pixel.
+const double MIN_SCALE = 0.5;
 
-typedef Track<cv::Point2d> PointTrack;
-typedef TrackList<cv::Point2d> PointTrackList;
+// Maximum average intensity difference as a fraction of the range.
+// (A value of 1 means anything is permitted.)
+const double MAX_AVERAGE_RESIDUAL = 0.1;
 
-void drawTrack(cv::Mat& image, const PointTrack& track) {
-  // Get last point in track.
-  const cv::Point2d& pos = track.rbegin()->second;
-  // Draw circle around point.
-  cv::circle(image, pos, MARKER_RADIUS, MARKER_COLOR, MARKER_THICKNESS);
+const int MAX_NUM_FEATURES = 100;
+const int NUM_OCTAVE_LAYERS = 3;
+const double CONTRAST_THRESHOLD = 0.04;
+const double EDGE_THRESHOLD = 10;
+const double SIGMA = 1.6;
 
-  // Draw trail from previous frames.
-  PointTrack::const_reverse_iterator point = track.rbegin();
-  cv::Point2d prev = point->second;
-  ++point;
-  int n = 0;
+const double SATURATION = 0.99;
+const double BRIGHTNESS = 0.99;
 
-  while (n < TRAIL_LENGTH && point != track.rend()) {
-    cv::line(image, prev, point->second, MARKER_COLOR, TRAIL_THICKNESS);
-    prev = point->second;
-    ++point;
-    n += 1;
-  }
-}
-
-void drawTracks(cv::Mat& image, const std::vector<const PointTrack*>& tracks) {
-  typedef std::vector<const PointTrack*> PointTrackList;
-  PointTrackList::const_iterator track;
-
-  for (track = tracks.begin(); track != tracks.end(); ++track) {
-    drawTrack(image, **track);
-  }
-}
-
-std::string imageFilename(const std::string& format, int n) {
+std::string makeFilename(const std::string& format, int n) {
   return boost::str(boost::format(format) % (n + 1));
 }
 
-cv::Point2d readPointFromFile(const cv::FileNode& node) {
-  double x = (double)node["x"];
-  double y = (double)node["y"];
-
-  return cv::Point2d(x, y);
+SimilarityFeature keypointToSimilarityFeature(const cv::KeyPoint& keypoint) {
+  double theta = keypoint.angle / 180. * CV_PI;
+  return SimilarityFeature(keypoint.pt.x, keypoint.pt.y, keypoint.size, theta);
 }
 
-void shiftTrack(const PointTrack& input, PointTrack& output, int delta) {
-  output.clear();
+struct Feature {
+  SimilarityFeature state;
+  cv::Mat appearance;
+  cv::Scalar color;
 
-  PointTrack::const_iterator point;
-  for (point = input.begin(); point != input.end(); ++point) {
-    int t = point->first;
-    const cv::Point2d& position = point->second;
+  Feature() : state(), appearance(), color() {}
 
-    output[t + delta] = position;
-  }
-}
+  Feature(const SimilarityFeature& state, const cv::Scalar& color)
+      : state(state), appearance(), color(color) {}
+};
 
-void shiftTracks(const PointTrackList& input,
-                 PointTrackList& output,
-                 int delta) {
-  output.clear();
-
-  PointTrackList::const_iterator track;
-  for (track = input.begin(); track != input.end(); ++track) {
-    // Create a new track.
-    output.push_back(PointTrack());
-    // Copy with a shift.
-    shiftTrack(*track, output.back(), delta);
-  }
-}
-
-bool loadKeypoints(const std::string& filename,
-                   std::vector<cv::Point2d>& points) {
-  // Open file.
-  cv::FileStorage fs(filename, cv::FileStorage::READ);
-  if (!fs.isOpened()) {
-    return false;
-  }
-
-  // Parse keypoints.
-  cv::FileNode list = fs["keypoints"];
-  std::transform(list.begin(), list.end(), std::back_inserter(points),
-      readPointFromFile);
-
-  return true;
+Feature makeRandomColorFeature(const cv::KeyPoint& keypoint) {
+  return Feature(keypointToSimilarityFeature(keypoint),
+      randomColor(SATURATION, BRIGHTNESS));
 }
 
 int main(int argc, char** argv) {
-  if (argc < 5) {
-    std::cerr << "usage: " << argv[0] <<
-      " image-format frame-number keypoints tracks" << std::endl;
-    std::cerr << std::endl;
-    std::cerr << "Example" << std::endl;
-    std::cerr << argv[0] <<
-      " input/my-video/%03d.png 5 output/my-video/keypoints/005.yaml"
-      " output/my-video/tracks/005.yaml" << std::endl;
+  google::InitGoogleLogging(argv[0]);
+
+  if (argc < 3) {
+    std::cerr << "usage: " << argv[0] << " image-format output-format" <<
+      std::endl;
     return 1;
   }
 
   std::string image_format = argv[1];
-  int first_frame = boost::lexical_cast<int>(argv[2]);
-  std::string keypoints_filename = argv[3];
-  std::string tracks_filename = argv[4];
+  std::string output_format = argv[2];
 
-  // Frame index.
-  int n = first_frame;
+  int t = 0;
+  bool ok = true;
 
-  // Read keypoints from file.
-  std::vector<cv::Point2d> points;
-  loadKeypoints(keypoints_filename, points);
-  std::cerr << points.size() << std::endl;
+  SimilarityWarp similarity_warp(PATCH_SIZE);
+  Warp& warp = similarity_warp;
 
-  KltTracker klt_tracker;
-  klt_tracker.init(points, WINDOW_SIZE, MIN_DETERMINANT, MAX_ITERATIONS,
-      MIN_DISPLACEMENT, MAX_RESIDUAL, CONSISTENCY_MODE);
-  // Ensure that we're adhering to the tracker interface.
-  SerialTracker& tracker = klt_tracker;
+  WarpTracker tracker(warp, PATCH_SIZE, MAX_NUM_ITERATIONS, FUNCTION_TOLERANCE,
+      GRADIENT_TOLERANCE, PARAMETER_TOLERANCE, ITERATION_LIMIT_IS_FATAL,
+      MAX_CONDITION);
 
-  // Loop variables.
-  bool user_quit = false;
-  bool have_frame = true;
-  bool have_features = true;
-  cv::Mat color_image;
-  cv::Mat image;
-  cv::Size size(0, 0);
+  typedef std::list<Feature> FeatureList;
+  FeatureList features;
 
-  while (!user_quit && have_frame && have_features) {
-    // Attempt to read next frame.
-    have_frame = readImage(imageFilename(image_format, n), color_image, image);
-    if (!have_frame) {
-      continue;
+  while (ok) {
+    // Read image.
+    cv::Mat integer_image;
+    cv::Mat color_image;
+    ok = readImage(makeFilename(image_format, t), color_image, integer_image);
+    if (!ok) {
+      std::cerr << "could not read image" << std::endl;
+      return 1;
     }
 
-    // Get image size to save out to file.
-    size = image.size();
+    // Convert to floating point.
+    cv::Mat image;
+    integer_image.convertTo(image, cv::DataType<double>::type, 1. / 255.);
 
-    // Add image to sequence.
-    tracker.feed(image);
+    tracker.feedImage(image);
 
-    // Draw the points which are currently being tracked.
-    std::vector<const PointTrack*> tracks;
-    tracker.activeTracks(tracks);
-    drawTracks(color_image, tracks);
+    if (t == 0) {
+      // First frame: get some features.
+      std::vector<cv::KeyPoint> keypoints;
+      cv::SIFT sift(MAX_NUM_FEATURES, NUM_OCTAVE_LAYERS, CONTRAST_THRESHOLD,
+          EDGE_THRESHOLD, SIGMA);
+      sift(integer_image, cv::noArray(), keypoints, cv::noArray(), false);
 
-    // If there are no features, then abort.
-    have_features = !tracks.empty();
+      // Convert keypoints to our features.
+      std::transform(keypoints.begin(), keypoints.end(),
+          std::back_inserter(features), makeRandomColorFeature);
 
-    // Draw image.
-    cv::imshow("tracking", color_image);
+      // Sample appearance of each feature.
+      for (FeatureList::iterator feature = features.begin();
+           feature != features.end();
+           ++feature) {
+        // Sample patch at new position in image.
+        cv::Mat M = warp.matrix(feature->state.data());
+        sampleAffinePatch(image, feature->appearance, M, PATCH_SIZE, false);
+      }
 
-    // Check for keypress.
-    char c = char(cv::waitKey(10));
-    if (c == 27) {
-      user_quit = true;
+      std::cerr << "detected " << features.size() << " features" << std::endl;
+    } else {
+      // Iterate through features and either update or remove each.
+      FeatureList::iterator feature = features.begin();
+
+      while (feature != features.end()) {
+        bool remove;
+        bool tracked = tracker.track(feature->state.data());
+
+        if (!tracked) {
+          // Remove from list.
+          remove = true;
+          std::cerr << "could not track" << std::endl;
+        } else {
+          // Check that feature did not become too small.
+          double scale = feature->state.size / double(PATCH_SIZE);
+
+          if (scale < MIN_SCALE) {
+            remove = true;
+            std::cerr << "scale too small" << std::endl;
+          } else {
+            // Sample patch at new position in image.
+            cv::Mat M = warp.matrix(feature->state.data());
+            cv::Mat appearance;
+            sampleAffinePatch(image, appearance, M, PATCH_SIZE, false);
+
+            // Check that the feature looks similar.
+            double residual = averageResidual(feature->appearance, appearance);
+
+            if (residual > MAX_AVERAGE_RESIDUAL) {
+              remove = true;
+              std::cerr << "residual too large" << std::endl;
+            } else {
+              // Keep the feature!
+              remove = false;
+              // Swap the image contents.
+              feature->appearance = appearance;
+            }
+          }
+        }
+
+        if (remove) {
+          feature = features.erase(feature);
+        } else {
+          ++feature;
+        }
+      }
+
+      std::cout << "tracked " << features.size() << " features" << std::endl;
     }
 
-    // Frame counter.
-    n += 1;
+    // Visualize positions.
+    for (FeatureList::const_iterator feature = features.begin();
+         feature != features.end();
+         ++feature) {
+      warp.draw(color_image, feature->state.data(), PATCH_SIZE, feature->color);
+    }
+
+    std::string output_filename = makeFilename(output_format, t);
+    cv::imwrite(output_filename, color_image);
+
+    cv::imshow("frame", color_image);
+    cv::waitKey(10);
+
+    t += 1;
   }
-
-  // Shift tracks in time so that they start at the first frame.
-  PointTrackList shifted;
-  shiftTracks(tracker.tracks(), shifted, first_frame);
-
-  // Write out tracks.
-  ImagePointWriter writer;
-  bool ok = saveTrackList(tracks_filename, shifted, writer);
-  CHECK(ok) << "Could not save tracks";
 
   return 0;
 }

@@ -15,9 +15,10 @@
 #include "descriptor.hpp"
 #include "match.hpp"
 #include "random_color.hpp"
-#include "rigid_feature.hpp"
-#include "rigid_warp.hpp"
-#include "rigid_feature_reader.hpp"
+#include "similarity_feature.hpp"
+#include "similarity_warp.hpp"
+
+#include "similarity_feature_reader.hpp"
 #include "vector_reader.hpp"
 
 const int PATCH_SIZE = 9;
@@ -29,29 +30,29 @@ DEFINE_string(output_file, "keypoints.png", "Location to save image.");
 DEFINE_bool(save, false, "Save to file?");
 DEFINE_bool(display, true, "Show in window?");
 
-typedef std::vector<RigidFeature> FeatureList;
+typedef std::vector<SimilarityFeature> FeatureList;
 
-// Converts a cv::KeyPoint to a RigidFeature.
-RigidFeature keypointToRigidFeature(const cv::KeyPoint& keypoint) {
+// Converts a cv::KeyPoint to a SimilarityFeature.
+SimilarityFeature keypointToSimilarityFeature(const cv::KeyPoint& keypoint) {
   double theta = keypoint.angle / 180. * CV_PI;
-  return RigidFeature(keypoint.pt.x, keypoint.pt.y, keypoint.size, theta);
+  return SimilarityFeature(keypoint.pt.x, keypoint.pt.y, keypoint.size, theta);
 }
 
 // Renders a keypoint on top of an image with a random color.
-void drawRigidFeature(cv::Mat& image, const RigidFeature& feature) {
+void drawSimilarityFeature(cv::Mat& image, const SimilarityFeature& feature) {
   // Generate a random color.
   cv::Scalar color = randomColor(SATURATION, BRIGHTNESS);
 
   // Warp is just for drawing. This feels weird.
-  RigidWarp warp(PATCH_SIZE);
+  SimilarityWarp warp(PATCH_SIZE);
   warp.draw(image, feature.data(), PATCH_SIZE, color);
 }
 
 // Renders all keypoints over an image with random colors.
-void drawRigidFeatures(cv::Mat& image, const FeatureList& features) {
+void drawSimilarityFeatures(cv::Mat& image, const FeatureList& features) {
   // Draw each keypoint with a random color.
   std::for_each(features.begin(), features.end(),
-      boost::bind(drawRigidFeature, boost::ref(image), _1));
+      boost::bind(drawSimilarityFeature, boost::ref(image), _1));
 }
 
 void init(int& argc, char**& argv) {
@@ -87,13 +88,13 @@ int main(int argc, char** argv) {
 
   // Load keypoints.
   FeatureList features;
-  RigidFeatureReader feature_reader;
+  SimilarityFeatureReader feature_reader;
   ok = loadList(keypoints_file, features, feature_reader);
   CHECK(ok) << "Could not load keypoints";
   LOG(INFO) << "Loaded " << features.size() << " keypoints" << std::endl;
 
   // Visualize matches.
-  drawRigidFeatures(image, features);
+  drawSimilarityFeatures(image, features);
 
   if (FLAGS_save) {
     cv::imwrite(output_file, image);

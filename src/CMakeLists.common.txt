@@ -1,45 +1,11 @@
 set(CMAKE_CXX_FLAGS "-Wall")
 
-ADD_EXECUTABLE(track-features
-  track_features.cpp
-  read_image.cpp
-  klt_tracker.cpp
-  image_point_writer)
-TARGET_LINK_LIBRARIES(track-features glog gflags)
-TARGET_LINK_LIBRARIES(track-features ${OpenCV_LIBS})
-TARGET_LINK_LIBRARIES(track-features klt)
-
-ADD_EXECUTABLE(track-features-bidirectional
-  track_features_bidirectional.cpp
-  read_image.cpp
-  klt_tracker.cpp
-  image_point_writer.cpp)
-TARGET_LINK_LIBRARIES(track-features-bidirectional glog gflags)
-TARGET_LINK_LIBRARIES(track-features-bidirectional ${OpenCV_LIBS})
-TARGET_LINK_LIBRARIES(track-features-bidirectional klt)
-
-ADD_EXECUTABLE(visualize-tracks
-  visualize_tracks.cpp
-  read_image.cpp
-  random_color.cpp
-  image_point_reader.cpp)
-TARGET_LINK_LIBRARIES(visualize-tracks glog gflags)
-TARGET_LINK_LIBRARIES(visualize-tracks ${OpenCV_LIBS})
-
-ADD_EXECUTABLE(visualize-all-tracks
-  visualize_all_tracks.cpp
-  read_image.cpp
-  random_color.cpp
-  image_point_reader.cpp)
-TARGET_LINK_LIBRARIES(visualize-all-tracks glog gflags)
-TARGET_LINK_LIBRARIES(visualize-all-tracks ${OpenCV_LIBS})
-
 ADD_EXECUTABLE(visualize-keypoints
   visualize_keypoints.cpp
   read_image.cpp
-  rigid_feature.cpp
-  rigid_feature_reader.cpp
-  rigid_warp.cpp
+  similarity_feature.cpp
+  similarity_feature_reader.cpp
+  similarity_warp.cpp
   random_color.cpp)
 TARGET_LINK_LIBRARIES(visualize-keypoints glog gflags)
 TARGET_LINK_LIBRARIES(visualize-keypoints ${OpenCV_LIBS})
@@ -55,11 +21,11 @@ ADD_EXECUTABLE(visualize-matches
   visualize_matches.cpp
   read_image.cpp
   draw_matches.cpp
-  rigid_feature.cpp
-  rigid_warp.cpp
+  similarity_feature.cpp
+  similarity_warp.cpp
   random_color.cpp
   match_reader.cpp
-  rigid_feature_reader.cpp)
+  similarity_feature_reader.cpp)
 TARGET_LINK_LIBRARIES(visualize-matches glog gflags)
 TARGET_LINK_LIBRARIES(visualize-matches ${OpenCV_LIBS})
 
@@ -67,50 +33,50 @@ ADD_EXECUTABLE(adjacent-matches-to-tracks
   adjacent_matches_to_tracks.cpp
   read_image.cpp
   match_reader.cpp
-  rigid_feature.cpp
-  rigid_feature_reader.cpp
-  rigid_feature_writer.cpp)
+  similarity_feature.cpp
+  similarity_feature_reader.cpp
+  similarity_feature_writer.cpp)
 TARGET_LINK_LIBRARIES(adjacent-matches-to-tracks glog gflags)
 TARGET_LINK_LIBRARIES(adjacent-matches-to-tracks ${OpenCV_LIBS})
 
-ADD_EXECUTABLE(track-rigid
-  track_rigid.cpp
+ADD_EXECUTABLE(track-features
+  track_features.cpp
   read_image.cpp
   flow.cpp
-  rigid_warp.cpp
-  rigid_feature.cpp
+  similarity_warp.cpp
+  similarity_feature.cpp
   random_color.cpp)
-TARGET_LINK_LIBRARIES(track-rigid glog gflags)
-TARGET_LINK_LIBRARIES(track-rigid ${OpenCV_LIBS})
-TARGET_LINK_LIBRARIES(track-rigid ceres)
-TARGET_LINK_LIBRARIES(track-rigid cxsparse)
-TARGET_LINK_LIBRARIES(track-rigid cholmod ccolamd camd colamd amd)
-TARGET_LINK_LIBRARIES(track-rigid ${LAPACK_LIB})
+TARGET_LINK_LIBRARIES(track-features glog gflags)
+TARGET_LINK_LIBRARIES(track-features ${OpenCV_LIBS})
+TARGET_LINK_LIBRARIES(track-features ceres)
+TARGET_LINK_LIBRARIES(track-features cxsparse)
+TARGET_LINK_LIBRARIES(track-features cholmod ccolamd camd colamd amd)
+TARGET_LINK_LIBRARIES(track-features ${LAPACK_LIB})
 
-ADD_EXECUTABLE(track-rigid-bidir
-  track_rigid_bidir.cpp
+ADD_EXECUTABLE(track-features-bidir
+  track_features_bidir.cpp
   read_image.cpp
   flow.cpp
-  rigid_warp.cpp
-  rigid_feature.cpp
-  rigid_feature_reader.cpp
-  rigid_feature_writer.cpp
+  similarity_warp.cpp
+  similarity_feature.cpp
+  similarity_feature_reader.cpp
+  similarity_feature_writer.cpp
   random_color.cpp)
-TARGET_LINK_LIBRARIES(track-rigid-bidir glog gflags)
-TARGET_LINK_LIBRARIES(track-rigid-bidir ${OpenCV_LIBS})
-TARGET_LINK_LIBRARIES(track-rigid-bidir ceres)
-TARGET_LINK_LIBRARIES(track-rigid-bidir cxsparse)
-TARGET_LINK_LIBRARIES(track-rigid-bidir cholmod ccolamd camd colamd amd)
-TARGET_LINK_LIBRARIES(track-rigid-bidir ${LAPACK_LIB})
+TARGET_LINK_LIBRARIES(track-features-bidir glog gflags)
+TARGET_LINK_LIBRARIES(track-features-bidir ${OpenCV_LIBS})
+TARGET_LINK_LIBRARIES(track-features-bidir ceres)
+TARGET_LINK_LIBRARIES(track-features-bidir cxsparse)
+TARGET_LINK_LIBRARIES(track-features-bidir cholmod ccolamd camd colamd amd)
+TARGET_LINK_LIBRARIES(track-features-bidir ${LAPACK_LIB})
 
 ADD_EXECUTABLE(extract-sift-tracks
   extract_sift_tracks.cpp
   read_image.cpp
-  rigid_feature.cpp
-  rigid_warp.cpp
+  similarity_feature.cpp
+  similarity_warp.cpp
   sift.cpp
-  rigid_feature_reader.cpp
-  rigid_feature_writer.cpp
+  similarity_feature_reader.cpp
+  similarity_feature_writer.cpp
   descriptor_writer.cpp)
 TARGET_LINK_LIBRARIES(extract-sift-tracks glog gflags)
 TARGET_LINK_LIBRARIES(extract-sift-tracks ${OpenCV_LIBS})
@@ -118,8 +84,8 @@ TARGET_LINK_LIBRARIES(extract-sift-tracks ${OpenCV_LIBS})
 ADD_EXECUTABLE(test-extract-sift
   test_extract_sift.cpp
   read_image.cpp
-  rigid_feature.cpp
-  rigid_warp.cpp
+  similarity_feature.cpp
+  similarity_warp.cpp
   sift.cpp)
 TARGET_LINK_LIBRARIES(test-extract-sift glog gflags)
 TARGET_LINK_LIBRARIES(test-extract-sift ${OpenCV_LIBS})
@@ -131,47 +97,47 @@ ADD_EXECUTABLE(pca-descriptor
 TARGET_LINK_LIBRARIES(pca-descriptor glog gflags)
 TARGET_LINK_LIBRARIES(pca-descriptor ${OpenCV_LIBS})
 
-ADD_EXECUTABLE(visualize-rigid-tracks
-  visualize_rigid_tracks.cpp
-  rigid_feature.cpp
-  rigid_warp.cpp
+ADD_EXECUTABLE(visualize-tracks
+  visualize_tracks.cpp
+  similarity_feature.cpp
+  similarity_warp.cpp
   read_image.cpp
   random_color.cpp
-  rigid_feature_reader.cpp)
-TARGET_LINK_LIBRARIES(visualize-rigid-tracks glog gflags)
-TARGET_LINK_LIBRARIES(visualize-rigid-tracks ${OpenCV_LIBS})
+  similarity_feature_reader.cpp)
+TARGET_LINK_LIBRARIES(visualize-tracks glog gflags)
+TARGET_LINK_LIBRARIES(visualize-tracks ${OpenCV_LIBS})
 
-ADD_EXECUTABLE(track-rigid-test
-  track_rigid_test.cpp
+ADD_EXECUTABLE(track-features-test
+  track_features_test.cpp
   read_image.cpp
   flow.cpp
-  rigid_warp.cpp
-  rigid_feature.cpp
+  similarity_warp.cpp
+  similarity_feature.cpp
   random_color.cpp)
-TARGET_LINK_LIBRARIES(track-rigid-test glog gflags)
-TARGET_LINK_LIBRARIES(track-rigid-test ${OpenCV_LIBS})
-TARGET_LINK_LIBRARIES(track-rigid-test ceres)
-TARGET_LINK_LIBRARIES(track-rigid-test cxsparse)
-TARGET_LINK_LIBRARIES(track-rigid-test cholmod ccolamd camd colamd amd)
-TARGET_LINK_LIBRARIES(track-rigid-test ${LAPACK_LIB})
+TARGET_LINK_LIBRARIES(track-features-test glog gflags)
+TARGET_LINK_LIBRARIES(track-features-test ${OpenCV_LIBS})
+TARGET_LINK_LIBRARIES(track-features-test ceres)
+TARGET_LINK_LIBRARIES(track-features-test cxsparse)
+TARGET_LINK_LIBRARIES(track-features-test cholmod ccolamd camd colamd amd)
+TARGET_LINK_LIBRARIES(track-features-test ${LAPACK_LIB})
 
-ADD_EXECUTABLE(merge-rigid-tracks
-  merge_rigid_tracks.cpp
-  rigid_feature.cpp
-  rigid_feature_reader.cpp
-  rigid_feature_writer.cpp)
-TARGET_LINK_LIBRARIES(merge-rigid-tracks glog gflags)
-TARGET_LINK_LIBRARIES(merge-rigid-tracks ${OpenCV_LIBS})
-TARGET_LINK_LIBRARIES(merge-rigid-tracks ceres)
-TARGET_LINK_LIBRARIES(merge-rigid-tracks cxsparse)
-TARGET_LINK_LIBRARIES(merge-rigid-tracks cholmod ccolamd camd colamd amd)
-TARGET_LINK_LIBRARIES(merge-rigid-tracks ${LAPACK_LIB})
+ADD_EXECUTABLE(merge-tracks
+  merge_tracks.cpp
+  similarity_feature.cpp
+  similarity_feature_reader.cpp
+  similarity_feature_writer.cpp)
+TARGET_LINK_LIBRARIES(merge-tracks glog gflags)
+TARGET_LINK_LIBRARIES(merge-tracks ${OpenCV_LIBS})
+TARGET_LINK_LIBRARIES(merge-tracks ceres)
+TARGET_LINK_LIBRARIES(merge-tracks cxsparse)
+TARGET_LINK_LIBRARIES(merge-tracks cholmod ccolamd camd colamd amd)
+TARGET_LINK_LIBRARIES(merge-tracks ${LAPACK_LIB})
 
 ADD_EXECUTABLE(select-active-tracks
   select_active_tracks.cpp
-  rigid_feature.cpp
-  rigid_feature_reader.cpp
-  rigid_feature_writer.cpp)
+  similarity_feature.cpp
+  similarity_feature_reader.cpp
+  similarity_feature_writer.cpp)
 TARGET_LINK_LIBRARIES(select-active-tracks glog gflags)
 TARGET_LINK_LIBRARIES(select-active-tracks ${OpenCV_LIBS})
 
@@ -184,10 +150,10 @@ TARGET_LINK_LIBRARIES(effect-of-sift-threshold ${OpenCV_LIBS})
 ADD_EXECUTABLE(find-keypoints-and-extract-descriptors
   find_keypoints_and_extract_descriptors.cpp
   read_image.cpp
-  rigid_feature.cpp
-  rigid_warp.cpp
+  similarity_feature.cpp
+  similarity_warp.cpp
   sift.cpp
-  rigid_feature_writer.cpp
+  similarity_feature_writer.cpp
   descriptor_writer.cpp)
 TARGET_LINK_LIBRARIES(find-keypoints-and-extract-descriptors glog gflags)
 TARGET_LINK_LIBRARIES(find-keypoints-and-extract-descriptors ${OpenCV_LIBS})
@@ -252,9 +218,9 @@ TARGET_LINK_LIBRARIES(effect-of-matching-parameters ${OpenCV_LIBS})
 
 ADD_EXECUTABLE(select-long-tracks
   select_long_tracks.cpp
-  rigid_feature.cpp
-  rigid_feature_reader.cpp
-  rigid_feature_writer.cpp)
+  similarity_feature.cpp
+  similarity_feature_reader.cpp
+  similarity_feature_writer.cpp)
 TARGET_LINK_LIBRARIES(select-long-tracks glog gflags)
 TARGET_LINK_LIBRARIES(select-long-tracks ${OpenCV_LIBS})
 
@@ -277,9 +243,9 @@ ADD_EXECUTABLE(visualize-multiview-tracks
   read_lines.cpp
   multiview_track.cpp
   random_color.cpp
-  rigid_feature.cpp
-  rigid_warp.cpp
-  rigid_feature_reader.cpp
+  similarity_feature.cpp
+  similarity_warp.cpp
+  similarity_feature_reader.cpp
   read_image.cpp)
 TARGET_LINK_LIBRARIES(visualize-multiview-tracks glog gflags)
 TARGET_LINK_LIBRARIES(visualize-multiview-tracks ${OpenCV_LIBS})

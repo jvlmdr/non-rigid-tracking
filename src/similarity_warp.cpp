@@ -1,24 +1,24 @@
-#include "rigid_warp.hpp"
+#include "similarity_warp.hpp"
 #include <cmath>
-#include "rigid_feature.hpp"
+#include "similarity_feature.hpp"
 
 const int LINE_THICKNESS = 2;
 
 ////////////////////////////////////////////////////////////////////////////////
 
-RigidWarpFunction::RigidWarpFunction(double resolution)
+SimilarityWarpFunction::SimilarityWarpFunction(double resolution)
     : resolution_(resolution) {}
 
 ////////////////////////////////////////////////////////////////////////////////
 
-RigidWarp::RigidWarp(int resolution)
-    : resolution_(resolution), warp_(new RigidWarpFunction(resolution)) {}
+SimilarityWarp::SimilarityWarp(int resolution)
+    : resolution_(resolution), warp_(new SimilarityWarpFunction(resolution)) {}
 
-RigidWarp::~RigidWarp() {}
+SimilarityWarp::~SimilarityWarp() {}
 
-cv::Point2d RigidWarp::evaluate(const cv::Point2d& position,
-                                const double* params,
-                                double* jacobian) const {
+cv::Point2d SimilarityWarp::evaluate(const cv::Point2d& position,
+                                     const double* params,
+                                     double* jacobian) const {
   // Get derivative of warp function.
   double x[2] = { position.x, position.y };
   // Create somewhere to write out the result.
@@ -33,12 +33,13 @@ cv::Point2d RigidWarp::evaluate(const cv::Point2d& position,
   return cv::Point2d(y[0], y[1]);
 }
 
-int RigidWarp::numParams() const {
+int SimilarityWarp::numParams() const {
   return NUM_PARAMS;
 }
 
-cv::Mat RigidWarp::matrix(const double* params) const {
-  const RigidFeature* p = reinterpret_cast<const RigidFeature*>(params);
+cv::Mat SimilarityWarp::matrix(const double* params) const {
+  const SimilarityFeature* p;
+  p = reinterpret_cast<const SimilarityFeature*>(params);
 
   double scale = p->size / double(resolution_);
   cv::Mat M = (cv::Mat_<double>(2, 3) <<
@@ -48,11 +49,12 @@ cv::Mat RigidWarp::matrix(const double* params) const {
   return M;
 }
 
-void RigidWarp::draw(cv::Mat& image,
-                     const double* params,
-                     int width,
-                     const cv::Scalar& color) const {
-  const RigidFeature* p = reinterpret_cast<const RigidFeature*>(params);
+void SimilarityWarp::draw(cv::Mat& image,
+                          const double* params,
+                          int width,
+                          const cv::Scalar& color) const {
+  const SimilarityFeature* p;
+  p = reinterpret_cast<const SimilarityFeature*>(params);
 
   const double NUM_STDDEV = 2;
   double radius = NUM_STDDEV * p->size / 2.;
