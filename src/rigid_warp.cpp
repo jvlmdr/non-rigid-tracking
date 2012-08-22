@@ -52,19 +52,15 @@ void RigidWarp::draw(cv::Mat& image,
                      const double* params,
                      int width,
                      const cv::Scalar& color) const {
-  double radius = width / 2.;
-  cv::Point2d c(0, 0);
-  cv::Point2d i(radius, 0);
-  cv::Point2d j(0, radius);
-  c = evaluate(c, params, NULL);
-  i = evaluate(i, params, NULL);
-  j = evaluate(j, params, NULL);
-  i -= c;
-  j -= c;
+  const RigidFeature* p = reinterpret_cast<const RigidFeature*>(params);
 
-  cv::line(image, c - i - j, c + i - j, color, LINE_THICKNESS);
-  cv::line(image, c - i + j, c + i + j, color, LINE_THICKNESS);
-  cv::line(image, c - i - j, c - i + j, color, LINE_THICKNESS);
-  cv::line(image, c + i - j, c + i + j, color, LINE_THICKNESS);
-  cv::line(image, c, c + j, color, LINE_THICKNESS);
+  const double NUM_STDDEV = 2;
+  double radius = NUM_STDDEV * p->size / 2.;
+  cv::Point2d c(0, 0);
+  cv::Point2d b(0, NUM_STDDEV * resolution_ / 2.);
+  c = evaluate(c, params, NULL);
+  b = evaluate(b, params, NULL);
+
+  cv::circle(image, c, radius, color, LINE_THICKNESS);
+  cv::line(image, c, b, color, LINE_THICKNESS);
 }

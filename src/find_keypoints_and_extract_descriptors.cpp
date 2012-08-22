@@ -115,8 +115,6 @@ int main(int argc, char** argv) {
   bool ok = readImage(image_filename, color_image, image);
   CHECK(ok) << "Could not read image";
 
-  LOG(INFO) << "Extracting features...";
-
   FeatureList features;
   extractFeatures(image, features, CONTRAST_THRESHOLD);
 

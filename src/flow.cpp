@@ -1,6 +1,7 @@
 #include "flow.hpp"
 #include <stdexcept>
 #include <numeric>
+#include <glog/logging.h>
 #include <boost/scoped_array.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
 #include <ceres/ceres.h>
@@ -141,7 +142,7 @@ bool trackPatch(const Warp& warp,
   // Should really check it at every iteration.
   double condition = cond(jacobian);
   if (condition > max_condition) {
-    std::cerr << "condition was over threshold" << std::endl;
+    DLOG(INFO) << "Condition number too large";
     return false;
   }
 
