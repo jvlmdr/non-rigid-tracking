@@ -8,9 +8,10 @@
 #include <gflags/gflags.h>
 #include <glog/logging.h>
 #include "track_list.hpp"
-#include "rigid_feature.hpp"
-#include "rigid_feature_reader.hpp"
-#include "rigid_feature_writer.hpp"
+#include "similarity_feature.hpp"
+
+#include "similarity_feature_reader.hpp"
+#include "similarity_feature_writer.hpp"
 #include "track_list_reader.hpp"
 #include "track_list_writer.hpp"
 
@@ -51,8 +52,8 @@ int main(int argc, char** argv) {
   std::string output_file = argv[2];
 
   // Load tracks from file.
-  TrackList<RigidFeature> input_tracks;
-  RigidFeatureReader feature_reader;
+  TrackList<SimilarityFeature> input_tracks;
+  SimilarityFeatureReader feature_reader;
   bool ok = loadTrackList(input_file, input_tracks, feature_reader);
   CHECK(ok) << "Could not load tracks";
 
@@ -65,7 +66,7 @@ int main(int argc, char** argv) {
     // Sort tracks by their length.
     std::vector<ScoredIndex> scored;
     for (int i = 0; i < int(input_tracks.size()); i += 1) {
-      const Track<RigidFeature>& track = input_tracks[i];
+      const Track<SimilarityFeature>& track = input_tracks[i];
       int length = track.rbegin()->first - track.begin()->first + 1;
       scored.push_back(ScoredIndex(i, length));
     }
@@ -89,11 +90,10 @@ int main(int argc, char** argv) {
     min_track_length = boost::lexical_cast<int>(argv[3]);
   }
 
-  TrackList<RigidFeature> output_tracks;
+  TrackList<SimilarityFeature> output_tracks;
 
-  for (TrackList<RigidFeature>::const_iterator track = input_tracks.begin();
-       track != input_tracks.end();
-       ++track) {
+  TrackList<SimilarityFeature>::const_iterator track;
+  for (track = input_tracks.begin(); track != input_tracks.end(); ++track) {
     // Measure track length.
     int length = track->rbegin()->first - track->begin()->first + 1;
 
@@ -110,7 +110,7 @@ int main(int argc, char** argv) {
       fraction << ")";
 
   // Write out tracks.
-  RigidFeatureWriter feature_writer;
+  SimilarityFeatureWriter feature_writer;
   ok = saveTrackList(output_file, output_tracks, feature_writer);
   CHECK(ok) << "Could not save tracks";
 

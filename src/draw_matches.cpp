@@ -1,27 +1,16 @@
 #include "draw_matches.hpp"
 #include "random_color.hpp"
-#include "rigid_feature.hpp"
-#include "rigid_warp.hpp"
-
-const int PATCH_SIZE = 9;
+#include "similarity_feature.hpp"
+#include "draw_similarity_feature.hpp"
 
 const double SATURATION = 0.99;
 const double BRIGHTNESS = 0.99;
 
-typedef std::vector<RigidFeature> RigidFeatureList;
+typedef std::vector<SimilarityFeature> SimilarityFeatureList;
 typedef std::vector<Match> MatchList;
 
-// Renders a keypoint on top of an image with a random color.
-void drawKeypoint(cv::Mat& image,
-                  const RigidFeature& feature,
-                  const cv::Scalar& color) {
-  // Warp is just for drawing. This feels weird.
-  RigidWarp warp(PATCH_SIZE);
-  warp.draw(image, feature.data(), PATCH_SIZE, color);
-}
-
-void drawMatches(const std::vector<RigidFeature>& keypoints1,
-                 const std::vector<RigidFeature>& keypoints2,
+void drawMatches(const std::vector<SimilarityFeature>& keypoints1,
+                 const std::vector<SimilarityFeature>& keypoints2,
                  const std::vector<Match>& matches,
                  cv::Mat& image1,
                  cv::Mat& image2,
@@ -32,8 +21,8 @@ void drawMatches(const std::vector<RigidFeature>& keypoints1,
     cv::Scalar color = randomColor(SATURATION, BRIGHTNESS);
 
     // Draw the keypoint in each image.
-    drawKeypoint(image1, keypoints1[match->first], color);
-    drawKeypoint(image2, keypoints2[match->second], color);
+    drawSimilarityFeature(image1, keypoints1[match->first], color);
+    drawSimilarityFeature(image2, keypoints2[match->second], color);
   }
 
   // Initialize large side-by-side image with black background.

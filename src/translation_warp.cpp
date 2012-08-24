@@ -1,7 +1,10 @@
 #include "translation_warp.hpp"
-#include "translation_feature.hpp"
 
-const int LINE_THICKNESS = 2;
+TranslationWarpParams::TranslationWarpParams() : x(0), y(0) {}
+
+TranslationWarpParams::TranslationWarpParams(double x, double y) : x(x), y(y) {}
+
+////////////////////////////////////////////////////////////////////////////////
 
 TranslationWarp::TranslationWarp() : warp_(new TranslationWarpFunction) {}
 
@@ -29,31 +32,7 @@ cv::Point2d TranslationWarp::evaluate(const cv::Point2d& position,
 }
 
 cv::Mat TranslationWarp::matrix(const double* params) const {
-  const TranslationFeature* p =
-      reinterpret_cast<const TranslationFeature*>(params);
-
+  TranslationWarpParams p(params[0], params[1]);
   cv::Mat M = (cv::Mat_<double>(2, 3) << 1, 0, p->x, 0, 1, p->y);
-
   return M;
-}
-
-void TranslationWarp::draw(cv::Mat& image,
-                           const double* params,
-                           int width,
-                           const cv::Scalar& color) const {
-  const TranslationFeature* p =
-      reinterpret_cast<const TranslationFeature*>(params);
-
-  cv::Point2d c(p->x, p->y);
-  cv::Point2d i(1, 0);
-  cv::Point2d j(0, 1);
-  double radius = (width - 1) / 2.;
-  i *= radius;
-  j *= radius;
-
-  cv::line(image, c - i - j, c + i - j, color, LINE_THICKNESS);
-  cv::line(image, c - i + j, c + i + j, color, LINE_THICKNESS);
-  cv::line(image, c - i - j, c - i + j, color, LINE_THICKNESS);
-  cv::line(image, c + i - j, c + i + j, color, LINE_THICKNESS);
-  cv::circle(image, c, LINE_THICKNESS, color, -1);
 }

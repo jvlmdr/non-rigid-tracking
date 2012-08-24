@@ -5,19 +5,19 @@
 const int SIFT_FIXPT_SCALE = 48;
 const double SIFT_INIT_SIGMA = 0.5;
 
-RigidFeature keypointToRigidFeature(const cv::KeyPoint& keypoint) {
+SimilarityFeature keypointToSimilarityFeature(const cv::KeyPoint& keypoint) {
   double theta = keypoint.angle / 180. * CV_PI;
-  return RigidFeature(keypoint.pt.x, keypoint.pt.y, keypoint.size, theta);
+  return SimilarityFeature(keypoint.pt.x, keypoint.pt.y, keypoint.size, theta);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 
-void extractRigidFeaturesFromKeypoints(
+void extractSimilarityFeaturesFromKeypoints(
     const std::vector<cv::KeyPoint>& keypoints,
-    std::vector<RigidFeature>& features) {
+    std::vector<SimilarityFeature>& features) {
   // Transform each element.
   std::transform(keypoints.begin(), keypoints.end(),
-      std::back_inserter(features), keypointToRigidFeature);
+      std::back_inserter(features), keypointToSimilarityFeature);
 }
 
 void extractDescriptorFromRow(const cv::Mat& row, Descriptor& descriptor) {
@@ -78,7 +78,7 @@ SiftExtractor::SiftExtractor(const cv::Mat& image,
 }
 
 void SiftExtractor::extractDescriptors(
-    const std::vector<RigidFeature>& features,
+    const std::vector<SimilarityFeature>& features,
     std::vector<Descriptor>& descriptors) const {
   // Convert each feature to a registered keypoint.
   std::vector<cv::KeyPoint> keypoints;
@@ -96,7 +96,7 @@ void SiftExtractor::extractDescriptors(
   extractDescriptorsFromMatrix(descriptor_table, descriptors);
 }
 
-void SiftExtractor::extractDescriptor(const RigidFeature& feature,
+void SiftExtractor::extractDescriptor(const SimilarityFeature& feature,
                                       Descriptor& descriptor) const {
   // Register the feature in the pyramid.
   cv::KeyPoint keypoint = featureToRegisteredKeypoint(feature);
@@ -157,7 +157,7 @@ void SiftExtractor::calculatePyramidPosition(double size,
 
 // A "registered" keypoint is one that knows its octave and layer.
 cv::KeyPoint SiftExtractor::featureToRegisteredKeypoint(
-    const RigidFeature& feature) const {
+    const SimilarityFeature& feature) const {
   // Unused parameters.
   float response = 0;
   int class_id = -1;

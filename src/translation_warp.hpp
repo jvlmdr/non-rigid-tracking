@@ -3,6 +3,14 @@
 
 #include "warp.hpp"
 
+struct TranslationWarpParams {
+  double x;
+  double y;
+
+  TranslationWarpParams();
+  TranslationWarpParams(double x, double y);
+};
+
 class TranslationWarpFunction {
   public:
     template<class T>
@@ -26,11 +34,6 @@ class TranslationWarp : public Warp {
                          double* jacobian) const;
 
     cv::Mat matrix(const double* params) const;
-
-    void draw(cv::Mat& image,
-              const double* params,
-              int width,
-              const cv::Scalar& color) const;
 };
 
 #include "translation_warp.inl"

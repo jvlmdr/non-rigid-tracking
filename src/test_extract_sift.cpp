@@ -10,15 +10,9 @@
 #include <opencv2/features2d/features2d.hpp>
 #include <opencv2/nonfree/nonfree.hpp>
 #include "read_image.hpp"
-#include "rigid_warp.hpp"
-#include "rigid_feature.hpp"
+#include "similarity_feature.hpp"
 #include "descriptor.hpp"
 #include "sift.hpp"
-
-// for doing fixed point arithmetic
-const int SIFT_FIXPT_SCALE = 48;
-// assumed gaussian blur for input image
-const float SIFT_INIT_SIGMA = 0.5f;
 
 const int MAX_NUM_FEATURES = 100;
 const int NUM_OCTAVE_LAYERS = 3;
@@ -89,7 +83,7 @@ int main(int argc, char** argv) {
 
   typedef std::vector<Descriptor> DescriptorList;
   typedef std::vector<cv::KeyPoint> KeypointList;
-  typedef std::vector<RigidFeature> FeatureList;
+  typedef std::vector<SimilarityFeature> FeatureList;
 
   KeypointList keypoints;
   FeatureList features;
@@ -105,7 +99,7 @@ int main(int argc, char** argv) {
     sift(integer_image, cv::noArray(), keypoints, descriptor_table, false);
 
     // Convert.
-    extractRigidFeaturesFromKeypoints(keypoints, features);
+    extractSimilarityFeaturesFromKeypoints(keypoints, features);
     extractDescriptorsFromMatrix(descriptor_table, cv_descriptors);
   }
 

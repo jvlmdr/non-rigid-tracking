@@ -9,17 +9,15 @@
 #include "multiview_track.hpp"
 #include "multiview_track_list.hpp"
 #include "random_color.hpp"
-#include "rigid_feature.hpp"
-#include "rigid_warp.hpp"
-
+#include "similarity_feature.hpp"
+#include "draw_similarity_feature.hpp"
 #include "multiview_track_list_reader.hpp"
 #include "default_reader.hpp"
 #include "read_lines.hpp"
 #include "vector_reader.hpp"
-#include "rigid_feature_reader.hpp"
+#include "similarity_feature_reader.hpp"
 #include "read_image.hpp"
 
-const int PATCH_SIZE = 9;
 const double SATURATION = 0.99;
 const double BRIGHTNESS = 0.99;
 const double LINE_THICKNESS = 2;
@@ -114,14 +112,14 @@ bool loadImages(const std::string& image_format,
 }
 
 bool loadFeatures(const MultiviewTrackList<int>& id_tracks,
-                  MultiviewTrackList<RigidFeature>& tracks,
+                  MultiviewTrackList<SimilarityFeature>& tracks,
                   const std::string& features_format,
                   const std::vector<std::string>& views) {
   // Initialize list of empty tracks.
   int num_features = id_tracks.numTracks();
   int num_views = views.size();
-  std::vector<MultiviewTrack<RigidFeature> > track_list;
-  track_list.assign(num_features, MultiviewTrack<RigidFeature>(num_views));
+  std::vector<MultiviewTrack<SimilarityFeature> > track_list;
+  track_list.assign(num_features, MultiviewTrack<SimilarityFeature>(num_views));
 
   // Iterate through time (to avoid loading all features at once).
   MultiViewTimeIterator<int> iterator(id_tracks);
@@ -130,11 +128,11 @@ bool loadFeatures(const MultiviewTrackList<int>& id_tracks,
     int time = iterator.time();
 
     for (int view = 0; view < num_views; view += 1) {
-      std::vector<RigidFeature> all_features;
+      std::vector<SimilarityFeature> all_features;
 
       // Load features in this frame.
       std::string file = makeFrameFilename(features_format, views[view], time);
-      RigidFeatureReader feature_reader;
+      SimilarityFeatureReader feature_reader;
       bool ok = loadList(file, all_features, feature_reader);
       if (!ok) {
         return false;
@@ -163,37 +161,35 @@ bool loadFeatures(const MultiviewTrackList<int>& id_tracks,
 }
 
 void drawFeatures(cv::Mat& image,
-                  const std::map<int, RigidFeature>& features,
+                  const std::map<int, SimilarityFeature>& features,
                   const std::vector<cv::Scalar>& colors) {
-  typedef std::map<int, RigidFeature> FeatureSet;
+  typedef std::map<int, SimilarityFeature> FeatureSet;
   typedef std::vector<cv::Scalar> ColorList;
-
-  RigidWarp warp(PATCH_SIZE);
 
   FeatureSet::const_iterator mapping;
   for (mapping = features.begin(); mapping != features.end(); ++mapping) {
     int index = mapping->first;
-    const RigidFeature& feature = mapping->second;
+    const SimilarityFeature& feature = mapping->second;
 
-    warp.draw(image, feature.data(), PATCH_SIZE, colors[index]);
+    drawSimilarityFeature(image, feature, colors[index]);
   }
 }
 
 void getFeaturesInView(
-    const std::map<int, std::map<int, RigidFeature> >& features,
+    const std::map<int, std::map<int, SimilarityFeature> >& features,
     int view,
-    std::map<int, RigidFeature>& subset) {
+    std::map<int, SimilarityFeature>& subset) {
   subset.clear();
 
   // Iterate through multiview observations of each feature.
-  std::map<int, std::map<int, RigidFeature> >::const_iterator observations;
+  std::map<int, std::map<int, SimilarityFeature> >::const_iterator observations;
   for (observations = features.begin();
        observations != features.end();
        ++observations) {
     int id = observations->first;
 
     // Check if this feature appeared in the current view.
-    std::map<int, RigidFeature>::const_iterator observation;
+    std::map<int, SimilarityFeature>::const_iterator observation;
     observation = observations->second.find(view);
 
     if (observation != observations->second.end()) {
@@ -204,7 +200,7 @@ void getFeaturesInView(
 }
 
 void drawFeaturesInAllViews(
-    const std::map<int, std::map<int, RigidFeature> >& features,
+    const std::map<int, std::map<int, SimilarityFeature> >& features,
     cv::Mat& collage,
     const cv::Size& size,
     const std::vector<cv::Point>& offsets,
@@ -217,7 +213,7 @@ void drawFeaturesInAllViews(
     cv::Mat viewport = collage(cv::Rect(offsets[view], size));
 
     // Get features for this view.
-    std::map<int, RigidFeature> subset;
+    std::map<int, SimilarityFeature> subset;
     getFeaturesInView(features, view, subset);
 
     drawFeatures(viewport, subset, colors);
@@ -225,19 +221,19 @@ void drawFeaturesInAllViews(
 }
 
 void drawInterViewMatches(
-    const std::map<int, std::map<int, RigidFeature> >& features,
+    const std::map<int, std::map<int, SimilarityFeature> >& features,
     cv::Mat& collage,
     const cv::Size& size,
     const std::vector<cv::Point>& offsets,
     const std::vector<cv::Scalar>& colors) {
-  std::map<int, std::map<int, RigidFeature> >::const_iterator views;
+  std::map<int, std::map<int, SimilarityFeature> >::const_iterator views;
   for (views = features.begin(); views != features.end(); ++views) {
     int id = views->first;
     // 
-    std::map<int, RigidFeature>::const_iterator view1;
+    std::map<int, SimilarityFeature>::const_iterator view1;
 
     for (view1 = views->second.begin(); view1 != views->second.end(); ++view1) {
-      std::map<int, RigidFeature>::const_iterator view2;
+      std::map<int, SimilarityFeature>::const_iterator view2;
 
       for (view2 = views->second.begin();
            view2 != views->second.end();
@@ -288,7 +284,7 @@ int main(int argc, char** argv) {
   CHECK(id_tracks.numFrames() <= num_frames);
 
   // Load actual features for tracks.
-  MultiviewTrackList<RigidFeature> tracks;
+  MultiviewTrackList<SimilarityFeature> tracks;
   ok = loadFeatures(id_tracks, tracks, features_format, views);
   CHECK(ok) << "Could not load features";
 
@@ -306,13 +302,13 @@ int main(int argc, char** argv) {
   }
 
   // Iterate through time.
-  MultiViewTimeIterator<RigidFeature> iterator(tracks);
+  MultiViewTimeIterator<SimilarityFeature> iterator(tracks);
 
   for (int time = 0; time < num_frames; time += 1) {
     LOG(INFO) << time;
 
     // Get points at this time instant, indexed by feature number.
-    std::map<int, std::map<int, RigidFeature> > features;
+    std::map<int, std::map<int, SimilarityFeature> > features;
     iterator.get(features);
 
     // Load image for each view.

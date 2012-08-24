@@ -2,6 +2,15 @@ inline double sqr(double x) {
   return x * x;
 }
 
+inline bool isNumber(double x) {
+  return (x == x);
+}
+
+inline bool isFinite(double x) {
+  return (x <= std::numeric_limits<double>::max() &&
+          x >= -std::numeric_limits<double>::max());
+}
+
 inline cv::Mat imagePointToHomogeneous(const cv::Point2d& x) {
   return (cv::Mat_<double>(3, 1) << x.x, x.y, 1);
 }

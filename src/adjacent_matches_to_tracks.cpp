@@ -10,25 +10,25 @@
 #include <gflags/gflags.h>
 #include "read_image.hpp"
 #include "track_list.hpp"
-#include "rigid_feature.hpp"
+#include "similarity_feature.hpp"
 #include "match.hpp"
 #include "match_reader.hpp"
 #include "vector_reader.hpp"
-#include "rigid_feature_writer.hpp"
+#include "similarity_feature_writer.hpp"
 #include "track_list_writer.hpp"
-#include "rigid_feature_reader.hpp"
+#include "similarity_feature_reader.hpp"
 #include "writer.hpp"
 
-typedef std::vector<RigidFeature> KeypointList;
+typedef std::vector<SimilarityFeature> KeypointList;
 
 // Save index not whole descriptor.
 // OpenCV always reads the whole file at once.
 // That would be a lot of descriptors.
 struct IndexedFeature {
   int index;
-  RigidFeature feature;
+  SimilarityFeature feature;
 
-  IndexedFeature(int index, const RigidFeature& feature)
+  IndexedFeature(int index, const SimilarityFeature& feature)
       : index(index), feature(feature) {}
 
   // Default constructor.
@@ -40,7 +40,7 @@ struct IndexedFeatureWriter : public Writer<IndexedFeature> {
     ~IndexedFeatureWriter() {}
 
     void write(cv::FileStorage& file, const IndexedFeature& x) {
-      RigidFeatureWriter feature_writer;
+      SimilarityFeatureWriter feature_writer;
       file << "index" << x.index;
       feature_writer.write(file, x.feature);
     }
@@ -87,7 +87,7 @@ int main(int argc, char** argv) {
     // Load keypoints.
     KeypointList keypoints;
     std::string keypoints_file = makeFilename(keypoints_format, u);
-    RigidFeatureReader feature_reader;
+    SimilarityFeatureReader feature_reader;
     ok = loadList(keypoints_file, keypoints, feature_reader);
     if (!ok) {
       std::cerr << "could not load keypoints" << std::endl;
