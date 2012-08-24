@@ -40,12 +40,12 @@ std::string makeFrameFilename(const std::string& format,
   return boost::str(boost::format(format) % view % (time + 1));
 }
 
-void removeSingleViewTracks(const MultiviewTrackList<RigidFeature>& input,
-                            MultiviewTrackList<RigidFeature>& output) {
+void removeSingleViewTracks(const MultiviewTrackList<SimilarityFeature>& input,
+                            MultiviewTrackList<SimilarityFeature>& output) {
   output.reset(input.numViews());
 
   // Copy track list.
-  typedef std::list<MultiviewTrack<RigidFeature> > TrackList;
+  typedef std::list<MultiviewTrack<SimilarityFeature> > TrackList;
   TrackList tracks(input.tracks().begin(), input.tracks().end());
 
   TrackList::iterator track;
@@ -290,7 +290,7 @@ int main(int argc, char** argv) {
 
   // Remove any single-view tracks.
   if (FLAGS_exclude_single_view) {
-    MultiviewTrackList<RigidFeature> multi;
+    MultiviewTrackList<SimilarityFeature> multi;
     removeSingleViewTracks(tracks, multi);
     tracks.swap(multi);
   }
