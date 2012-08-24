@@ -15,15 +15,28 @@ class Track {
     typedef typename Map::reverse_iterator reverse_iterator;
     typedef typename Map::const_reverse_iterator const_reverse_iterator;
 
+    typedef typename Map::reference reference;
+    typedef typename Map::const_reference const_reference;
+    typedef typename Map::pointer pointer;
+    typedef typename Map::const_pointer const_pointer;
+
+    typedef typename Map::value_type value_type;
+
     Track();
 
     T& operator[](int x);
+    std::pair<iterator, bool> insert(const value_type& x);
+    iterator insert(iterator position, const value_type& x);
+    template<class InputIterator>
+    void insert(InputIterator first, InputIterator last);
+
     const_iterator find(int x) const;
     iterator find(int x);
 
     int size() const;
     bool empty() const;
     void clear();
+    void swap(Track<T>& other);
 
     iterator begin();
     const_iterator begin() const;

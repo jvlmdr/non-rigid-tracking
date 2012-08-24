@@ -16,12 +16,9 @@
 #include "match.hpp"
 #include "random_color.hpp"
 #include "similarity_feature.hpp"
-#include "similarity_warp.hpp"
-
+#include "draw_similarity_feature.hpp"
 #include "similarity_feature_reader.hpp"
 #include "vector_reader.hpp"
-
-const int PATCH_SIZE = 9;
 
 const double SATURATION = 0.99;
 const double BRIGHTNESS = 0.99;
@@ -39,20 +36,17 @@ SimilarityFeature keypointToSimilarityFeature(const cv::KeyPoint& keypoint) {
 }
 
 // Renders a keypoint on top of an image with a random color.
-void drawSimilarityFeature(cv::Mat& image, const SimilarityFeature& feature) {
+void drawFeature(cv::Mat& image, const SimilarityFeature& feature) {
   // Generate a random color.
   cv::Scalar color = randomColor(SATURATION, BRIGHTNESS);
-
-  // Warp is just for drawing. This feels weird.
-  SimilarityWarp warp(PATCH_SIZE);
-  warp.draw(image, feature.data(), PATCH_SIZE, color);
+  drawSimilarityFeature(image, feature, color);
 }
 
 // Renders all keypoints over an image with random colors.
 void drawSimilarityFeatures(cv::Mat& image, const FeatureList& features) {
   // Draw each keypoint with a random color.
   std::for_each(features.begin(), features.end(),
-      boost::bind(drawSimilarityFeature, boost::ref(image), _1));
+      boost::bind(drawFeature, boost::ref(image), _1));
 }
 
 void init(int& argc, char**& argv) {

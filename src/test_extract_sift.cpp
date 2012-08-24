@@ -10,15 +10,9 @@
 #include <opencv2/features2d/features2d.hpp>
 #include <opencv2/nonfree/nonfree.hpp>
 #include "read_image.hpp"
-#include "similarity_warp.hpp"
 #include "similarity_feature.hpp"
 #include "descriptor.hpp"
 #include "sift.hpp"
-
-// for doing fixed point arithmetic
-const int SIFT_FIXPT_SCALE = 48;
-// assumed gaussian blur for input image
-const float SIFT_INIT_SIGMA = 0.5f;
 
 const int MAX_NUM_FEATURES = 100;
 const int NUM_OCTAVE_LAYERS = 3;

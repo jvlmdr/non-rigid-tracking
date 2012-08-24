@@ -2,14 +2,13 @@
 #define WARP_HPP_
 
 #include <opencv2/core/core.hpp>
-// TODO: Separate differentiation from rest of implementation?
-// Otherwise anything that uses a warp has to...
 #include <ceres/ceres.h>
 
 // Describes a parametrized affine warp.
 //
 // Has:
 // - number of parameters
+// - radius
 // - method to transform a point given parameters
 // - method to produce an affine matrix from the parameters
 // - method to draw a warped patch on an image
@@ -28,12 +27,31 @@ class Warp {
     // Returns a matrix representation of the affine warp.
     // For use with warpAffine().
     virtual cv::Mat matrix(const double* params) const = 0;
-
-    // Visualizes a patch on an image.
-    virtual void draw(cv::Mat& image,
-                      const double* params,
-                      int width,
-                      const cv::Scalar& color) const = 0;
 };
+
+class WarpValidator {
+  public:
+    virtual ~WarpValidator() {}
+
+    // Checks if a set of parameters are valid.
+    virtual bool check(const double* params) const = 0;
+};
+
+// Extracts a square patch of an image after applying a warp.
+void samplePatch(const Warp& warp,
+                 const double* params,
+                 const cv::Mat& image,
+                 cv::Mat& patch,
+                 int width,
+                 bool invert,
+                 int interpolation);
+
+// Extracts a square patch of an image after applying a warp.
+void samplePatchAffine(const cv::Mat& src,
+                       cv::Mat& dst,
+                       const cv::Mat& M,
+                       int width,
+                       bool invert,
+                       int interpolation);
 
 #endif

@@ -15,12 +15,11 @@
 #include "read_image.hpp"
 #include "track_list.hpp"
 #include "similarity_feature.hpp"
-#include "similarity_warp.hpp"
+#include "draw_similarity_feature.hpp"
 #include "random_color.hpp"
 #include "similarity_feature_reader.hpp"
 #include "track_list_reader.hpp"
 
-const int PATCH_SIZE = 9;
 const double SATURATION = 0.99;
 const double BRIGHTNESS = 0.99;
 
@@ -38,14 +37,12 @@ void drawFeatures(cv::Mat& image,
   typedef std::map<int, SimilarityFeature> FeatureSet;
   typedef std::vector<cv::Scalar> ColorList;
 
-  SimilarityWarp warp(PATCH_SIZE);
-
   FeatureSet::const_iterator mapping;
   for (mapping = features.begin(); mapping != features.end(); ++mapping) {
     int index = mapping->first;
     const SimilarityFeature& feature = mapping->second;
 
-    warp.draw(image, feature.data(), PATCH_SIZE, colors[index]);
+    drawSimilarityFeature(image, feature, colors[index]);
   }
 }
 

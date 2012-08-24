@@ -14,7 +14,6 @@
 #include "match.hpp"
 #include "draw_matches.hpp"
 #include "similarity_feature.hpp"
-
 #include "vector_reader.hpp"
 #include "match_reader.hpp"
 #include "similarity_feature_reader.hpp"

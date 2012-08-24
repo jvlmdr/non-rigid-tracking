@@ -1,18 +1,17 @@
 #include "similarity_warp.hpp"
 #include <cmath>
-#include "similarity_feature.hpp"
 
-const int LINE_THICKNESS = 2;
+SimilarityWarpParams::SimilarityWarpParams() {}
+
+SimilarityWarpParams::SimilarityWarpParams(double x,
+                                           double y,
+                                           double log_scale,
+                                           double theta)
+      : x(x), y(y), log_scale(log_scale), theta(theta) {}
 
 ////////////////////////////////////////////////////////////////////////////////
 
-SimilarityWarpFunction::SimilarityWarpFunction(double resolution)
-    : resolution_(resolution) {}
-
-////////////////////////////////////////////////////////////////////////////////
-
-SimilarityWarp::SimilarityWarp(int resolution)
-    : resolution_(resolution), warp_(new SimilarityWarpFunction(resolution)) {}
+SimilarityWarp::SimilarityWarp() : warp_(new SimilarityWarpFunction()) {}
 
 SimilarityWarp::~SimilarityWarp() {}
 
@@ -38,31 +37,12 @@ int SimilarityWarp::numParams() const {
 }
 
 cv::Mat SimilarityWarp::matrix(const double* params) const {
-  const SimilarityFeature* p;
-  p = reinterpret_cast<const SimilarityFeature*>(params);
+  SimilarityWarpParams p(params[0], params[1], params[2], params[3]);
 
-  double scale = p->size / double(resolution_);
+  double scale = std::exp(p.log_scale);
   cv::Mat M = (cv::Mat_<double>(2, 3) <<
-      scale * std::cos(p->theta), scale * -std::sin(p->theta), p->x,
-      scale * std::sin(p->theta), scale *  std::cos(p->theta), p->y);
+      scale * std::cos(p.theta), scale * -std::sin(p.theta), p.x,
+      scale * std::sin(p.theta), scale *  std::cos(p.theta), p.y);
 
   return M;
-}
-
-void SimilarityWarp::draw(cv::Mat& image,
-                          const double* params,
-                          int width,
-                          const cv::Scalar& color) const {
-  const SimilarityFeature* p;
-  p = reinterpret_cast<const SimilarityFeature*>(params);
-
-  const double NUM_STDDEV = 2;
-  double radius = NUM_STDDEV * p->size / 2.;
-  cv::Point2d c(0, 0);
-  cv::Point2d b(0, NUM_STDDEV * resolution_ / 2.);
-  c = evaluate(c, params, NULL);
-  b = evaluate(b, params, NULL);
-
-  cv::circle(image, c, radius, color, LINE_THICKNESS);
-  cv::line(image, c, b, color, LINE_THICKNESS);
 }

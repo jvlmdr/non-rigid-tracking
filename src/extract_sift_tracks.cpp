@@ -17,11 +17,9 @@
 #include "read_image.hpp"
 #include "track_list.hpp"
 #include "warp.hpp"
-#include "similarity_warp.hpp"
 #include "similarity_feature.hpp"
 #include "descriptor.hpp"
 #include "sift.hpp"
-
 #include "similarity_feature_reader.hpp"
 #include "track_list_reader.hpp"
 #include "writer.hpp"
@@ -29,37 +27,8 @@
 #include "descriptor_writer.hpp"
 #include "track_list_writer.hpp"
 
-// Size of window to track.
-const int PATCH_SIZE = 9;
-const int NUM_PIXELS = PATCH_SIZE * PATCH_SIZE;
-
-// Lucas-Kanade optimization settings.
-const int MAX_NUM_ITERATIONS = 100;
-const double FUNCTION_TOLERANCE = 1e-4;
-const double GRADIENT_TOLERANCE = 0;
-const double PARAMETER_TOLERANCE = 1e-4;
-const bool ITERATION_LIMIT_IS_FATAL = true;
-const double MAX_CONDITION = 100;
-
-const int SIFT_FIXPT_SCALE = 48;
-// assumed gaussian blur for input image
-const float SIFT_INIT_SIGMA = 0.5f;
-
-// Do not want to sample below one pixel.
-const double MIN_SCALE = 0.5;
-
-// Maximum average intensity difference as a fraction of the range.
-// (A value of 1 means anything is permitted.)
-const double MAX_RESIDUAL = 0.1;
-
-const int MAX_NUM_FEATURES = 100;
 const int NUM_OCTAVE_LAYERS = 3;
-const double CONTRAST_THRESHOLD = 0.04;
-const double EDGE_THRESHOLD = 10;
 const double SIGMA = 1.6;
-
-const double SATURATION = 0.99;
-const double BRIGHTNESS = 0.99;
 
 std::string makeFilename(const std::string& format, int n) {
   return boost::str(boost::format(format) % (n + 1));

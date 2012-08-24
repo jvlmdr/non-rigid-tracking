@@ -10,6 +10,24 @@ T& Track<T>::operator[](int x) {
 }
 
 template<class T>
+std::pair<typename Track<T>::iterator, bool>
+Track<T>::insert(const value_type& x) {
+  return map_.insert(x);
+}
+
+template<class T>
+typename Track<T>::iterator
+Track<T>::insert(iterator position, const value_type& x) {
+  return map_.insert(position, x);
+}
+
+template<class T>
+template<class InputIterator>
+void Track<T>::insert(InputIterator first, InputIterator last) {
+  map_.insert(first, last);
+}
+
+template<class T>
 typename Track<T>::const_iterator Track<T>::find(int x) const {
   return map_.find(x);
 }
@@ -32,6 +50,11 @@ bool Track<T>::empty() const {
 template<class T>
 void Track<T>::clear() {
   map_.clear();
+}
+
+template<class T>
+void Track<T>::swap(Track<T>& other) {
+  map_.swap(other.map_);
 }
 
 template<class T>

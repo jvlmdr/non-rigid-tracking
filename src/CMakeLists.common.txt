@@ -5,7 +5,7 @@ ADD_EXECUTABLE(visualize-keypoints
   read_image.cpp
   similarity_feature.cpp
   similarity_feature_reader.cpp
-  similarity_warp.cpp
+  draw_similarity_feature.cpp
   random_color.cpp)
 TARGET_LINK_LIBRARIES(visualize-keypoints glog gflags)
 TARGET_LINK_LIBRARIES(visualize-keypoints ${OpenCV_LIBS})
@@ -22,9 +22,9 @@ ADD_EXECUTABLE(visualize-matches
   read_image.cpp
   draw_matches.cpp
   similarity_feature.cpp
-  similarity_warp.cpp
   random_color.cpp
   match_reader.cpp
+  draw_similarity_feature.cpp
   similarity_feature_reader.cpp)
 TARGET_LINK_LIBRARIES(visualize-matches glog gflags)
 TARGET_LINK_LIBRARIES(visualize-matches ${OpenCV_LIBS})
@@ -39,24 +39,12 @@ ADD_EXECUTABLE(adjacent-matches-to-tracks
 TARGET_LINK_LIBRARIES(adjacent-matches-to-tracks glog gflags)
 TARGET_LINK_LIBRARIES(adjacent-matches-to-tracks ${OpenCV_LIBS})
 
-ADD_EXECUTABLE(track-features
-  track_features.cpp
-  read_image.cpp
-  flow.cpp
-  similarity_warp.cpp
-  similarity_feature.cpp
-  random_color.cpp)
-TARGET_LINK_LIBRARIES(track-features glog gflags)
-TARGET_LINK_LIBRARIES(track-features ${OpenCV_LIBS})
-TARGET_LINK_LIBRARIES(track-features ceres)
-TARGET_LINK_LIBRARIES(track-features cxsparse)
-TARGET_LINK_LIBRARIES(track-features cholmod ccolamd camd colamd amd)
-TARGET_LINK_LIBRARIES(track-features ${LAPACK_LIB})
-
 ADD_EXECUTABLE(track-features-bidir
   track_features_bidir.cpp
   read_image.cpp
   flow.cpp
+  warp.cpp
+  util.cpp
   similarity_warp.cpp
   similarity_feature.cpp
   similarity_feature_reader.cpp
@@ -73,7 +61,6 @@ ADD_EXECUTABLE(extract-sift-tracks
   extract_sift_tracks.cpp
   read_image.cpp
   similarity_feature.cpp
-  similarity_warp.cpp
   sift.cpp
   similarity_feature_reader.cpp
   similarity_feature_writer.cpp
@@ -85,7 +72,6 @@ ADD_EXECUTABLE(test-extract-sift
   test_extract_sift.cpp
   read_image.cpp
   similarity_feature.cpp
-  similarity_warp.cpp
   sift.cpp)
 TARGET_LINK_LIBRARIES(test-extract-sift glog gflags)
 TARGET_LINK_LIBRARIES(test-extract-sift ${OpenCV_LIBS})
@@ -100,26 +86,12 @@ TARGET_LINK_LIBRARIES(pca-descriptor ${OpenCV_LIBS})
 ADD_EXECUTABLE(visualize-tracks
   visualize_tracks.cpp
   similarity_feature.cpp
-  similarity_warp.cpp
+  draw_similarity_feature.cpp
   read_image.cpp
   random_color.cpp
   similarity_feature_reader.cpp)
 TARGET_LINK_LIBRARIES(visualize-tracks glog gflags)
 TARGET_LINK_LIBRARIES(visualize-tracks ${OpenCV_LIBS})
-
-ADD_EXECUTABLE(track-features-test
-  track_features_test.cpp
-  read_image.cpp
-  flow.cpp
-  similarity_warp.cpp
-  similarity_feature.cpp
-  random_color.cpp)
-TARGET_LINK_LIBRARIES(track-features-test glog gflags)
-TARGET_LINK_LIBRARIES(track-features-test ${OpenCV_LIBS})
-TARGET_LINK_LIBRARIES(track-features-test ceres)
-TARGET_LINK_LIBRARIES(track-features-test cxsparse)
-TARGET_LINK_LIBRARIES(track-features-test cholmod ccolamd camd colamd amd)
-TARGET_LINK_LIBRARIES(track-features-test ${LAPACK_LIB})
 
 ADD_EXECUTABLE(merge-tracks
   merge_tracks.cpp
@@ -151,7 +123,6 @@ ADD_EXECUTABLE(find-keypoints-and-extract-descriptors
   find_keypoints_and_extract_descriptors.cpp
   read_image.cpp
   similarity_feature.cpp
-  similarity_warp.cpp
   sift.cpp
   similarity_feature_writer.cpp
   descriptor_writer.cpp)
@@ -244,7 +215,7 @@ ADD_EXECUTABLE(visualize-multiview-tracks
   multiview_track.cpp
   random_color.cpp
   similarity_feature.cpp
-  similarity_warp.cpp
+  draw_similarity_feature.cpp
   similarity_feature_reader.cpp
   read_image.cpp)
 TARGET_LINK_LIBRARIES(visualize-multiview-tracks glog gflags)
