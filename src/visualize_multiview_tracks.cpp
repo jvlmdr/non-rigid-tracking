@@ -26,8 +26,9 @@ DEFINE_string(output_format, "%d.png", "Location to save image.");
 DEFINE_bool(save, false, "Save to file?");
 DEFINE_bool(display, true, "Show in window?");
 
-DEFINE_bool(show_matches, false, "Show cross-view matches?");
-DEFINE_bool(show_tracks, false, "Show within-view tracks?");
+DEFINE_bool(show_matches, true, "Show cross-view matches?");
+DEFINE_bool(exclude_single_view, true, "Show multi-view tracks that aren't?");
+//DEFINE_bool(show_tracks, false, "Show point trails within view?");
 
 std::string makeTimeFilename(const std::string& format, int time) {
   return boost::str(boost::format(format) % (time + 1));
@@ -37,6 +38,23 @@ std::string makeFrameFilename(const std::string& format,
                               const std::string& view,
                               int time) {
   return boost::str(boost::format(format) % view % (time + 1));
+}
+
+void removeSingleViewTracks(const MultiviewTrackList<RigidFeature>& input,
+                            MultiviewTrackList<RigidFeature>& output) {
+  output.reset(input.numViews());
+
+  // Copy track list.
+  typedef std::list<MultiviewTrack<RigidFeature> > TrackList;
+  TrackList tracks(input.tracks().begin(), input.tracks().end());
+
+  TrackList::iterator track;
+  for (track = tracks.begin(); track != tracks.end(); ++track) {
+    // Filter out single-view tracks.
+    if (track->numViewsPresent() > 1) {
+      output.add(*track);
+    }
+  }
 }
 
 void init(int& argc, char**& argv) {
@@ -269,6 +287,13 @@ int main(int argc, char** argv) {
   MultiviewTrackList<SimilarityFeature> tracks;
   ok = loadFeatures(id_tracks, tracks, features_format, views);
   CHECK(ok) << "Could not load features";
+
+  // Remove any single-view tracks.
+  if (FLAGS_exclude_single_view) {
+    MultiviewTrackList<RigidFeature> multi;
+    removeSingleViewTracks(tracks, multi);
+    tracks.swap(multi);
+  }
 
   // Generate a color for each track.
   std::vector<cv::Scalar> colors;

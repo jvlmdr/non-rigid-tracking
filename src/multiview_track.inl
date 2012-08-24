@@ -60,3 +60,17 @@ bool MultiviewTrack<T>::empty() const {
 
   return true;
 }
+
+template<class T>
+int MultiviewTrack<T>::numViewsPresent() const {
+  int num_views = tracks_.size();
+  int count = 0;
+
+  for (int i = 0; i < num_views; i += 1) {
+    if (!tracks_[i].empty()) {
+      count += 1;
+    }
+  }
+
+  return count;
+}
