@@ -3,7 +3,7 @@
 #include <iostream>
 
 const double NUM_STDDEV = 2.;
-const int LINE_THICKNESS = 2;
+const int LINE_THICKNESS = 1;
 
 void drawSimilarityFeature(cv::Mat& image,
                            const SimilarityFeature& feature,
