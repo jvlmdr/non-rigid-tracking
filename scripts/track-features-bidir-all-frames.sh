@@ -21,10 +21,9 @@ do
 
   # Get some whitespace up in here.
   echo ""
-  echo "========================================"
   echo $n
 
-  ./track-rigid-bidir $image_format $i $keypoints $tracks -max_frames $max_frames -nodisplay 2> /dev/null
+  ./track-features-bidir $image_format $i $keypoints $tracks -max_frames $max_frames -nodisplay -logtostderr
 
   (( n += 1 ))
 done
