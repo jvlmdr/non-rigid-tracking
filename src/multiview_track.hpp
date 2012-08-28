@@ -21,8 +21,9 @@ struct Frame {
 template<class T>
 class MultiviewTrack {
   public:
+    explicit MultiviewTrack(int num_views);
     MultiviewTrack();
-    MultiviewTrack(int num_views);
+
     void reset(int num_views);
     void swap(MultiviewTrack<T>& other);
 

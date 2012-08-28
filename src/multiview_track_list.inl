@@ -2,12 +2,18 @@
 #include <glog/logging.h>
 
 template<class T>
+MultiviewTrackList<T>::MultiviewTrackList(int num_views)
+    : tracks_(), num_views_(num_views), num_frames_(0) {}
+
+template<class T>
 MultiviewTrackList<T>::MultiviewTrackList()
     : tracks_(), num_views_(0), num_frames_(0) {}
 
 template<class T>
-MultiviewTrackList<T>::MultiviewTrackList(int num_views)
-    : tracks_(), num_views_(num_views), num_frames_(0) {}
+MultiviewTrackList<T>::MultiviewTrackList(const MultiviewTrackList<T>& other)
+    : tracks_(other.tracks_),
+      num_views_(other.num_views_),
+      num_frames_(other.num_frames_) {}
 
 template<class T>
 void MultiviewTrackList<T>::reset(int num_views) {

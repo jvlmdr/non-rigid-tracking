@@ -10,8 +10,12 @@
 template<class T>
 class MultiviewTrackList {
   public:
+    typedef std::vector<MultiviewTrack<T> > List;
+
+    explicit MultiviewTrackList(int num_views);
     MultiviewTrackList();
-    MultiviewTrackList(int num_views);
+    MultiviewTrackList(const MultiviewTrackList<T>& other);
+
     void reset(int num_views);
     void swap(MultiviewTrackList<T>& other);
 
@@ -20,7 +24,7 @@ class MultiviewTrackList {
 
     // Provides read access to the tracks in one view.
     const MultiviewTrack<T>& track(int id) const;
-    const std::vector<MultiviewTrack<T> >& tracks() const;
+    const List& tracks() const;
 
     int numTracks() const;
     int numViews() const;
@@ -29,7 +33,7 @@ class MultiviewTrackList {
   private:
     // Store as a list of multiview tracks.
     // This seems like the most natural way to add() to the data structure.
-    std::vector<MultiviewTrack<T> > tracks_;
+    List tracks_;
     int num_views_;
     int num_frames_;
 };

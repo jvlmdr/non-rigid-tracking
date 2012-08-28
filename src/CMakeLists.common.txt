@@ -105,10 +105,6 @@ ADD_EXECUTABLE(merge-tracks
   similarity_feature_writer.cpp)
 TARGET_LINK_LIBRARIES(merge-tracks glog gflags)
 TARGET_LINK_LIBRARIES(merge-tracks ${OpenCV_LIBS})
-TARGET_LINK_LIBRARIES(merge-tracks ceres)
-TARGET_LINK_LIBRARIES(merge-tracks cxsparse)
-TARGET_LINK_LIBRARIES(merge-tracks cholmod ccolamd camd colamd amd)
-TARGET_LINK_LIBRARIES(merge-tracks ${LAPACK_LIB})
 
 ADD_EXECUTABLE(select-active-tracks
   select_active_tracks.cpp
@@ -256,3 +252,12 @@ ADD_EXECUTABLE(track-matches-to-multiview-tracks
   similarity_feature_writer.cpp)
 TARGET_LINK_LIBRARIES(track-matches-to-multiview-tracks glog gflags)
 TARGET_LINK_LIBRARIES(track-matches-to-multiview-tracks ${OpenCV_LIBS})
+
+ADD_EXECUTABLE(merge-multiview-tracks
+  merge_multiview_tracks.cpp
+  similarity_feature.cpp
+  similarity_feature_reader.cpp
+  similarity_feature_writer.cpp
+  multiview_track.cpp)
+TARGET_LINK_LIBRARIES(merge-multiview-tracks glog gflags)
+TARGET_LINK_LIBRARIES(merge-multiview-tracks ${OpenCV_LIBS})
