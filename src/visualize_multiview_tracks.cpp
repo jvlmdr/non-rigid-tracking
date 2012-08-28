@@ -71,8 +71,7 @@ void init(int& argc, char**& argv) {
   std::ostringstream usage;
   usage << "Visualizes multi-view tracks." << std::endl;
   usage << std::endl;
-  usage << argv[0] << " tracks keypoints-format image-format view-names"
-      " num-frames" << std::endl;
+  usage << argv[0] << " tracks image-format view-names num-frames" << std::endl;
   google::SetUsageMessage(usage.str());
 
   google::InitGoogleLogging(argv[0]);
