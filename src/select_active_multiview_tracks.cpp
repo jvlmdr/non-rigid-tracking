@@ -8,38 +8,58 @@
 #include <opencv2/core/core.hpp>
 #include <gflags/gflags.h>
 #include <glog/logging.h>
-#include "track_list.hpp"
+#include "multiview_track_list.hpp"
 #include "similarity_feature.hpp"
 #include "similarity_feature_reader.hpp"
-#include "track_list_reader.hpp"
+#include "multiview_track_list_reader.hpp"
 #include "similarity_feature_writer.hpp"
-#include "track_list_writer.hpp"
+#include "multiview_track_list_writer.hpp"
 
 DEFINE_bool(top_n, false, "Select best n tracks (versus a threshold)");
 DEFINE_bool(fraction, false, "When top_n is enabled, selects top fraction");
 
-// Considers only (x, y) movement not rotation or scale.
-double measureAverageStep(const Track<SimilarityFeature>& track) {
-  double distance = 0;
-  int n = 0;
-  cv::Point2d previous;
+void pathLength(const Track<SimilarityFeature>& track,
+                double& distance,
+                int& duration) {
+  distance = 0;
+  duration = 0;
 
-  Track<SimilarityFeature>::const_iterator point;
-  for (point = track.begin(); point != track.end(); ++point) {
-    // Get current position.
-    const SimilarityFeature& feature = point->second;
-    cv::Point2d current(feature.x, feature.y);
+  int previous_time = 0;
+  cv::Point2d previous_position;
+  TrackIterator<SimilarityFeature> iterator(track);
 
-    // If this is the first point, we have no previous measurement.
-    if (point != track.begin()) {
-      distance += cv::norm(current - previous);
-      n += 1;
+  while (!iterator.end()) {
+    int time = iterator.time();
+    cv::Point2d position(iterator.get().x, iterator.get().y);
+
+    // Skip first frame.
+    if (!iterator.begin()) {
+      // Measure distance
+      distance += cv::norm(position - previous_position);
+      duration += (time - previous_time);
     }
 
-    previous = current;
+    previous_time = time;
+    previous_position = position;
+    iterator.next();
+  }
+}
+
+double measureAverageStep(const MultiviewTrack<SimilarityFeature>& track) {
+  double total_distance = 0;
+  int total_duration = 0;
+
+  for (int view = 0; view < track.numViews(); view += 1) {
+    double distance;
+    int duration;
+
+    pathLength(track.track(view), distance, duration);
+
+    total_distance += distance;
+    total_duration += duration;
   }
 
-  return distance / n;
+  return total_distance / total_duration;
 }
 
 void init(int& argc, char**& argv) {
@@ -71,17 +91,17 @@ int main(int argc, char** argv) {
   const char* threshold = argv[3];
 
   // Load tracks from file.
-  TrackList<SimilarityFeature> input_tracks;
+  MultiviewTrackList<SimilarityFeature> input_tracks;
   SimilarityFeatureReader feature_reader;
-  bool ok = loadTrackList(input_file, input_tracks, feature_reader);
+  bool ok = loadMultiviewTrackList(input_file, input_tracks, feature_reader);
   CHECK(ok) << "Could not load tracks";
 
-  int num_tracks = input_tracks.size();
+  int num_tracks = input_tracks.numTracks();
   double min_distance_per_frame;
 
   // Measure how much each point moved.
   std::vector<double> distances;
-  std::transform(input_tracks.begin(), input_tracks.end(),
+  std::transform(input_tracks.tracks().begin(), input_tracks.tracks().end(),
       std::back_inserter(distances), measureAverageStep);
 
   // Take tracks as long as the n-th value or x-th percentile.
@@ -109,24 +129,26 @@ int main(int argc, char** argv) {
     min_distance_per_frame = boost::lexical_cast<double>(threshold);
   }
 
-  TrackList<SimilarityFeature> output_tracks;
+  int num_views = input_tracks.numViews();
+  MultiviewTrackList<SimilarityFeature> output_tracks(num_views);
 
   // Filter out distances which are too small.
   for (int i = 0; i < num_tracks; i += 1) {
     if (distances[i] >= min_distance_per_frame) {
-      output_tracks.push_back(input_tracks[i]);
+      MultiviewTrack<SimilarityFeature> copy(input_tracks.tracks()[i]);
+      output_tracks.add(copy);
     }
   }
 
-  int num_input = input_tracks.size();
-  int num_output = output_tracks.size();
+  int num_input = input_tracks.numTracks();
+  int num_output = output_tracks.numTracks();
   double fraction = static_cast<double>(num_output) / num_input;
   LOG(INFO) << "Kept " << num_output << " / " << num_input << " tracks (" <<
       fraction << ")";
 
   // Write out tracks.
   SimilarityFeatureWriter feature_writer;
-  ok = saveTrackList(output_file, output_tracks, feature_writer);
+  ok = saveMultiviewTrackList(output_file, output_tracks, feature_writer);
   CHECK(ok) << "Could not save tracks";
 
   return 0;

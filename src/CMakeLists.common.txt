@@ -261,3 +261,12 @@ ADD_EXECUTABLE(merge-multiview-tracks
   multiview_track.cpp)
 TARGET_LINK_LIBRARIES(merge-multiview-tracks glog gflags)
 TARGET_LINK_LIBRARIES(merge-multiview-tracks ${OpenCV_LIBS})
+
+ADD_EXECUTABLE(select-active-multiview-tracks
+  select_active_multiview_tracks.cpp
+  similarity_feature.cpp
+  multiview_track.cpp
+  similarity_feature_reader.cpp
+  similarity_feature_writer.cpp)
+TARGET_LINK_LIBRARIES(select-active-multiview-tracks glog gflags)
+TARGET_LINK_LIBRARIES(select-active-multiview-tracks ${OpenCV_LIBS})
