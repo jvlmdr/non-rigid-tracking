@@ -54,22 +54,28 @@ class Track {
 
 ////////////////////////////////////////////////////////////////////////////////
 
-// A TrackCursor is an iterator that can check if it has reached the end.
-// Don't C++ iterators have the ability to do this? Not for lists?
+// Iterates through a track.
 template<class T>
-struct TrackCursor_ {
-  typedef typename Track<T>::const_iterator Position;
+class TrackIterator {
+  public:
+    TrackIterator();
+    explicit TrackIterator(const Track<T>& track);
+    TrackIterator(const TrackIterator<T>& other);
 
-  const Track<T>* track;
-  Position point;
+    void next();
+    void previous();
 
-  TrackCursor_();
-  TrackCursor_(const Track<T>& track, const Position& point);
+    bool end() const;
+    bool begin() const;
 
-  bool end() const;
+    const T& get() const;
+    int time() const;
 
-  // Returns a cursor at the start of the track.
-  static TrackCursor_ make(const Track<T>& track);
+  private:
+    typedef typename Track<T>::const_iterator Position;
+
+    const Track<T>* track_;
+    Position position_;
 };
 
 #include "track.inl"

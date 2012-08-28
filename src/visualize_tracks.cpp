@@ -86,7 +86,7 @@ int main(int argc, char** argv) {
   }
 
   // Iterate through frames in which track was observed.
-  FrameIterator_<SimilarityFeature> frame(tracks);
+  TrackListTimeIterator<SimilarityFeature> frame(tracks);
   frame.seekToStart();
 
   while (!frame.end()) {

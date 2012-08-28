@@ -20,7 +20,7 @@
 
 const double SATURATION = 0.99;
 const double BRIGHTNESS = 0.99;
-const double LINE_THICKNESS = 2;
+const double LINE_THICKNESS = 1;
 
 DEFINE_string(output_format, "%d.png", "Location to save image.");
 DEFINE_bool(save, false, "Save to file?");
@@ -28,7 +28,17 @@ DEFINE_bool(display, true, "Show in window?");
 
 DEFINE_bool(show_matches, true, "Show cross-view matches?");
 DEFINE_bool(exclude_single_view, true, "Show multi-view tracks that aren't?");
-//DEFINE_bool(show_tracks, false, "Show point trails within view?");
+DEFINE_bool(show_trails, false, "Show point trails within view?");
+
+struct Collage {
+  cv::Mat image;
+  cv::Size size;
+  std::vector<cv::Point> offsets;
+
+  cv::Mat viewport(int view) {
+    return image(cv::Rect(offsets[view], size));
+  }
+};
 
 std::string makeTimeFilename(const std::string& format, int time) {
   return boost::str(boost::format(format) % (time + 1));
@@ -77,11 +87,9 @@ void init(int& argc, char**& argv) {
 bool loadImages(const std::string& image_format,
                 int time,
                 const std::vector<std::string>& views,
-                cv::Mat& collage,
-                cv::Size& size,
-                std::vector<cv::Point>& offsets) {
+                Collage& collage) {
   int num_views = views.size();
-  offsets.assign(num_views, cv::Point());
+  collage.offsets.assign(num_views, cv::Point());
 
   for (int view = 0; view < num_views; view += 1) {
     // Load image for this frame.
@@ -95,16 +103,15 @@ bool loadImages(const std::string& image_format,
 
     // Initialize image if uninitialized.
     if (view == 0) {
-      size = image.size();
-      collage.create(size.height, size.width * num_views,
+      collage.size = image.size();
+      collage.image.create(collage.size.height, collage.size.width * num_views,
           cv::DataType<cv::Vec3b>::type);
     }
 
-    offsets[view] = cv::Point(size.width * view, 0);
+    collage.offsets[view] = cv::Point(collage.size.width * view, 0);
 
     // Copy into collage.
-    cv::Mat viewport;
-    viewport = collage(cv::Rect(offsets[view], size));
+    cv::Mat viewport = collage.viewport(view);
     image.copyTo(viewport);
   }
 
@@ -137,6 +144,8 @@ bool loadFeatures(const MultiviewTrackList<int>& id_tracks,
       if (!ok) {
         return false;
       }
+      LOG(INFO) << "Loaded " << all_features.size() << " features for (" <<
+          view << ", " << time << ")";
 
       // Get feature indices matched in this frame.
       std::map<int, int> subset;
@@ -201,16 +210,14 @@ void getFeaturesInView(
 
 void drawFeaturesInAllViews(
     const std::map<int, std::map<int, SimilarityFeature> >& features,
-    cv::Mat& collage,
-    const cv::Size& size,
-    const std::vector<cv::Point>& offsets,
+    Collage& collage,
     const std::vector<cv::Scalar>& colors) {
-  int num_views = offsets.size();
+  int num_views = collage.offsets.size();
 
   // Render features in each view.
   for (int view = 0; view < num_views; view += 1) {
     // Access viewport within collage.
-    cv::Mat viewport = collage(cv::Rect(offsets[view], size));
+    cv::Mat viewport = collage.viewport(view);
 
     // Get features for this view.
     std::map<int, SimilarityFeature> subset;
@@ -222,9 +229,7 @@ void drawFeaturesInAllViews(
 
 void drawInterViewMatches(
     const std::map<int, std::map<int, SimilarityFeature> >& features,
-    cv::Mat& collage,
-    const cv::Size& size,
-    const std::vector<cv::Point>& offsets,
+    Collage& collage,
     const std::vector<cv::Scalar>& colors) {
   std::map<int, std::map<int, SimilarityFeature> >::const_iterator views;
   for (views = features.begin(); views != features.end(); ++views) {
@@ -243,13 +248,42 @@ void drawInterViewMatches(
         cv::Point2d x2(view2->second.x, view2->second.y);
 
         // Offset by position of view.
-        x1 += cv::Point2d(offsets[view1->first].x, offsets[view1->first].y);
-        x2 += cv::Point2d(offsets[view2->first].x, offsets[view2->first].y);
+        x1 += cv::Point2d(collage.offsets[view1->first].x,
+                          collage.offsets[view1->first].y);
+        x2 += cv::Point2d(collage.offsets[view2->first].x,
+                          collage.offsets[view2->first].y);
 
         // Draw connecting line.
-        cv::line(collage, x1, x2, colors[id], LINE_THICKNESS);
+        cv::line(collage.image, x1, x2, colors[id], LINE_THICKNESS);
       }
     }
+  }
+}
+
+void drawTrail(TrackIterator<SimilarityFeature> position,
+               cv::Mat& image,
+               const cv::Scalar& color,
+               int time) {
+  // First go looking forwards in time.
+}
+
+void drawTrails(const SingleViewTimeIterator<SimilarityFeature>& iterator,
+                cv::Mat& image,
+                const std::vector<cv::Scalar>& colors) {
+}
+
+void drawTrailsInAllViews(
+    const MultiViewTimeIterator<SimilarityFeature>& iterator,
+    Collage& collage,
+    const std::vector<cv::Scalar>& colors) {
+  int num_views = collage.offsets.size();
+
+  // Render features in each view.
+  for (int view = 0; view < num_views; view += 1) {
+    // Access viewport within collage.
+    cv::Mat viewport = collage.viewport(view);
+
+    drawTrails(iterator.view(view), viewport, colors);
   }
 }
 
@@ -312,27 +346,30 @@ int main(int argc, char** argv) {
     iterator.get(features);
 
     // Load image for each view.
-    cv::Mat collage;
-    cv::Size size;
-    std::vector<cv::Point> offsets;
-    ok = loadImages(image_format, time, views, collage, size, offsets);
+    Collage collage;
+    ok = loadImages(image_format, time, views, collage);
     CHECK(ok) << "Could not load images";
 
     // Visualize all features.
-    drawFeaturesInAllViews(features, collage, size, offsets, colors);
+    drawFeaturesInAllViews(features, collage, colors);
 
-    // Visualize matches 
+    // Visualize inter-view matches.
     if (FLAGS_show_matches) {
-      drawInterViewMatches(features, collage, size, offsets, colors);
+      drawInterViewMatches(features, collage, colors);
+    }
+
+    // Visualize optical flow trails.
+    if (FLAGS_show_trails) {
+      drawTrailsInAllViews(iterator, collage, colors);
     }
 
     if (FLAGS_save) {
       std::string output_file = makeTimeFilename(FLAGS_output_format, time);
-      cv::imwrite(output_file, collage);
+      cv::imwrite(output_file, collage.image);
     }
 
     if (FLAGS_display) {
-      cv::imshow("tracks", collage);
+      cv::imshow("tracks", collage.image);
       cv::waitKey(10);
     }
 

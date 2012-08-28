@@ -28,6 +28,16 @@ void MultiviewTrack<T>::add(const Frame& frame, const T& x) {
 }
 
 template<class T>
+void MultiviewTrack<T>::addTrack(int view, const Track<T>& track) {
+  typename Track<T>::const_iterator point;
+
+  // Add each point in the track.
+  for (point = track.begin(); point != track.end(); ++point) {
+    add(Frame(view, point->first), point->second);
+  }
+}
+
+template<class T>
 const Track<T>& MultiviewTrack<T>::track(int view) const {
   return tracks_[view];
 }

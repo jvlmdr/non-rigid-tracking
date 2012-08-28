@@ -6,6 +6,10 @@
 struct Descriptor {
   typedef std::vector<double> Data;
   Data data;
+
+  Descriptor();
+  explicit Descriptor(int n);
+  Descriptor(int n, double x);
 };
 
 #endif

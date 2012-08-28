@@ -1,5 +1,6 @@
 #include "vector_writer.hpp"
 #include "track_writer.hpp"
+#include "multiview_track_writer.hpp"
 
 template<class T>
 MultiviewTrackListWriter<T>::MultiviewTrackListWriter(

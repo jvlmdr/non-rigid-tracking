@@ -140,11 +140,11 @@ typename TrackList<T>::const_reverse_iterator TrackList<T>::rend() const {
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-// FrameIterator_
+// TrackListTimeIterator
 
 // Initializes at start of tracks.
 template<class T>
-FrameIterator_<T>::FrameIterator_(const TrackList<T>& tracks)
+TrackListTimeIterator<T>::TrackListTimeIterator(const TrackList<T>& tracks)
     : cursors_(), t_(0) {
   // Iterate through tracks.
   typename TrackList<T>::const_iterator track = tracks.begin();
@@ -154,7 +154,7 @@ FrameIterator_<T>::FrameIterator_(const TrackList<T>& tracks)
   for (track = tracks.begin(); track != tracks.end(); ++track) {
     // Add a cursor for each non-empty track.
     if (!track->empty()) {
-      cursors_[i] = TrackCursor_<T>::make(*track);
+      cursors_[i] = TrackIterator<T>(*track);
     }
 
     i += 1;
@@ -163,24 +163,25 @@ FrameIterator_<T>::FrameIterator_(const TrackList<T>& tracks)
 
 // Copy constructor.
 template<class T>
-FrameIterator_<T>::FrameIterator_(const FrameIterator_& rhs)
+TrackListTimeIterator<T>::TrackListTimeIterator(
+    const TrackListTimeIterator& rhs)
     : cursors_(rhs.cursors_), t_(rhs.t_) {}
 
 // Pre-increment.
 // Updates the list of points in this frame and advances the cursor.
 template<class T>
-FrameIterator_<T>& FrameIterator_<T>::operator++() {
+TrackListTimeIterator<T>& TrackListTimeIterator<T>::operator++() {
   // Iterate through tracks.
   typename CursorList::iterator cursor = cursors_.begin();
   while (cursor != cursors_.end()) {
     bool remove = false;
 
     // Get space-time point.
-    int t = cursor->second.point->first;
+    int t = cursor->second.time();
 
     // If track appeared in this frame, advance the cursor.
     if (t == t_) {
-      ++cursor->second.point;
+      cursor->second.next();
       // If the cursor reached the end of the track, remove it.
       if (cursor->second.end()) {
         remove = true;
@@ -201,14 +202,14 @@ FrameIterator_<T>& FrameIterator_<T>::operator++() {
 
 // Post-increment.
 template<class T>
-FrameIterator_<T> FrameIterator_<T>::operator++(int) {
-  FrameIterator_<T> result(*this);
+TrackListTimeIterator<T> TrackListTimeIterator<T>::operator++(int) {
+  TrackListTimeIterator<T> result(*this);
   ++(*this);
   return result;
 }
 
 template<class T>
-void FrameIterator_<T>::seekToStart() {
+void TrackListTimeIterator<T>::seekToStart() {
   bool found = false;
 
   while (!found && !end()) {
@@ -224,20 +225,20 @@ void FrameIterator_<T>::seekToStart() {
 }
 
 template<class T>
-int FrameIterator_<T>::t() const {
+int TrackListTimeIterator<T>::t() const {
   return t_;
 }
 
 template<class T>
-void FrameIterator_<T>::getPoints(Points& points) const {
+void TrackListTimeIterator<T>::getPoints(Points& points) const {
   // Iterate through tracks.
   typename CursorList::const_iterator cursor;
 
   for (cursor = cursors_.begin(); cursor != cursors_.end(); ++cursor) {
     // Get space-time point.
     int i = cursor->first;
-    int t = cursor->second.point->first;
-    const T& x = cursor->second.point->second;
+    int t = cursor->second.time();
+    const T& x = cursor->second.get();
 
     // If track appeared in this frame, add to points.
     if (t == t_) {
@@ -248,6 +249,6 @@ void FrameIterator_<T>::getPoints(Points& points) const {
 
 // Returns true if this is the last frame.
 template<class T>
-bool FrameIterator_<T>::end() const {
+bool TrackListTimeIterator<T>::end() const {
   return cursors_.empty();
 }

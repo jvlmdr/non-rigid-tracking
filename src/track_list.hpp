@@ -72,7 +72,7 @@ class TrackList {
 
 // Iterates through a list of tracks one frame at a time.
 template<class T>
-class FrameIterator_ {
+class TrackListTimeIterator {
   public:
     typedef std::map<int, T> Points;
 
@@ -82,14 +82,14 @@ class FrameIterator_ {
     bool end() const;
 
     // Initializes at start of tracks.
-    FrameIterator_(const TrackList<T>& tracks);
+    TrackListTimeIterator(const TrackList<T>& tracks);
     // Copy constructor.
-    FrameIterator_(const FrameIterator_& rhs);
+    TrackListTimeIterator(const TrackListTimeIterator& rhs);
 
     // Pre-increment.
-    FrameIterator_<T>& operator++();
+    TrackListTimeIterator<T>& operator++();
     // Post-increment.
-    FrameIterator_<T> operator++(int);
+    TrackListTimeIterator<T> operator++(int);
 
     // Seek to the start of the tracks.
     void seekToStart();
@@ -98,7 +98,7 @@ class FrameIterator_ {
 
   private:
     // Maintain a list of positions in each track.
-    typedef TrackCursor_<T> Cursor;
+    typedef TrackIterator<T> Cursor;
     typedef std::map<int, Cursor> CursorList;
     CursorList cursors_;
     // Index of current frame.

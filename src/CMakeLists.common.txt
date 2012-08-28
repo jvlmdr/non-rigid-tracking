@@ -12,6 +12,8 @@ TARGET_LINK_LIBRARIES(visualize-keypoints ${OpenCV_LIBS})
 
 ADD_EXECUTABLE(match-features
   match_features.cpp
+  descriptor.cpp
+  find_matches.cpp
   descriptor_reader.cpp
   match_result_writer.cpp)
 TARGET_LINK_LIBRARIES(match-features glog gflags)
@@ -64,7 +66,8 @@ ADD_EXECUTABLE(extract-sift-tracks
   sift.cpp
   similarity_feature_reader.cpp
   similarity_feature_writer.cpp
-  descriptor_writer.cpp)
+  descriptor_writer.cpp
+  descriptor.cpp)
 TARGET_LINK_LIBRARIES(extract-sift-tracks glog gflags)
 TARGET_LINK_LIBRARIES(extract-sift-tracks ${OpenCV_LIBS})
 
@@ -72,14 +75,16 @@ ADD_EXECUTABLE(test-extract-sift
   test_extract_sift.cpp
   read_image.cpp
   similarity_feature.cpp
-  sift.cpp)
+  sift.cpp
+  descriptor.cpp)
 TARGET_LINK_LIBRARIES(test-extract-sift glog gflags)
 TARGET_LINK_LIBRARIES(test-extract-sift ${OpenCV_LIBS})
 
 ADD_EXECUTABLE(pca-descriptor
   pca_descriptor.cpp
   random_color.cpp
-  descriptor_reader.cpp)
+  descriptor_reader.cpp
+  descriptor.cpp)
 TARGET_LINK_LIBRARIES(pca-descriptor glog gflags)
 TARGET_LINK_LIBRARIES(pca-descriptor ${OpenCV_LIBS})
 
@@ -115,7 +120,8 @@ TARGET_LINK_LIBRARIES(select-active-tracks ${OpenCV_LIBS})
 
 ADD_EXECUTABLE(effect-of-sift-threshold
   effect_of_sift_threshold.cpp
-  descriptor_reader.cpp)
+  descriptor_reader.cpp
+  descriptor.cpp)
 TARGET_LINK_LIBRARIES(effect-of-sift-threshold glog gflags)
 TARGET_LINK_LIBRARIES(effect-of-sift-threshold ${OpenCV_LIBS})
 
@@ -125,7 +131,8 @@ ADD_EXECUTABLE(find-keypoints-and-extract-descriptors
   similarity_feature.cpp
   sift.cpp
   similarity_feature_writer.cpp
-  descriptor_writer.cpp)
+  descriptor_writer.cpp
+  descriptor.cpp)
 TARGET_LINK_LIBRARIES(find-keypoints-and-extract-descriptors glog gflags)
 TARGET_LINK_LIBRARIES(find-keypoints-and-extract-descriptors ${OpenCV_LIBS})
 
@@ -197,17 +204,29 @@ TARGET_LINK_LIBRARIES(select-long-tracks ${OpenCV_LIBS})
 
 ADD_EXECUTABLE(match-tracks-using-mean
   match_tracks_using_mean.cpp
-  descriptor_reader.cpp)
+  descriptor.cpp
+  find_matches.cpp
+  descriptor_reader.cpp
+  match_result_writer.cpp)
 TARGET_LINK_LIBRARIES(match-tracks-using-mean glog gflags)
 TARGET_LINK_LIBRARIES(match-tracks-using-mean ${OpenCV_LIBS})
 
-ADD_EXECUTABLE(exhaustive-matches-to-tracks
-  exhaustive_matches_to_tracks.cpp
+ADD_EXECUTABLE(exhaustive-matches-to-multiview-tracks
+  exhaustive_matches_to_multiview_tracks.cpp
   read_lines.cpp
+  sift_feature.cpp
+  similarity_feature.cpp
+  descriptor.cpp
+  multiview_track.cpp
   match_reader.cpp
-  multiview_track.cpp)
-TARGET_LINK_LIBRARIES(exhaustive-matches-to-tracks glog gflags)
-TARGET_LINK_LIBRARIES(exhaustive-matches-to-tracks ${OpenCV_LIBS})
+  sift_feature_reader.cpp
+  descriptor_reader.cpp
+  similarity_feature_reader.cpp
+  sift_feature_writer.cpp
+  descriptor_writer.cpp
+  similarity_feature_writer.cpp)
+TARGET_LINK_LIBRARIES(exhaustive-matches-to-multiview-tracks glog gflags)
+TARGET_LINK_LIBRARIES(exhaustive-matches-to-multiview-tracks ${OpenCV_LIBS})
 
 ADD_EXECUTABLE(visualize-multiview-tracks
   visualize_multiview_tracks.cpp
@@ -227,3 +246,13 @@ ADD_EXECUTABLE(select-distinctive-matches
   match_result_writer.cpp)
 TARGET_LINK_LIBRARIES(select-distinctive-matches glog gflags)
 TARGET_LINK_LIBRARIES(select-distinctive-matches ${OpenCV_LIBS})
+
+ADD_EXECUTABLE(track-matches-to-multiview-tracks
+  track_matches_to_multiview_tracks.cpp
+  similarity_feature.cpp
+  multiview_track.cpp
+  match_result_reader.cpp
+  similarity_feature_reader.cpp
+  similarity_feature_writer.cpp)
+TARGET_LINK_LIBRARIES(track-matches-to-multiview-tracks glog gflags)
+TARGET_LINK_LIBRARIES(track-matches-to-multiview-tracks ${OpenCV_LIBS})

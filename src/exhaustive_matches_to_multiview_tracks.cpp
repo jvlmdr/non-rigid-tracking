@@ -13,13 +13,15 @@
 #include "match.hpp"
 #include "multiview_track.hpp"
 #include "multiview_track_list.hpp"
+#include "sift_feature.hpp"
 
 #include "match_reader.hpp"
 #include "vector_reader.hpp"
 #include "read_lines.hpp"
-#include "default_writer.hpp"
+#include "sift_feature_reader.hpp"
 #include "multiview_track_writer.hpp"
 #include "multiview_track_list_writer.hpp"
+#include "sift_feature_writer.hpp"
 
 // Identifies a feature in a multiview video.
 // TODO: Need a better name?
@@ -77,26 +79,32 @@ void init(int& argc, char**& argv) {
   std::ostringstream usage;
   usage << "Reduces matches to consistent tracks." << std::endl;
   usage << std::endl;
-  usage << argv[0] << " matches-format view-names num-frames tracks" <<
-      std::endl;
+  usage << argv[0] << " matches-format keypoints-format view-names num-frames"
+      " tracks" << std::endl;
   google::SetUsageMessage(usage.str());
 
   google::InitGoogleLogging(argv[0]);
   google::ParseCommandLineFlags(&argc, &argv, true);
 
-  if (argc != 5) {
+  if (argc != 6) {
     google::ShowUsageWithFlags(argv[0]);
     std::exit(1);
   }
 }
 
-std::string makeFilename(const std::string& format,
-                         const std::string& view1,
-                         const std::string& view2,
-                         int t1,
-                         int t2) {
+std::string makeMatchFilename(const std::string& format,
+                              const std::string& view1,
+                              const std::string& view2,
+                              int time1,
+                              int time2) {
   return boost::str(
-      boost::format(format) % view1 % view2 % (t1 + 1) % (t2 + 1));
+      boost::format(format) % view1 % view2 % (time1 + 1) % (time2 + 1));
+}
+
+std::string makeFrameFilename(const std::string& format,
+                              const std::string& view,
+                              int time) {
+  return boost::str(boost::format(format) % view % (time + 1));
 }
 
 MatchGraph::vertex_descriptor findOrInsert(MatchGraph& graph,
@@ -139,7 +147,7 @@ void loadAllMatches(const std::string& matches_format,
       int v2 = i2 / num_frames;
 
       // Construct filename.
-      std::string matches_file = makeFilename(matches_format, views[v1],
+      std::string matches_file = makeMatchFilename(matches_format, views[v1],
           views[v2], t1, t2);
 
       // Load matches from file.
@@ -200,31 +208,82 @@ void convertFeaturesToTrack(const FeatureList& features,
   track.reset(num_views);
 
   // Assumes features are consistent.
-  for (FeatureList::const_iterator feature = features.begin();
-       feature != features.end();
-       ++feature) {
+  FeatureList::const_iterator feature;
+  for (feature = features.begin(); feature != features.end(); ++feature) {
     track.add(Frame(feature->view, feature->time), feature->id);
   }
+}
+
+bool loadFeatures(const MultiviewTrackList<int>& id_tracks,
+                  const std::string& keypoints_format,
+                  const std::vector<std::string>& views,
+                  MultiviewTrackList<SiftFeature>& tracks) {
+  // Initialize list of empty tracks.
+  int num_features = id_tracks.numTracks();
+  int num_views = views.size();
+  std::vector<MultiviewTrack<SiftFeature> > track_list;
+  track_list.assign(num_features, MultiviewTrack<SiftFeature>(num_views));
+
+  // Iterate through time (to avoid loading all features at once).
+  MultiViewTimeIterator<int> iterator(id_tracks);
+
+  while (!iterator.end()) {
+    int time = iterator.time();
+
+    for (int view = 0; view < num_views; view += 1) {
+      std::vector<SiftFeature> all_features;
+
+      // Load features in this frame.
+      std::string file = makeFrameFilename(keypoints_format, views[view], time);
+      SiftFeatureReader feature_reader;
+      bool ok = loadList(file, all_features, feature_reader);
+      if (!ok) {
+        return false;
+      }
+      LOG(INFO) << "Loaded " << all_features.size() << " features for (" <<
+          view << ", " << time << ")";
+
+      // Get feature indices matched in this frame.
+      std::map<int, int> subset;
+      iterator.getView(view, subset);
+
+      // Copy into track.
+      std::map<int, int>::const_iterator id;
+      for (id = subset.begin(); id != subset.end(); ++id) {
+        track_list[id->first].add(Frame(view, time), all_features[id->second]);
+      }
+    }
+
+    iterator.next();
+  }
+
+  tracks.reset(num_views);
+  for (int i = 0; i < num_features; i += 1) {
+    tracks.add(track_list[i]);
+  }
+
+  return true;
 }
 
 int main(int argc, char** argv) {
   init(argc, argv);
 
   std::string matches_format = argv[1];
-  std::string view_names_file = argv[2];
-  int num_frames = boost::lexical_cast<int>(argv[3]);
-  std::string tracks_file = argv[4];
+  std::string keypoints_format = argv[2];
+  std::string view_names_file = argv[3];
+  int num_frames = boost::lexical_cast<int>(argv[4]);
+  std::string tracks_file = argv[5];
 
   bool ok;
 
-  std::vector<std::string> view_names;
-  ok = readLines(view_names_file, view_names);
+  std::vector<std::string> views;
+  ok = readLines(view_names_file, views);
   CHECK(ok) << "Could not load view names";
-  int num_views = view_names.size();
+  int num_views = views.size();
 
-  //
+  // Load matches.
   MatchGraph graph;
-  loadAllMatches(matches_format, view_names, num_frames, graph);
+  loadAllMatches(matches_format, views, num_frames, graph);
   int num_vertices = boost::num_vertices(graph);
   int num_edges = boost::num_edges(graph);
   LOG(INFO) << "Loaded " << num_edges << " matches between " << num_vertices <<
@@ -269,21 +328,27 @@ int main(int argc, char** argv) {
   }
   LOG(INFO) << "Pruned to " << subsets.size() << " consistent subsets";
 
-  // Convert to tracks!
-  MultiviewTrackList<int> tracks(num_views);
-  for (std::list<FeatureList>::const_iterator subset = subsets.begin();
-       subset != subsets.end();
-       ++subset) {
-    MultiviewTrack<int> track;
-    convertFeaturesToTrack(*subset, track, num_views);
+  // Convert from graph components to tracks!
+  MultiviewTrackList<int> id_tracks(num_views);
+  {
+    std::list<FeatureList>::const_iterator subset;
+    for (subset = subsets.begin(); subset != subsets.end(); ++subset) {
+      MultiviewTrack<int> track;
+      convertFeaturesToTrack(*subset, track, num_views);
 
-    // Add to list.
-    tracks.add(track);
+      // Add to list.
+      id_tracks.add(track);
+    }
   }
 
+  // Convert from indices to actual features.
+  MultiviewTrackList<SiftFeature> tracks;
+  ok = loadFeatures(id_tracks, keypoints_format, views, tracks);
+  CHECK(ok) << "Could not load features for matches";
+
   // Save track list.
-  DefaultWriter<int> writer;
-  ok = saveMultiviewTrackList(tracks_file, tracks, writer);
+  SiftFeatureWriter feature_writer;
+  ok = saveMultiviewTrackList(tracks_file, tracks, feature_writer);
   CHECK(ok) << "Could not save tracks";
 
   return 0;

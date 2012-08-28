@@ -1,3 +1,5 @@
+#include <glog/logging.h>
+
 ////////////////////////////////////////////////////////////////////////////////
 // Track
 
@@ -98,22 +100,51 @@ typename Track<T>::const_reverse_iterator Track<T>::rend() const {
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-// TrackCursor
+// TrackIterator
 
 template<class T>
-TrackCursor_<T>::TrackCursor_() : track(NULL), point() {}
+TrackIterator<T>::TrackIterator() : track_(NULL), position_() {}
 
 template<class T>
-TrackCursor_<T>::TrackCursor_(const Track<T>& track,
-                              const Position& point)
-    : track(&track), point(point) {}
+TrackIterator<T>::TrackIterator(const Track<T>& track)
+    : track_(&track), position_(track.begin()) {}
 
 template<class T>
-TrackCursor_<T> TrackCursor_<T>::make(const Track<T>& track) {
-  return TrackCursor_(track, track.begin());
+TrackIterator<T>::TrackIterator(const TrackIterator<T>& other)
+    : track_(other.track_), position_(other.position_) {}
+
+template<class T>
+void TrackIterator<T>::next() {
+  CHECK_NOTNULL(track_);
+  ++position_;
 }
 
 template<class T>
-bool TrackCursor_<T>::end() const {
-  return point == track->end();
+void TrackIterator<T>::previous() {
+  CHECK_NOTNULL(track_);
+  --position_;
+}
+
+template<class T>
+bool TrackIterator<T>::end() const {
+  CHECK_NOTNULL(track_);
+  return (position_ == track_->end());
+}
+
+template<class T>
+bool TrackIterator<T>::begin() const {
+  CHECK_NOTNULL(track_);
+  return (position_ == track_->begin());
+}
+
+template<class T>
+const T& TrackIterator<T>::get() const {
+  CHECK_NOTNULL(track_);
+  return position_->second;
+}
+
+template<class T>
+int TrackIterator<T>::time() const {
+  CHECK_NOTNULL(track_);
+  return position_->first;
 }

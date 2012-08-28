@@ -34,6 +34,7 @@ class MultiviewTrackList {
     int num_frames_;
 };
 
+// Iterates over all tracks in one view of a MultiviewTrackList in time order.
 template<class T>
 class SingleViewTimeIterator {
   public:
@@ -50,14 +51,15 @@ class SingleViewTimeIterator {
     void get(std::map<int, T>& points) const;
 
   private:
-    const MultiviewTrackList<T>* tracks_;
+    typedef TrackIterator<T> Cursor;
+    typedef std::vector<Cursor> CursorList;
+
     int view_;
     int time_;
-    typedef typename Track<T>::const_iterator Cursor;
-    typedef std::vector<Cursor> CursorList;
     CursorList cursors_;
 };
 
+// Iterates over all tracks in a MultiviewTrackList in time order.
 template<class T>
 class MultiViewTimeIterator {
   public:
@@ -75,10 +77,11 @@ class MultiViewTimeIterator {
     // Populates a map of feature -> point for a single view.
     void getView(int view, std::map<int, T>& points) const;
 
+    const SingleViewTimeIterator<T>& view(int i) const;
+
   private:
     typedef std::vector<SingleViewTimeIterator<T> > IteratorList;
 
-    const MultiviewTrackList<T>* tracks_;
     IteratorList views_;
     int time_;
 };

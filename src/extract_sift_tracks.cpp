@@ -91,7 +91,7 @@ int main(int argc, char** argv) {
   TrackList<Feature> feature_tracks(num_features);
 
   // Iterate over each frame in the track.
-  FrameIterator_<SimilarityFeature> frame(position_tracks);
+  TrackListTimeIterator<SimilarityFeature> frame(position_tracks);
   frame.seekToStart();
 
   while (!frame.end()) {

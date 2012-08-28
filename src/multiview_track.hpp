@@ -27,6 +27,7 @@ class MultiviewTrack {
     void swap(MultiviewTrack<T>& other);
 
     void add(const Frame& frame, const T& x);
+    void addTrack(int view, const Track<T>& track);
 
     // Provides read access to the track in one view.
     const Track<T>& track(int view) const;
