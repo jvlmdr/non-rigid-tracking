@@ -11,6 +11,7 @@ void drawMatches(const std::vector<SimilarityFeature>& keypoints1,
                  const std::vector<Match>& matches,
                  cv::Mat& image1,
                  cv::Mat& image2,
-                 cv::Mat& render);
+                 cv::Mat& render,
+                 int line_thickness);
 
 #endif

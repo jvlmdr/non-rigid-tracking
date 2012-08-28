@@ -20,7 +20,7 @@
 
 const double SATURATION = 0.99;
 const double BRIGHTNESS = 0.99;
-const double LINE_THICKNESS = 1;
+const double LINE_THICKNESS = 2;
 
 DEFINE_string(output_format, "%d.png", "Location to save image.");
 DEFINE_bool(save, false, "Save to file?");
@@ -78,7 +78,7 @@ void init(int& argc, char**& argv) {
   google::InitGoogleLogging(argv[0]);
   google::ParseCommandLineFlags(&argc, &argv, true);
 
-  if (argc != 6) {
+  if (argc != 5) {
     google::ShowUsageWithFlags(argv[0]);
     std::exit(1);
   }
@@ -180,7 +180,7 @@ void drawFeatures(cv::Mat& image,
     int index = mapping->first;
     const SimilarityFeature& feature = mapping->second;
 
-    drawSimilarityFeature(image, feature, colors[index]);
+    drawSimilarityFeature(image, feature, colors[index], LINE_THICKNESS);
   }
 }
 
@@ -291,10 +291,9 @@ int main(int argc, char** argv) {
   init(argc, argv);
 
   std::string tracks_file = argv[1];
-  std::string features_format = argv[2];
-  std::string image_format = argv[3];
-  std::string views_file = argv[4];
-  int num_frames = boost::lexical_cast<int>(argv[5]);
+  std::string image_format = argv[2];
+  std::string views_file = argv[3];
+  int num_frames = boost::lexical_cast<int>(argv[4]);
 
   bool ok;
 
@@ -305,22 +304,17 @@ int main(int argc, char** argv) {
   int num_views = views.size();
 
   // Load tracks.
-  MultiviewTrackList<int> id_tracks;
-  DefaultReader<int> int_reader;
-  ok = loadMultiviewTrackList(tracks_file, id_tracks, int_reader);
+  MultiviewTrackList<SimilarityFeature> tracks;
+  SimilarityFeatureReader feature_reader;
+  ok = loadMultiviewTrackList(tracks_file, tracks, feature_reader);
   CHECK(ok) << "Could not load tracks";
-  LOG(INFO) << "Loaded " << id_tracks.numTracks() << " multi-view tracks";
+  LOG(INFO) << "Loaded " << tracks.numTracks() << " multi-view tracks";
 
   // Ensure that number of views matches.
-  CHECK(num_views == id_tracks.numViews());
+  CHECK(num_views == tracks.numViews());
   // Ensure that there aren't more frames than there are in the sequence.
   // TODO: Is there any point storing the number of frames?
-  CHECK(id_tracks.numFrames() <= num_frames);
-
-  // Load actual features for tracks.
-  MultiviewTrackList<SimilarityFeature> tracks;
-  ok = loadFeatures(id_tracks, tracks, features_format, views);
-  CHECK(ok) << "Could not load features";
+  CHECK(tracks.numFrames() <= num_frames);
 
   // Remove any single-view tracks.
   if (FLAGS_exclude_single_view) {

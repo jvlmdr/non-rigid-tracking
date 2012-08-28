@@ -22,6 +22,8 @@ DEFINE_string(output_file, "matches.png", "Location to save image.");
 DEFINE_bool(save, false, "Save to file?");
 DEFINE_bool(display, true, "Show matches?");
 
+int LINE_THICKNESS = 1;
+
 typedef std::vector<SimilarityFeature> SimilarityFeatureList;
 typedef std::vector<Match> MatchList;
 
@@ -90,7 +92,8 @@ int main(int argc, char** argv) {
 
   // Visualize matches.
   cv::Mat render;
-  drawMatches(keypoints1, keypoints2, matches, image1, image2, render);
+  drawMatches(keypoints1, keypoints2, matches, image1, image2, render,
+      LINE_THICKNESS);
 
   if (FLAGS_save) {
     cv::imwrite(output_file, render);

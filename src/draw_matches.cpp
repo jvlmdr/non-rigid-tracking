@@ -14,15 +14,18 @@ void drawMatches(const std::vector<SimilarityFeature>& keypoints1,
                  const std::vector<Match>& matches,
                  cv::Mat& image1,
                  cv::Mat& image2,
-                 cv::Mat& render) {
+                 cv::Mat& render,
+                 int line_thickness) {
   MatchList::const_iterator match;
   for (match = matches.begin(); match != matches.end(); ++match) {
     // Generate a random color.
     cv::Scalar color = randomColor(SATURATION, BRIGHTNESS);
 
     // Draw the keypoint in each image.
-    drawSimilarityFeature(image1, keypoints1[match->first], color);
-    drawSimilarityFeature(image2, keypoints2[match->second], color);
+    drawSimilarityFeature(image1, keypoints1[match->first], color,
+        line_thickness);
+    drawSimilarityFeature(image2, keypoints2[match->second], color,
+        line_thickness);
   }
 
   // Initialize large side-by-side image with black background.

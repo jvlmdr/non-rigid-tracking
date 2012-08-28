@@ -6,6 +6,7 @@
 
 void drawSimilarityFeature(cv::Mat& image,
                            const SimilarityFeature& feature,
-                           const cv::Scalar& color);
+                           const cv::Scalar& color,
+                           int line_thickness);
 
 #endif

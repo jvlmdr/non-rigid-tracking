@@ -22,6 +22,7 @@
 
 const double SATURATION = 0.99;
 const double BRIGHTNESS = 0.99;
+const int LINE_THICKNESS = 1;
 
 DEFINE_string(output_format, "%d.png", "Location to save image.");
 DEFINE_bool(save, false, "Save to file?");
@@ -42,7 +43,7 @@ void drawFeatures(cv::Mat& image,
     int index = mapping->first;
     const SimilarityFeature& feature = mapping->second;
 
-    drawSimilarityFeature(image, feature, colors[index]);
+    drawSimilarityFeature(image, feature, colors[index], LINE_THICKNESS);
   }
 }
 

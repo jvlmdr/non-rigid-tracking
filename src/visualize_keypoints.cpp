@@ -22,6 +22,7 @@
 
 const double SATURATION = 0.99;
 const double BRIGHTNESS = 0.99;
+const int LINE_THICKNESS = 1;
 
 DEFINE_string(output_file, "keypoints.png", "Location to save image.");
 DEFINE_bool(save, false, "Save to file?");
@@ -39,7 +40,7 @@ SimilarityFeature keypointToSimilarityFeature(const cv::KeyPoint& keypoint) {
 void drawFeature(cv::Mat& image, const SimilarityFeature& feature) {
   // Generate a random color.
   cv::Scalar color = randomColor(SATURATION, BRIGHTNESS);
-  drawSimilarityFeature(image, feature, color);
+  drawSimilarityFeature(image, feature, color, LINE_THICKNESS);
 }
 
 // Renders all keypoints over an image with random colors.
