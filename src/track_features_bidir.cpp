@@ -51,7 +51,6 @@ const double MAX_CONDITION = 1e3;
 // Tracking settings.
 // Do not want to interpolate much below one pixel.
 const double MIN_SCALE = 1.;
-const double SCALE_HYSTERESIS = 1.5;
 // Align to the template from the previous frame?
 const bool UPDATE_TEMPLATE = true;
 // Maximum average intensity difference as a fraction of the range.
@@ -399,8 +398,7 @@ int main(int argc, char** argv) {
   cv::Mat mask = makeGaussian(MASK_SIGMA, PATCH_SIZE);
   // Checks that scale is not vanishing or infinite.
   // Use double 
-  SimilarityWarpValidator validator(size, PATCH_SIZE,
-      SCALE_HYSTERESIS * MIN_SCALE);
+  SimilarityWarpValidator validator(size, PATCH_SIZE, MIN_SCALE);
 
   // Check whether any of the features are initialized as invalid.
   // This warrants a warning.
@@ -413,14 +411,11 @@ int main(int argc, char** argv) {
   int num_valid = valid.size();
   int num_invalid = num_features - num_valid;
   if (num_invalid > 0) {
-    LOG(WARNING) << "Removed " << num_invalid << " invalid features (" <<
-        num_valid << " remain)";
+    LOG(WARNING) << "Some features were invalid to track (" << num_invalid <<
+        " / " << num_features << ")";
   }
-  warp_params.swap(valid);
-  num_features = num_valid;
-
-  // Undo hysteresis.
-  validator = SimilarityWarpValidator(size, PATCH_SIZE, MIN_SCALE);
+  //warp_params.swap(valid);
+  //num_features = num_valid;
 
   // Track forwards.
   TrackList<Params> forward_tracks;
