@@ -2,13 +2,13 @@
 
 if [ $# -ne 4 ]
 then
-  echo "usage: $0 num-frames views descriptors-format matches-format"
+  echo "usage: $0 views num-frames descriptors-format matches-format"
   echo ""
   exit
 fi
 
-num_frames=$1
-views=$2
+views=$1
+num_frames=$2
 descriptors_format=$3
 matches_format=$4
 
