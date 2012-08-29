@@ -1,50 +1,18 @@
 #!/bin/bash
 
-if [ $# -ne 4 ]
+if [ $# -ne 5 ]
 then
-  echo "usage: $0 views num-frames descriptors-format matches-format"
+  echo "usage: $0 descriptors-format views num-frames matches-format num-parallel"
   echo ""
   exit
 fi
 
-views=$1
-num_frames=$2
-descriptors_format=$3
+descriptors_format=$1
+views=$2
+num_frames=$3
 matches_format=$4
+num_parallel=$5
 
-# Replace views string with an array.
-declare -a views=($views)
-num_views=${#views[@]}
-
-for v1 in `seq 1 $num_views`
-do
-  view1=${views[((v1 - 1))]}
-
-  for t1 in `seq 1 $num_frames`
-  do
-    for v2 in `seq $v1 $num_views`
-    do
-      view2=${views[((v2 - 1))]}
-
-      if [ $v1 -eq $v2 ]
-      then
-        # Same view. Match next frame to end.
-        (( a = t1 + 1 ))
-      else
-        # Different view. Match against every other frame.
-        (( a = 1 ))
-      fi
-
-      for t2 in `seq $a $num_frames`
-      do
-        echo "(($view1, $t1), ($view2, $t2))"
-
-        descriptors1=`printf $descriptors_format $view1 $t1`
-        descriptors2=`printf $descriptors_format $view2 $t2`
-        matches=`printf $matches_format $view1 $view2 $t1 $t2`
-
-        ./match-tracks-using-mean $descriptors1 $descriptors2 $matches -logtostderr
-      done
-    done
-  done
-done
+../scripts/generate-exhaustive-pairs.sh "$views" $num_frames | \
+  xargs -n 4 -P $num_parallel \
+  ../scripts/match-tracks-using-mean-helper.sh $descriptors_format $matches_format

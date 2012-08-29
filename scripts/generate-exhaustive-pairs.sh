@@ -2,8 +2,7 @@
 
 if [ $# -ne 2 ]
 then
-  echo "usage: $0 views num-frames"
-  echo ""
+  echo "usage: $0 views num-frames" >&2
   exit
 fi
 
