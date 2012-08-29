@@ -270,3 +270,12 @@ ADD_EXECUTABLE(select-active-multiview-tracks
   similarity_feature_writer.cpp)
 TARGET_LINK_LIBRARIES(select-active-multiview-tracks glog gflags)
 TARGET_LINK_LIBRARIES(select-active-multiview-tracks ${OpenCV_LIBS})
+
+ADD_EXECUTABLE(match-tracks-using-min
+  match_tracks_using_min.cpp
+  descriptor.cpp
+  find_matches.cpp
+  descriptor_reader.cpp
+  match_result_writer.cpp)
+TARGET_LINK_LIBRARIES(match-tracks-using-min glog gflags)
+TARGET_LINK_LIBRARIES(match-tracks-using-min ${OpenCV_LIBS})

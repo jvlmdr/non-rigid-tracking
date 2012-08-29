@@ -5,8 +5,8 @@
 
 // The result of a single match from one image to the other.
 typedef cv::DMatch SingleDirectedMatchResult;
-// A pair of single matches.
-typedef std::vector<SingleDirectedMatchResult> SingleDirectedMatchResultPair;
+// A list of single matches.
+typedef std::vector<SingleDirectedMatchResult> SingleDirectedMatchResultList;
 
 void listToMatrix(const std::vector<Descriptor>& list, cv::Mat& matrix) {
   int num_descriptors = list.size();
@@ -20,8 +20,19 @@ void listToMatrix(const std::vector<Descriptor>& list, cv::Mat& matrix) {
   }
 }
 
+void bagsToMatrices(const std::vector<DescriptorBag>& bags,
+                    std::vector<cv::Mat>& matrices) {
+  int num_bags = bags.size();
+  // Initialize list of matrices.
+  matrices.assign(num_bags, cv::Mat());
+  // Copy lists of descriptors into matrices.
+  for (int i = 0; i < num_bags; i += 1) {
+    listToMatrix(bags[i], matrices[i]);
+  }
+}
+
 // Converts a pair of matches to a top-two match.
-DirectedMatchResult pairToResult(const SingleDirectedMatchResultPair& pair) {
+DirectedMatchResult pairToResult(const SingleDirectedMatchResultList& pair) {
   DirectedMatchResult result;
 
   // Every element in the query set matched to one element in the training set.
@@ -44,8 +55,8 @@ void matchBothDirections(const std::vector<Descriptor>& list1,
   listToMatrix(list2, mat2);
 
   // Find two nearest neighbours, match in each direction.
-  std::vector<SingleDirectedMatchResultPair> forward_match_pairs;
-  std::vector<SingleDirectedMatchResultPair> reverse_match_pairs;
+  std::vector<SingleDirectedMatchResultList> forward_match_pairs;
+  std::vector<SingleDirectedMatchResultList> reverse_match_pairs;
 
   // Construct matcher.
   cv::Ptr<cv::DescriptorMatcher> matcher;
@@ -142,3 +153,108 @@ void unionOfMatches(const std::vector<DirectedMatchResult>& forward_matches,
   }
 }
 
+////////////////////////////////////////////////////////////////////////////////
+
+int findBestMatch(const std::vector<SingleDirectedMatchResultList>& list) {
+  CHECK(list.size() > 0);
+  int n = list.size();
+  int arg = 0;
+
+  for (int i = 1; i < n; i += 1) {
+    if (list[i].front() < list[arg].front()) {
+      arg = i;
+    }
+  }
+
+  return arg;
+}
+
+int sizeOfLargestBag(const std::vector<cv::Mat>& matrices) {
+  int max = 0;
+  int n = matrices.size();
+
+  for (int i = 0; i < n; i += 1) {
+    max = std::max(matrices[i].rows, max);
+  }
+
+  return max;
+}
+
+void flattenMatches(const std::vector<SingleDirectedMatchResultList>& matches,
+                    SingleDirectedMatchResultList& flat) {
+  int n = matches.size();
+  flat.clear();
+
+  for (int i = 0; i < n; i += 1) {
+    std::copy(matches[i].begin(), matches[i].end(), std::back_inserter(flat));
+  }
+}
+
+void matchBags(const std::vector<cv::Mat>& query,
+               const std::vector<cv::Mat>& train,
+               std::vector<DirectedMatchResult>& results,
+               bool use_flann) {
+  cv::Ptr<cv::DescriptorMatcher> matcher;
+  if (use_flann) {
+    matcher = cv::DescriptorMatcher::create("FlannBased");
+  } else {
+    matcher = cv::DescriptorMatcher::create("BruteForce");
+  }
+
+  int num_query_features = query.size();
+  results.clear();
+
+  // Find a match in the train image for every feature in the query image.
+  matcher->add(train);
+  // Find largest bag in train image.
+  int largest = sizeOfLargestBag(train);
+
+  for (int i = 0; i < num_query_features; i += 1) {
+    int num_queries = query[i].rows;
+    CHECK(num_queries > 0);
+
+    // Find best match for each feature in the bag.
+    std::vector<SingleDirectedMatchResultList> grouped_matches;
+    matcher->knnMatch(query[i], grouped_matches, largest + 1);
+
+    // Flatten out into a single list.
+    SingleDirectedMatchResultList matches;
+    flattenMatches(grouped_matches, matches);
+
+    // Sort all of them. (This could be more efficient!)
+    std::sort(matches.begin(), matches.end());
+
+    // Read best match from front of list.
+    DirectedMatchResult result;
+    result.match = matches.front().imgIdx;
+    result.dist = matches.front().distance;
+
+    // Find first match belonging to a different feature.
+    int j = 0;
+    int num_matches = matches.size();
+    while (matches[j].imgIdx == result.match) {
+      j += 1;
+      CHECK(j < num_matches);
+    }
+    result.second_dist = matches[j].distance;
+
+    results.push_back(result);
+  }
+}
+
+void matchBagsBothDirections(const std::vector<DescriptorBag>& bags1,
+                             const std::vector<DescriptorBag>& bags2,
+                             std::vector<DirectedMatchResult>& forward_matches,
+                             std::vector<DirectedMatchResult>& reverse_matches,
+                             bool use_flann) {
+  // Load descriptors into matrices for cv::DescriptorMatcher.
+  std::vector<cv::Mat> matrices1;
+  std::vector<cv::Mat> matrices2;
+  bagsToMatrices(bags1, matrices1);
+  bagsToMatrices(bags2, matrices2);
+
+  // Find a match in the second image for each feature in the first image...
+  matchBags(matrices1, matrices2, forward_matches, use_flann);
+  // ...and vice versa.
+  matchBags(matrices2, matrices1, reverse_matches, use_flann);
+}
