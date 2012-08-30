@@ -13,6 +13,7 @@ class MultiviewTrackList {
     typedef std::vector<MultiviewTrack<T> > List;
 
     explicit MultiviewTrackList(int num_views);
+    MultiviewTrackList(int num_views, int num_features);
     MultiviewTrackList();
     MultiviewTrackList(const MultiviewTrackList<T>& other);
 
@@ -20,9 +21,10 @@ class MultiviewTrackList {
     void swap(MultiviewTrackList<T>& other);
 
     // Swaps a multi-view track into the list.
+    // TODO: Growing vector should probably be disallowed.
     void add(MultiviewTrack<T>& track);
 
-    // Provides read access to the tracks in one view.
+    // Read access.
     const MultiviewTrack<T>& track(int id) const;
     const List& tracks() const;
 

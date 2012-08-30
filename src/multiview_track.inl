@@ -20,7 +20,37 @@ void MultiviewTrack<T>::swap(MultiviewTrack<T>& other) {
 }
 
 template<class T>
-void MultiviewTrack<T>::add(const Frame& frame, const T& x) {
+const T* MultiviewTrack<T>::get(const Frame& frame) const {
+  typename Track<T>::const_iterator result;
+
+  result = tracks_[frame.view].find(frame.time);
+
+  if (result == tracks_[frame.view].end()) {
+    // Frame was not found in track index.
+    return NULL;
+  } else {
+    // Frame was found.
+    return &result->second;
+  }
+}
+
+template<class T>
+T* MultiviewTrack<T>::get(const Frame& frame) {
+  typename Track<T>::iterator result;
+
+  result = tracks_[frame.view].find(frame.time);
+
+  if (result == tracks_[frame.view].end()) {
+    // Frame was not found in track index.
+    return NULL;
+  } else {
+    // Frame was found.
+    return &result->second;
+  }
+}
+
+template<class T>
+void MultiviewTrack<T>::set(const Frame& frame, const T& x) {
   tracks_[frame.view][frame.time] = x;
   if (frame.time > num_frames_ - 1) {
     num_frames_ = frame.time + 1;
@@ -28,22 +58,22 @@ void MultiviewTrack<T>::add(const Frame& frame, const T& x) {
 }
 
 template<class T>
-void MultiviewTrack<T>::addTrack(int view, const Track<T>& track) {
+void MultiviewTrack<T>::setTrack(int view, const Track<T>& track) {
   typename Track<T>::const_iterator point;
 
   // Add each point in the track.
   for (point = track.begin(); point != track.end(); ++point) {
-    add(Frame(view, point->first), point->second);
+    set(Frame(view, point->first), point->second);
   }
 }
 
 template<class T>
-const Track<T>& MultiviewTrack<T>::track(int view) const {
-  return tracks_[view];
+const Track<T>& MultiviewTrack<T>::view(int i) const {
+  return tracks_[i];
 }
 
 template<class T>
-const std::vector<Track<T> >& MultiviewTrack<T>::tracks() const {
+const std::vector<Track<T> >& MultiviewTrack<T>::views() const {
   return tracks_;
 }
 

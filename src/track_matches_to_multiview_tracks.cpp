@@ -65,8 +65,8 @@ int main(int argc, char** argv) {
   int num_matches = matches.size();
   for (int i = 0; i < num_matches; i += 1) {
     MultiviewTrack<SimilarityFeature> track(2);
-    track.addTrack(0, tracks1[matches[i].index1]);
-    track.addTrack(1, tracks2[matches[i].index2]);
+    track.setTrack(0, tracks1[matches[i].index1]);
+    track.setTrack(1, tracks2[matches[i].index2]);
 
     multiview_tracks.add(track);
   }

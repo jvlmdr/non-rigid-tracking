@@ -6,6 +6,10 @@ MultiviewTrackList<T>::MultiviewTrackList(int num_views)
     : tracks_(), num_views_(num_views), num_frames_(0) {}
 
 template<class T>
+MultiviewTrackList<T>::MultiviewTrackList(int num_views, int num_features)
+    : tracks_(num_features), num_views_(num_views), num_frames_(0) {}
+
+template<class T>
 MultiviewTrackList<T>::MultiviewTrackList()
     : tracks_(), num_views_(0), num_frames_(0) {}
 
@@ -41,7 +45,6 @@ void MultiviewTrackList<T>::add(MultiviewTrack<T>& track) {
   num_frames_ = std::max(num_frames_, track.numFrames());
 }
 
-// Provides read access to the tracks in one view.
 template<class T>
 const MultiviewTrack<T>& MultiviewTrackList<T>::track(int id) const {
   return tracks_[id];
@@ -85,7 +88,7 @@ SingleViewTimeIterator<T>::SingleViewTimeIterator(
        multiview_track != tracks.tracks().end();
        ++multiview_track) {
     // Add cursor at beginning of track for given view.
-    cursors_.push_back(TrackIterator<T>(multiview_track->track(view_)));
+    cursors_.push_back(TrackIterator<T>(multiview_track->view(view_)));
   }
 }
 

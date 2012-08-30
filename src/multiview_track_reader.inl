@@ -24,7 +24,7 @@ void MultiviewTrackReader<T>::read(const cv::FileNode& node,
     for (point = views[view].begin(); point != views[view].end(); ++point) {
       // Add each point to the track.
       int time = point->first;
-      multiview_track.add(Frame(view, time), point->second);
+      multiview_track.set(Frame(view, time), point->second);
     }
   }
 }

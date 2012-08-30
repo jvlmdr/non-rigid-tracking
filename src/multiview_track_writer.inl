@@ -11,5 +11,5 @@ template<class T>
 void MultiviewTrackWriter<T>::write(cv::FileStorage& file,
                                     const MultiviewTrack<T>& track) {
   VectorWriter<Track<T> > list_writer(*writer_);
-  list_writer.write(file, track.tracks());
+  list_writer.write(file, track.views());
 }

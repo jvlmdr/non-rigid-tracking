@@ -53,7 +53,7 @@ double measureAverageStep(const MultiviewTrack<SimilarityFeature>& track) {
     double distance;
     int duration;
 
-    pathLength(track.track(view), distance, duration);
+    pathLength(track.view(view), distance, duration);
 
     total_distance += distance;
     total_duration += duration;

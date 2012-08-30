@@ -13,15 +13,19 @@
 #include "match.hpp"
 #include "multiview_track.hpp"
 #include "multiview_track_list.hpp"
-#include "sift_feature.hpp"
 
-#include "match_reader.hpp"
-#include "vector_reader.hpp"
 #include "read_lines.hpp"
-#include "sift_feature_reader.hpp"
-#include "multiview_track_writer.hpp"
+#include "vector_reader.hpp"
+#include "match_reader.hpp"
 #include "multiview_track_list_writer.hpp"
-#include "sift_feature_writer.hpp"
+#include "vector_writer.hpp"
+#include "default_writer.hpp"
+
+DEFINE_bool(discard_inconsistent, false,
+    "Discard any feature which appears twice in one frame.");
+
+// More than one feature may be observed in each frame.
+typedef std::vector<int> FeatureSet;
 
 // Identifies a feature in a multiview video.
 // TODO: Need a better name?
@@ -79,14 +83,14 @@ void init(int& argc, char**& argv) {
   std::ostringstream usage;
   usage << "Reduces matches to consistent tracks." << std::endl;
   usage << std::endl;
-  usage << argv[0] << " matches-format keypoints-format view-names num-frames"
-      " tracks" << std::endl;
+  usage << argv[0] << " matches-format view-names num-frames tracks" <<
+      std::endl;
   google::SetUsageMessage(usage.str());
 
   google::InitGoogleLogging(argv[0]);
   google::ParseCommandLineFlags(&argc, &argv, true);
 
-  if (argc != 6) {
+  if (argc != 5) {
     google::ShowUsageWithFlags(argv[0]);
     std::exit(1);
   }
@@ -99,12 +103,6 @@ std::string makeMatchFilename(const std::string& format,
                               int time2) {
   return boost::str(
       boost::format(format) % view1 % view2 % (time1 + 1) % (time2 + 1));
-}
-
-std::string makeFrameFilename(const std::string& format,
-                              const std::string& view,
-                              int time) {
-  return boost::str(boost::format(format) % view % (time + 1));
 }
 
 MatchGraph::vertex_descriptor findOrInsert(MatchGraph& graph,
@@ -182,84 +180,28 @@ void loadAllMatches(const std::string& matches_format,
   }
 }
 
-bool isConsistent(const FeatureList& features) {
-  std::set<Frame> frames;
-
-  for (FeatureList::const_iterator feature = features.begin();
-       feature != features.end();
-       ++feature) {
-    Frame frame(feature->view, feature->time);
-
-    if (frames.find(frame) != frames.end()) {
-      // Frame already exists in set.
-      return false;
-    }
-
-    frames.insert(frame);
-  }
-
-  return true;
-}
-
-void convertFeaturesToTrack(const FeatureList& features,
-                            MultiviewTrack<int>& track,
-                            int num_views) {
-  // Reset multiview track.
+bool multitrackToTrack(const MultiviewTrack<FeatureSet>& multitrack,
+                       MultiviewTrack<int>& track) {
+  int num_views = multitrack.numViews();
   track.reset(num_views);
 
-  // Assumes features are consistent.
-  FeatureList::const_iterator feature;
-  for (feature = features.begin(); feature != features.end(); ++feature) {
-    track.add(Frame(feature->view, feature->time), feature->id);
-  }
-}
+  for (int i = 0; i < num_views; i += 1) {
+    TrackIterator<FeatureSet> point(multitrack.view(i));
 
-bool loadFeatures(const MultiviewTrackList<int>& id_tracks,
-                  const std::string& keypoints_format,
-                  const std::vector<std::string>& views,
-                  MultiviewTrackList<SiftFeature>& tracks) {
-  // Initialize list of empty tracks.
-  int num_features = id_tracks.numTracks();
-  int num_views = views.size();
-  std::vector<MultiviewTrack<SiftFeature> > track_list;
-  track_list.assign(num_features, MultiviewTrack<SiftFeature>(num_views));
+    while (!point.end()) {
+      // There should never be an entry with zero features.
+      CHECK(point.get().size() > 0);
 
-  // Iterate through time (to avoid loading all features at once).
-  MultiViewTimeIterator<int> iterator(id_tracks);
-
-  while (!iterator.end()) {
-    int time = iterator.time();
-
-    for (int view = 0; view < num_views; view += 1) {
-      std::vector<SiftFeature> all_features;
-
-      // Load features in this frame.
-      std::string file = makeFrameFilename(keypoints_format, views[view], time);
-      SiftFeatureReader feature_reader;
-      bool ok = loadList(file, all_features, feature_reader);
-      if (!ok) {
+      if (point.get().size() > 1) {
+        // Multiple features in this frame. Inconsistent track!
         return false;
+      } else {
+        // Add the single element in the vector to the track.
+        track.set(Frame(i, point.time()), point.get().front());
       }
-      LOG(INFO) << "Loaded " << all_features.size() << " features for (" <<
-          view << ", " << time << ")";
 
-      // Get feature indices matched in this frame.
-      std::map<int, int> subset;
-      iterator.getView(view, subset);
-
-      // Copy into track.
-      std::map<int, int>::const_iterator id;
-      for (id = subset.begin(); id != subset.end(); ++id) {
-        track_list[id->first].add(Frame(view, time), all_features[id->second]);
-      }
+      point.next();
     }
-
-    iterator.next();
-  }
-
-  tracks.reset(num_views);
-  for (int i = 0; i < num_features; i += 1) {
-    tracks.add(track_list[i]);
   }
 
   return true;
@@ -269,10 +211,9 @@ int main(int argc, char** argv) {
   init(argc, argv);
 
   std::string matches_format = argv[1];
-  std::string keypoints_format = argv[2];
-  std::string view_names_file = argv[3];
-  int num_frames = boost::lexical_cast<int>(argv[4]);
-  std::string tracks_file = argv[5];
+  std::string view_names_file = argv[2];
+  int num_frames = boost::lexical_cast<int>(argv[3]);
+  std::string tracks_file = argv[4];
 
   bool ok;
 
@@ -291,65 +232,65 @@ int main(int argc, char** argv) {
 
   // Find connected components of graph.
   std::vector<int> labels(num_vertices);
-  int num_components = boost::connected_components(graph, &labels[0]);
+  int num_components = boost::connected_components(graph, &labels.front());
   LOG(INFO) << "Found " << num_components << " connected components";
 
-  // Group features into subgraphs.
-  std::list<FeatureList> subsets(num_components);
+  // boost::connected_components assigns a label to each node.
+  // Now assign features with the same label to one track.
 
-  {
-    // Build lookup table.
-    std::vector<FeatureList*> subset_map(num_components);
+  // "Multitracks" can have more than one feature per frame.
+  std::vector<MultiviewTrack<FeatureSet> > multitrack_list(num_components,
+      MultiviewTrack<FeatureSet>(num_views));
 
-    std::list<FeatureList>::iterator subset = subsets.begin();
-    for (int i = 0; i < num_components; i += 1) {
-      subset_map[i] = &(*subset);
-      ++subset;
+  for (int i = 0; i < num_vertices; i += 1) {
+    const FeatureIndex& vertex = graph[i];
+    Frame frame(vertex.view, vertex.time);
+
+    MultiviewTrack<FeatureSet>& multitrack = multitrack_list[labels[i]];
+
+    FeatureSet* set = multitrack.get(frame);
+
+    // If there is no entry for this frame, create a blank one.
+    if (set == NULL) {
+      multitrack.set(frame, FeatureSet());
+      set = multitrack.get(frame);
+      CHECK(set != NULL);
     }
 
-    // Put features into their components.
-    for (int i = 0; i < num_vertices; i += 1) {
-      subset_map[labels[i]]->push_back(graph[i]);
-    }
+    // Add this feature.
+    set->push_back(vertex.id);
   }
 
-  // Sort through components and ensure that they are consistent.
-  {
-    std::list<FeatureList>::iterator subset = subsets.begin();
-    while (subset != subsets.end()) {
-      if (!isConsistent(*subset)) {
-        // Inconsistent. Remove it.
-        subsets.erase(subset++);
-      } else {
-        // Consistent. Keep it.
-        ++subset;
+  MultiviewTrackList<FeatureSet> multitracks(num_views);
+  for (int i = 0; i < num_components; i += 1) {
+    multitracks.add(multitrack_list[i]);
+  }
+
+  if (FLAGS_discard_inconsistent) {
+    // Build actual tracks from "multitracks", which have a set per frame.
+    MultiviewTrackList<int> tracks(num_views);
+
+    for (int i = 0; i < num_components; i += 1) {
+      // Do not keep "multi-tracks" which were observed twice in one frame.
+      MultiviewTrack<int> track;
+      bool consistent = multitrackToTrack(multitracks.track(i), track);
+
+      if (!consistent) {
+        tracks.add(track);
       }
     }
+
+    // Save track list.
+    DefaultWriter<int> feature_writer;
+    ok = saveMultiviewTrackList(tracks_file, tracks, feature_writer);
+    CHECK(ok) << "Could not save tracks";
+  } else {
+    // Save track list.
+    DefaultWriter<int> feature_writer;
+    VectorWriter<int> feature_set_writer(feature_writer);
+    ok = saveMultiviewTrackList(tracks_file, multitracks, feature_set_writer);
+    CHECK(ok) << "Could not save tracks";
   }
-  LOG(INFO) << "Pruned to " << subsets.size() << " consistent subsets";
-
-  // Convert from graph components to tracks!
-  MultiviewTrackList<int> id_tracks(num_views);
-  {
-    std::list<FeatureList>::const_iterator subset;
-    for (subset = subsets.begin(); subset != subsets.end(); ++subset) {
-      MultiviewTrack<int> track;
-      convertFeaturesToTrack(*subset, track, num_views);
-
-      // Add to list.
-      id_tracks.add(track);
-    }
-  }
-
-  // Convert from indices to actual features.
-  MultiviewTrackList<SiftFeature> tracks;
-  ok = loadFeatures(id_tracks, keypoints_format, views, tracks);
-  CHECK(ok) << "Could not load features for matches";
-
-  // Save track list.
-  SiftFeatureWriter feature_writer;
-  ok = saveMultiviewTrackList(tracks_file, tracks, feature_writer);
-  CHECK(ok) << "Could not save tracks";
 
   return 0;
 }

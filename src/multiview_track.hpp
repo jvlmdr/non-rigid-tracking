@@ -27,12 +27,14 @@ class MultiviewTrack {
     void reset(int num_views);
     void swap(MultiviewTrack<T>& other);
 
-    void add(const Frame& frame, const T& x);
-    void addTrack(int view, const Track<T>& track);
+    const T* get(const Frame& frame) const;
+    T* get(const Frame& frame);
+    void set(const Frame& frame, const T& x);
+    void setTrack(int view, const Track<T>& track);
 
-    // Provides read access to the track in one view.
-    const Track<T>& track(int view) const;
-    const std::vector<Track<T> >& tracks() const;
+    // Read access.
+    const Track<T>& view(int view) const;
+    const std::vector<Track<T> >& views() const;
 
     int numViews() const;
     int numFrames() const;

@@ -153,7 +153,7 @@ bool loadFeatures(const MultiviewTrackList<int>& id_tracks,
       // Copy into track.
       std::map<int, int>::const_iterator id;
       for (id = subset.begin(); id != subset.end(); ++id) {
-        track_list[id->first].add(Frame(view, time), all_features[id->second]);
+        track_list[id->first].set(Frame(view, time), all_features[id->second]);
       }
     }
 
