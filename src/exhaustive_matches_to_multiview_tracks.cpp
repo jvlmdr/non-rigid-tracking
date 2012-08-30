@@ -280,6 +280,10 @@ int main(int argc, char** argv) {
       }
     }
 
+    int num_discarded = multitracks.numTracks() - tracks.numTracks();
+    LOG(INFO) << "Discarded " << num_discarded << " inconsistent tracks (" <<
+        tracks.numTracks() << "/" << multitracks.numTracks() << " remain)";
+
     // Save track list.
     DefaultWriter<int> feature_writer;
     ok = saveMultiviewTrackList(tracks_file, tracks, feature_writer);
