@@ -1,21 +1,21 @@
 #include <glog/logging.h>
 
 template<class T>
-MultiviewTrack<T>::MultiviewTrack() : tracks_(), num_frames_(0) {}
+MultiviewTrack<T>::MultiviewTrack() : view_tracks_(), num_frames_(0) {}
 
 template<class T>
 MultiviewTrack<T>::MultiviewTrack(int num_views)
-    : tracks_(num_views, Track<T>()), num_frames_(0) {}
+    : view_tracks_(num_views, Track<T>()), num_frames_(0) {}
 
 template<class T>
 void MultiviewTrack<T>::reset(int num_views) {
   num_frames_ = 0;
-  tracks_.assign(num_views, Track<T>());
+  view_tracks_.assign(num_views, Track<T>());
 }
 
 template<class T>
 void MultiviewTrack<T>::swap(MultiviewTrack<T>& other) {
-  tracks_.swap(other.tracks_);
+  view_tracks_.swap(other.view_tracks_);
   std::swap(num_frames_, other.num_frames_);
 }
 
@@ -23,9 +23,9 @@ template<class T>
 const T* MultiviewTrack<T>::get(const Frame& frame) const {
   typename Track<T>::const_iterator result;
 
-  result = tracks_[frame.view].find(frame.time);
+  result = view_tracks_[frame.view].find(frame.time);
 
-  if (result == tracks_[frame.view].end()) {
+  if (result == view_tracks_[frame.view].end()) {
     // Frame was not found in track index.
     return NULL;
   } else {
@@ -38,9 +38,9 @@ template<class T>
 T* MultiviewTrack<T>::get(const Frame& frame) {
   typename Track<T>::iterator result;
 
-  result = tracks_[frame.view].find(frame.time);
+  result = view_tracks_[frame.view].find(frame.time);
 
-  if (result == tracks_[frame.view].end()) {
+  if (result == view_tracks_[frame.view].end()) {
     // Frame was not found in track index.
     return NULL;
   } else {
@@ -51,7 +51,7 @@ T* MultiviewTrack<T>::get(const Frame& frame) {
 
 template<class T>
 void MultiviewTrack<T>::set(const Frame& frame, const T& x) {
-  tracks_[frame.view][frame.time] = x;
+  view_tracks_[frame.view][frame.time] = x;
   if (frame.time > num_frames_ - 1) {
     num_frames_ = frame.time + 1;
   }
@@ -69,17 +69,36 @@ void MultiviewTrack<T>::setTrack(int view, const Track<T>& track) {
 
 template<class T>
 const Track<T>& MultiviewTrack<T>::view(int i) const {
-  return tracks_[i];
+  return view_tracks_[i];
 }
 
 template<class T>
-const std::vector<Track<T> >& MultiviewTrack<T>::views() const {
-  return tracks_;
+typename MultiviewTrack<T>::iterator
+MultiviewTrack<T>::begin() {
+  return view_tracks_.begin();
+}
+
+template<class T>
+typename MultiviewTrack<T>::iterator
+MultiviewTrack<T>::end() {
+  return view_tracks_.end();
+}
+
+template<class T>
+typename MultiviewTrack<T>::const_iterator
+MultiviewTrack<T>::begin() const {
+  return view_tracks_.begin();
+}
+
+template<class T>
+typename MultiviewTrack<T>::const_iterator
+MultiviewTrack<T>::end() const {
+  return view_tracks_.end();
 }
 
 template<class T>
 int MultiviewTrack<T>::numViews() const {
-  return tracks_.size();
+  return view_tracks_.size();
 }
 
 template<class T>
@@ -89,11 +108,11 @@ int MultiviewTrack<T>::numFrames() const {
 
 template<class T>
 bool MultiviewTrack<T>::empty() const {
-  int num_views = tracks_.size();
+  int num_views = view_tracks_.size();
 
   for (int i = 0; i < num_views; i += 1) {
     // If any view's track is non-empty, then the multi-view track is non-empty.
-    if (!tracks_[i].empty()) {
+    if (!view_tracks_[i].empty()) {
       return false;
     }
   }
@@ -103,11 +122,11 @@ bool MultiviewTrack<T>::empty() const {
 
 template<class T>
 int MultiviewTrack<T>::numViewsPresent() const {
-  int num_views = tracks_.size();
+  int num_views = view_tracks_.size();
   int count = 0;
 
   for (int i = 0; i < num_views; i += 1) {
-    if (!tracks_[i].empty()) {
+    if (!view_tracks_[i].empty()) {
       count += 1;
     }
   }

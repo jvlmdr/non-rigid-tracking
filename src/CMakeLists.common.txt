@@ -279,3 +279,9 @@ ADD_EXECUTABLE(match-tracks-using-min
   match_result_writer.cpp)
 TARGET_LINK_LIBRARIES(match-tracks-using-min glog gflags)
 TARGET_LINK_LIBRARIES(match-tracks-using-min ${OpenCV_LIBS})
+
+ADD_EXECUTABLE(multiview-index-tracks-to-features
+  multiview_index_tracks_to_features.cpp
+  multiview_track.cpp)
+TARGET_LINK_LIBRARIES(multiview-index-tracks-to-features glog gflags)
+TARGET_LINK_LIBRARIES(multiview-index-tracks-to-features ${OpenCV_LIBS})
