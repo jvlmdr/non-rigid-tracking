@@ -2,7 +2,7 @@
 #define MULTIVIEW_TRACK_HPP_
 
 #include "track.hpp"
-#include "smart_vector.hpp"
+#include <vector>
 
 // A frame is identified by a video stream and a time instant.
 struct Frame {
@@ -21,8 +21,8 @@ struct Frame {
 template<class T>
 class MultiviewTrack {
   public:
-    typedef typename SmartVector<Track<T> >::iterator iterator;
-    typedef typename SmartVector<Track<T> >::const_iterator const_iterator;
+    typedef typename std::vector<Track<T> >::iterator iterator;
+    typedef typename std::vector<Track<T> >::const_iterator const_iterator;
 
     explicit MultiviewTrack(int num_views);
     MultiviewTrack();
@@ -30,10 +30,8 @@ class MultiviewTrack {
     void reset(int num_views);
     void swap(MultiviewTrack<T>& other);
 
-    const T* get(const Frame& frame) const;
-    T* get(const Frame& frame);
-    void set(const Frame& frame, const T& x);
-    void setTrack(int view, const Track<T>& track);
+    const T* point(const Frame& frame) const;
+    T* point(const Frame& frame);
 
     // Read access.
     const Track<T>& view(int view) const;
@@ -52,7 +50,7 @@ class MultiviewTrack {
     int numViewsPresent() const;
 
   private:
-    SmartVector<Track<T> > view_tracks_;
+    std::vector<Track<T> > view_tracks_;
     int num_frames_;
 };
 

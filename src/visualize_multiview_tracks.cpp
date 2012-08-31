@@ -133,27 +133,27 @@ bool loadFeatures(const MultiviewTrackList<int>& id_tracks,
   while (!iterator.end()) {
     int time = iterator.time();
 
-    for (int view = 0; view < num_views; view += 1) {
+    for (int i = 0; i < num_views; i += 1) {
       std::vector<SimilarityFeature> all_features;
 
       // Load features in this frame.
-      std::string file = makeFrameFilename(features_format, views[view], time);
+      std::string file = makeFrameFilename(features_format, views[i], time);
       SimilarityFeatureReader feature_reader;
       bool ok = loadList(file, all_features, feature_reader);
       if (!ok) {
         return false;
       }
-      LOG(INFO) << "Loaded " << all_features.size() << " features for (" <<
-          view << ", " << time << ")";
+      LOG(INFO) << "Loaded " << all_features.size() << " features for (" << i <<
+          ", " << time << ")";
 
       // Get feature indices matched in this frame.
       std::map<int, int> subset;
-      iterator.getView(view, subset);
+      iterator.getView(i, subset);
 
       // Copy into track.
       std::map<int, int>::const_iterator id;
       for (id = subset.begin(); id != subset.end(); ++id) {
-        track_list[id->first].set(Frame(view, time), all_features[id->second]);
+        track_list[id->first].view(i)[time] = all_features[id->second];
       }
     }
 

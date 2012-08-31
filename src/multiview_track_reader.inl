@@ -10,21 +10,14 @@ MultiviewTrackReader<T>::~MultiviewTrackReader() {}
 template<class T>
 void MultiviewTrackReader<T>::read(const cv::FileNode& node,
                                    MultiviewTrack<T>& multiview_track) {
-  std::vector<Track<T> > views;
+  std::vector<Track<T> > view_tracks;
   VectorReader<Track<T> > list_reader(*reader_);
-  list_reader.read(node, views);
+  list_reader.read(node, view_tracks);
 
-  int num_views = views.size();
+  int num_views = view_tracks.size();
   multiview_track.reset(num_views);
 
-  // Iterate through views.
-  for (int view = 0; view < num_views; view += 1) {
-    // Iterate through track in each view.
-    typename Track<T>::const_iterator point;
-    for (point = views[view].begin(); point != views[view].end(); ++point) {
-      // Add each point to the track.
-      int time = point->first;
-      multiview_track.set(Frame(view, time), point->second);
-    }
+  for (int i = 0; i < num_views; i += 1) {
+    multiview_track.view(i).swap(view_tracks[i]);
   }
 }

@@ -20,7 +20,7 @@ void MultiviewTrack<T>::swap(MultiviewTrack<T>& other) {
 }
 
 template<class T>
-const T* MultiviewTrack<T>::get(const Frame& frame) const {
+const T* MultiviewTrack<T>::point(const Frame& frame) const {
   typename Track<T>::const_iterator result;
 
   result = view_tracks_[frame.view].find(frame.time);
@@ -35,7 +35,7 @@ const T* MultiviewTrack<T>::get(const Frame& frame) const {
 }
 
 template<class T>
-T* MultiviewTrack<T>::get(const Frame& frame) {
+T* MultiviewTrack<T>::point(const Frame& frame) {
   typename Track<T>::iterator result;
 
   result = view_tracks_[frame.view].find(frame.time);
@@ -50,25 +50,12 @@ T* MultiviewTrack<T>::get(const Frame& frame) {
 }
 
 template<class T>
-void MultiviewTrack<T>::set(const Frame& frame, const T& x) {
-  view_tracks_[frame.view][frame.time] = x;
-  if (frame.time > num_frames_ - 1) {
-    num_frames_ = frame.time + 1;
-  }
-}
-
-template<class T>
-void MultiviewTrack<T>::setTrack(int view, const Track<T>& track) {
-  typename Track<T>::const_iterator point;
-
-  // Add each point in the track.
-  for (point = track.begin(); point != track.end(); ++point) {
-    set(Frame(view, point->first), point->second);
-  }
-}
-
-template<class T>
 const Track<T>& MultiviewTrack<T>::view(int i) const {
+  return view_tracks_[i];
+}
+
+template<class T>
+Track<T>& MultiviewTrack<T>::view(int i) {
   return view_tracks_[i];
 }
 

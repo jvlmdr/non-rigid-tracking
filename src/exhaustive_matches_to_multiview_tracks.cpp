@@ -180,13 +180,19 @@ void loadAllMatches(const std::string& matches_format,
   }
 }
 
-bool multitrackToTrack(const MultiviewTrack<FeatureSet>& multitrack,
-                       MultiviewTrack<int>& track) {
-  int num_views = multitrack.numViews();
-  track.reset(num_views);
+bool multitrackToTrack(const MultiviewTrack<FeatureSet>& multiview_multitrack,
+                       MultiviewTrack<int>& multiview_track) {
+  int num_views = multiview_multitrack.numViews();
+  multiview_track.reset(num_views);
 
-  for (int i = 0; i < num_views; i += 1) {
-    TrackIterator<FeatureSet> point(multitrack.view(i));
+  MultiviewTrack<FeatureSet>::const_iterator multitrack;
+  MultiviewTrack<int>::iterator track;
+
+  multitrack = multiview_multitrack.begin();
+  track = multiview_track.begin();
+
+  while (multitrack != multiview_multitrack.end()) {
+    TrackIterator<FeatureSet> point(*multitrack);
 
     while (!point.end()) {
       // There should never be an entry with zero features.
@@ -197,11 +203,14 @@ bool multitrackToTrack(const MultiviewTrack<FeatureSet>& multitrack,
         return false;
       } else {
         // Add the single element in the vector to the track.
-        track.set(Frame(i, point.time()), point.get().front());
+        (*track)[point.time()] = point.get().front();
       }
 
       point.next();
     }
+
+    ++multitrack;
+    ++track;
   }
 
   return true;
@@ -248,12 +257,12 @@ int main(int argc, char** argv) {
 
     MultiviewTrack<FeatureSet>& multitrack = multitrack_list[labels[i]];
 
-    FeatureSet* set = multitrack.get(frame);
+    FeatureSet* set = multitrack.point(frame);
 
     // If there is no entry for this frame, create a blank one.
     if (set == NULL) {
-      multitrack.set(frame, FeatureSet());
-      set = multitrack.get(frame);
+      multitrack.view(vertex.view)[vertex.time] = FeatureSet();
+      set = multitrack.point(frame);
       CHECK(set != NULL);
     }
 
