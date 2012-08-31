@@ -6,15 +6,15 @@
 
 #include "match_result.hpp"
 #include "track_list.hpp"
-#include "similarity_feature.hpp"
+#include "sift_position.hpp"
 #include "multiview_track_list.hpp"
 
 #include "vector_reader.hpp"
 #include "match_result_reader.hpp"
 #include "track_list_reader.hpp"
-#include "similarity_feature_reader.hpp"
+#include "sift_position_reader.hpp"
 #include "multiview_track_list_writer.hpp"
-#include "similarity_feature_writer.hpp"
+#include "sift_position_writer.hpp"
 
 void init(int& argc, char**& argv) {
   std::ostringstream usage;
@@ -42,8 +42,8 @@ int main(int argc, char** argv) {
 
   bool ok;
   std::vector<MatchResult> matches;
-  TrackList<SimilarityFeature> tracks1;
-  TrackList<SimilarityFeature> tracks2;
+  TrackList<SiftPosition> tracks1;
+  TrackList<SiftPosition> tracks2;
 
   // Load matches.
   MatchResultReader match_reader;
@@ -51,7 +51,7 @@ int main(int argc, char** argv) {
   CHECK(ok) << "Could not load matches";
 
   // Load tracks.
-  SimilarityFeatureReader feature_reader;
+  SiftPositionReader feature_reader;
   ok = loadTrackList(tracks_file1, tracks1, feature_reader);
   CHECK(ok) << "Could not load tracks";
   ok = loadTrackList(tracks_file2, tracks2, feature_reader);
@@ -59,12 +59,12 @@ int main(int argc, char** argv) {
 
   // Create multi-view track.
   int num_views = 2;
-  MultiviewTrackList<SimilarityFeature> multiview_tracks(num_views);
+  MultiviewTrackList<SiftPosition> multiview_tracks(num_views);
 
   // Add multiview track for each match.
   int num_matches = matches.size();
   for (int i = 0; i < num_matches; i += 1) {
-    MultiviewTrack<SimilarityFeature> track(2);
+    MultiviewTrack<SiftPosition> track(2);
     track.view(0).swap(tracks1[matches[i].index1]);
     track.view(1).swap(tracks2[matches[i].index2]);
 
@@ -72,7 +72,7 @@ int main(int argc, char** argv) {
   }
 
   // Save track list.
-  SimilarityFeatureWriter writer;
+  SiftPositionWriter writer;
   ok = saveMultiviewTrackList(multiview_tracks_file, multiview_tracks, writer);
   CHECK(ok) << "Could not save multi-view tracks";
 

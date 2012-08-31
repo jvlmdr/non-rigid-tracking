@@ -1,16 +1,15 @@
 #ifndef SIFT_FEATURE_HPP_
 #define SIFT_FEATURE_HPP_
 
-#include "similarity_feature.hpp"
+#include "sift_position.hpp"
 #include "descriptor.hpp"
 
 struct SiftFeature {
-  SimilarityFeature position;
+  SiftPosition position;
   Descriptor descriptor;
 
   SiftFeature();
-  SiftFeature(const SimilarityFeature& position,
-              const Descriptor& descriptor);
+  SiftFeature(const SiftPosition& position, const Descriptor& descriptor);
 };
 
 #endif

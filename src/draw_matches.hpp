@@ -4,10 +4,10 @@
 #include <vector>
 #include <opencv2/core/core.hpp>
 #include "match.hpp"
-#include "similarity_feature.hpp"
+#include "sift_position.hpp"
 
-void drawMatches(const std::vector<SimilarityFeature>& keypoints1,
-                 const std::vector<SimilarityFeature>& keypoints2,
+void drawMatches(const std::vector<SiftPosition>& keypoints1,
+                 const std::vector<SiftPosition>& keypoints2,
                  const std::vector<Match>& matches,
                  cv::Mat& image1,
                  cv::Mat& image2,

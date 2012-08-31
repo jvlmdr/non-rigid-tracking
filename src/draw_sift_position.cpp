@@ -1,13 +1,13 @@
-#include "draw_similarity_feature.hpp"
+#include "draw_sift_position.hpp"
 #include <opencv2/imgproc/imgproc.hpp>
 #include <iostream>
 
 const double NUM_STDDEV = 2.;
 
-void drawSimilarityFeature(cv::Mat& image,
-                           const SimilarityFeature& feature,
-                           const cv::Scalar& color,
-                           int line_thickness) {
+void drawSiftPosition(cv::Mat& image,
+                      const SiftPosition& feature,
+                      const cv::Scalar& color,
+                      int line_thickness) {
   double radius = NUM_STDDEV * SIFT_SIZE_TO_SIGMA * feature.size;
 
   cv::Point2d c(feature.x, feature.y);

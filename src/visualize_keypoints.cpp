@@ -11,13 +11,15 @@
 #include <opencv2/features2d/features2d.hpp>
 #include <gflags/gflags.h>
 #include <glog/logging.h>
+
 #include "read_image.hpp"
 #include "descriptor.hpp"
 #include "match.hpp"
 #include "random_color.hpp"
-#include "similarity_feature.hpp"
-#include "draw_similarity_feature.hpp"
-#include "similarity_feature_reader.hpp"
+#include "sift_position.hpp"
+#include "draw_sift_position.hpp"
+
+#include "sift_position_reader.hpp"
 #include "vector_reader.hpp"
 
 const double SATURATION = 0.99;
@@ -28,23 +30,23 @@ DEFINE_string(output_file, "keypoints.png", "Location to save image.");
 DEFINE_bool(save, false, "Save to file?");
 DEFINE_bool(display, true, "Show in window?");
 
-typedef std::vector<SimilarityFeature> FeatureList;
+typedef std::vector<SiftPosition> FeatureList;
 
-// Converts a cv::KeyPoint to a SimilarityFeature.
-SimilarityFeature keypointToSimilarityFeature(const cv::KeyPoint& keypoint) {
+// Converts a cv::KeyPoint to a SiftPosition.
+SiftPosition keypointToSiftPosition(const cv::KeyPoint& keypoint) {
   double theta = keypoint.angle / 180. * CV_PI;
-  return SimilarityFeature(keypoint.pt.x, keypoint.pt.y, keypoint.size, theta);
+  return SiftPosition(keypoint.pt.x, keypoint.pt.y, keypoint.size, theta);
 }
 
 // Renders a keypoint on top of an image with a random color.
-void drawFeature(cv::Mat& image, const SimilarityFeature& feature) {
+void drawFeature(cv::Mat& image, const SiftPosition& feature) {
   // Generate a random color.
   cv::Scalar color = randomColor(SATURATION, BRIGHTNESS);
-  drawSimilarityFeature(image, feature, color, LINE_THICKNESS);
+  drawSiftPosition(image, feature, color, LINE_THICKNESS);
 }
 
 // Renders all keypoints over an image with random colors.
-void drawSimilarityFeatures(cv::Mat& image, const FeatureList& features) {
+void drawSiftPositions(cv::Mat& image, const FeatureList& features) {
   // Draw each keypoint with a random color.
   std::for_each(features.begin(), features.end(),
       boost::bind(drawFeature, boost::ref(image), _1));
@@ -83,13 +85,13 @@ int main(int argc, char** argv) {
 
   // Load keypoints.
   FeatureList features;
-  SimilarityFeatureReader feature_reader;
+  SiftPositionReader feature_reader;
   ok = loadList(keypoints_file, features, feature_reader);
   CHECK(ok) << "Could not load keypoints";
   LOG(INFO) << "Loaded " << features.size() << " keypoints" << std::endl;
 
   // Visualize matches.
-  drawSimilarityFeatures(image, features);
+  drawSiftPositions(image, features);
 
   if (FLAGS_save) {
     cv::imwrite(output_file, image);

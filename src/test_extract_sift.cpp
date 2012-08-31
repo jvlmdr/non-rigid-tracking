@@ -10,7 +10,7 @@
 #include <opencv2/features2d/features2d.hpp>
 #include <opencv2/nonfree/nonfree.hpp>
 #include "read_image.hpp"
-#include "similarity_feature.hpp"
+#include "sift_position.hpp"
 #include "descriptor.hpp"
 #include "sift.hpp"
 
@@ -83,7 +83,7 @@ int main(int argc, char** argv) {
 
   typedef std::vector<Descriptor> DescriptorList;
   typedef std::vector<cv::KeyPoint> KeypointList;
-  typedef std::vector<SimilarityFeature> FeatureList;
+  typedef std::vector<SiftPosition> FeatureList;
 
   KeypointList keypoints;
   FeatureList features;
@@ -99,7 +99,7 @@ int main(int argc, char** argv) {
     sift(integer_image, cv::noArray(), keypoints, descriptor_table, false);
 
     // Convert.
-    extractSimilarityFeaturesFromKeypoints(keypoints, features);
+    extractSiftPositionsFromKeypoints(keypoints, features);
     extractDescriptorsFromMatrix(descriptor_table, cv_descriptors);
   }
 

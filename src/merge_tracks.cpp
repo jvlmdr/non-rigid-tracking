@@ -12,14 +12,16 @@
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/features2d/features2d.hpp>
 #include <gflags/gflags.h>
+
 #include "track_list.hpp"
-#include "similarity_feature.hpp"
-#include "similarity_feature_reader.hpp"
-#include "similarity_feature_writer.hpp"
+#include "sift_position.hpp"
+
+#include "sift_position_reader.hpp"
+#include "sift_position_writer.hpp"
 #include "track_list_reader.hpp"
 #include "track_list_writer.hpp"
 
-typedef TrackList<SimilarityFeature> SimilarityTrackList;
+typedef TrackList<SiftPosition> SimilarityTrackList;
 typedef std::vector<SimilarityTrackList> TrackListList;
 
 std::string makeFilename(const std::string& format, int n) {
@@ -49,7 +51,7 @@ bool loadAllTracks(const std::string& tracks_format,
     SimilarityTrackList track_list;
 
     // Attempt to load tracks.
-    SimilarityFeatureReader feature_reader;
+    SiftPositionReader feature_reader;
     ok = loadTrackList(tracks_file, track_list, feature_reader);
     if (!ok) {
       // Failed.
@@ -113,7 +115,7 @@ int main(int argc, char** argv) {
     }
   }
 
-  SimilarityFeatureWriter feature_writer;
+  SiftPositionWriter feature_writer;
   ok = saveTrackList(merged_file, merged, feature_writer);
   CHECK(ok) << "Could not save tracks";
 

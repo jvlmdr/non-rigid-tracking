@@ -12,15 +12,17 @@
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/features2d/features2d.hpp>
 #include <gflags/gflags.h>
+
 #include "multiview_track_list.hpp"
-#include "similarity_feature.hpp"
-#include "similarity_feature_reader.hpp"
-#include "similarity_feature_writer.hpp"
+#include "sift_position.hpp"
+
+#include "sift_position_reader.hpp"
+#include "sift_position_writer.hpp"
 #include "multiview_track_list_reader.hpp"
 #include "multiview_track_list_writer.hpp"
 
 // Hmm.. this may be shadowing TrackList<T>.
-typedef MultiviewTrackList<SimilarityFeature> TrackList;
+typedef MultiviewTrackList<SiftPosition> TrackList;
 // Use a list to allow it to grow dynamically without copying.
 typedef std::list<TrackList> TrackListList;
 
@@ -51,7 +53,7 @@ bool loadAllTracks(const std::string& tracks_format,
     TrackList track_list;
 
     // Attempt to load tracks.
-    SimilarityFeatureReader feature_reader;
+    SiftPositionReader feature_reader;
     ok = loadMultiviewTrackList(tracks_file, track_list, feature_reader);
     if (!ok) {
       // Failed.
@@ -112,12 +114,12 @@ int main(int argc, char** argv) {
     // Add each track to the full list.
     TrackList::const_iterator track;
     for (track = tracks->begin(); track != tracks->end(); ++track) {
-      MultiviewTrack<SimilarityFeature> copy(*track);
+      MultiviewTrack<SiftPosition> copy(*track);
       merged.add(copy);
     }
   }
 
-  SimilarityFeatureWriter feature_writer;
+  SiftPositionWriter feature_writer;
   ok = saveMultiviewTrackList(merged_file, merged, feature_writer);
   CHECK(ok) << "Could not save tracks";
 

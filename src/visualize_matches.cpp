@@ -9,14 +9,16 @@
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/features2d/features2d.hpp>
 #include <gflags/gflags.h>
+
 #include "read_image.hpp"
 #include "descriptor.hpp"
 #include "match.hpp"
 #include "draw_matches.hpp"
-#include "similarity_feature.hpp"
+#include "sift_position.hpp"
+
 #include "vector_reader.hpp"
 #include "match_reader.hpp"
-#include "similarity_feature_reader.hpp"
+#include "sift_position_reader.hpp"
 
 DEFINE_string(output_file, "matches.png", "Location to save image.");
 DEFINE_bool(save, false, "Save to file?");
@@ -24,7 +26,7 @@ DEFINE_bool(display, true, "Show matches?");
 
 int LINE_THICKNESS = 1;
 
-typedef std::vector<SimilarityFeature> SimilarityFeatureList;
+typedef std::vector<SiftPosition> SiftPositionList;
 typedef std::vector<Match> MatchList;
 
 int main(int argc, char** argv) {
@@ -73,11 +75,11 @@ int main(int argc, char** argv) {
     return 1;
   }
 
-  SimilarityFeatureList keypoints1;
-  SimilarityFeatureList keypoints2;
+  SiftPositionList keypoints1;
+  SiftPositionList keypoints2;
 
   // Load keypoints.
-  SimilarityFeatureReader feature_reader;
+  SiftPositionReader feature_reader;
 
   ok = loadList(keypoints_file1, keypoints1, feature_reader);
   if (!ok) {

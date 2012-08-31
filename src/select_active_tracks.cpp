@@ -9,25 +9,25 @@
 #include <gflags/gflags.h>
 #include <glog/logging.h>
 #include "track_list.hpp"
-#include "similarity_feature.hpp"
-#include "similarity_feature_reader.hpp"
+#include "sift_position.hpp"
+#include "sift_position_reader.hpp"
 #include "track_list_reader.hpp"
-#include "similarity_feature_writer.hpp"
+#include "sift_position_writer.hpp"
 #include "track_list_writer.hpp"
 
 DEFINE_bool(top_n, false, "Select best n tracks (versus a threshold)");
 DEFINE_bool(fraction, false, "When top_n is enabled, selects top fraction");
 
 // Considers only (x, y) movement not rotation or scale.
-double measureAverageStep(const Track<SimilarityFeature>& track) {
+double measureAverageStep(const Track<SiftPosition>& track) {
   double distance = 0;
   int n = 0;
   cv::Point2d previous;
 
-  Track<SimilarityFeature>::const_iterator point;
+  Track<SiftPosition>::const_iterator point;
   for (point = track.begin(); point != track.end(); ++point) {
     // Get current position.
-    const SimilarityFeature& feature = point->second;
+    const SiftPosition& feature = point->second;
     cv::Point2d current(feature.x, feature.y);
 
     // If this is the first point, we have no previous measurement.
@@ -71,8 +71,8 @@ int main(int argc, char** argv) {
   const char* threshold = argv[3];
 
   // Load tracks from file.
-  TrackList<SimilarityFeature> input_tracks;
-  SimilarityFeatureReader feature_reader;
+  TrackList<SiftPosition> input_tracks;
+  SiftPositionReader feature_reader;
   bool ok = loadTrackList(input_file, input_tracks, feature_reader);
   CHECK(ok) << "Could not load tracks";
 
@@ -109,7 +109,7 @@ int main(int argc, char** argv) {
     min_distance_per_frame = boost::lexical_cast<double>(threshold);
   }
 
-  TrackList<SimilarityFeature> output_tracks;
+  TrackList<SiftPosition> output_tracks;
 
   // Filter out distances which are too small.
   for (int i = 0; i < num_tracks; i += 1) {
@@ -125,7 +125,7 @@ int main(int argc, char** argv) {
       fraction << ")";
 
   // Write out tracks.
-  SimilarityFeatureWriter feature_writer;
+  SiftPositionWriter feature_writer;
   ok = saveTrackList(output_file, output_tracks, feature_writer);
   CHECK(ok) << "Could not save tracks";
 

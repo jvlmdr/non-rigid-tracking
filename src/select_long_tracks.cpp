@@ -8,10 +8,10 @@
 #include <gflags/gflags.h>
 #include <glog/logging.h>
 #include "track_list.hpp"
-#include "similarity_feature.hpp"
+#include "sift_position.hpp"
 
-#include "similarity_feature_reader.hpp"
-#include "similarity_feature_writer.hpp"
+#include "sift_position_reader.hpp"
+#include "sift_position_writer.hpp"
 #include "track_list_reader.hpp"
 #include "track_list_writer.hpp"
 
@@ -52,8 +52,8 @@ int main(int argc, char** argv) {
   std::string output_file = argv[2];
 
   // Load tracks from file.
-  TrackList<SimilarityFeature> input_tracks;
-  SimilarityFeatureReader feature_reader;
+  TrackList<SiftPosition> input_tracks;
+  SiftPositionReader feature_reader;
   bool ok = loadTrackList(input_file, input_tracks, feature_reader);
   CHECK(ok) << "Could not load tracks";
 
@@ -66,7 +66,7 @@ int main(int argc, char** argv) {
     // Sort tracks by their length.
     std::vector<ScoredIndex> scored;
     for (int i = 0; i < int(input_tracks.size()); i += 1) {
-      const Track<SimilarityFeature>& track = input_tracks[i];
+      const Track<SiftPosition>& track = input_tracks[i];
       int length = track.rbegin()->first - track.begin()->first + 1;
       scored.push_back(ScoredIndex(i, length));
     }
@@ -90,9 +90,9 @@ int main(int argc, char** argv) {
     min_track_length = boost::lexical_cast<int>(argv[3]);
   }
 
-  TrackList<SimilarityFeature> output_tracks;
+  TrackList<SiftPosition> output_tracks;
 
-  TrackList<SimilarityFeature>::const_iterator track;
+  TrackList<SiftPosition>::const_iterator track;
   for (track = input_tracks.begin(); track != input_tracks.end(); ++track) {
     // Measure track length.
     int length = track->rbegin()->first - track->begin()->first + 1;
@@ -110,7 +110,7 @@ int main(int argc, char** argv) {
       fraction << ")";
 
   // Write out tracks.
-  SimilarityFeatureWriter feature_writer;
+  SiftPositionWriter feature_writer;
   ok = saveTrackList(output_file, output_tracks, feature_writer);
   CHECK(ok) << "Could not save tracks";
 

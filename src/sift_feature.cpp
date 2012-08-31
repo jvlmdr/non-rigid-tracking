@@ -2,6 +2,6 @@
 
 SiftFeature::SiftFeature() : position(), descriptor() {}
 
-SiftFeature::SiftFeature(const SimilarityFeature& position,
+SiftFeature::SiftFeature(const SiftPosition& position,
                          const Descriptor& descriptor)
     : position(position), descriptor(descriptor) {}

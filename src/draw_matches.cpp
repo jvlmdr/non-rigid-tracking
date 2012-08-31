@@ -1,16 +1,16 @@
 #include "draw_matches.hpp"
 #include "random_color.hpp"
-#include "similarity_feature.hpp"
-#include "draw_similarity_feature.hpp"
+#include "sift_position.hpp"
+#include "draw_sift_position.hpp"
 
 const double SATURATION = 0.99;
 const double BRIGHTNESS = 0.99;
 
-typedef std::vector<SimilarityFeature> SimilarityFeatureList;
+typedef std::vector<SiftPosition> SiftPositionList;
 typedef std::vector<Match> MatchList;
 
-void drawMatches(const std::vector<SimilarityFeature>& keypoints1,
-                 const std::vector<SimilarityFeature>& keypoints2,
+void drawMatches(const std::vector<SiftPosition>& keypoints1,
+                 const std::vector<SiftPosition>& keypoints2,
                  const std::vector<Match>& matches,
                  cv::Mat& image1,
                  cv::Mat& image2,
@@ -22,10 +22,8 @@ void drawMatches(const std::vector<SimilarityFeature>& keypoints1,
     cv::Scalar color = randomColor(SATURATION, BRIGHTNESS);
 
     // Draw the keypoint in each image.
-    drawSimilarityFeature(image1, keypoints1[match->first], color,
-        line_thickness);
-    drawSimilarityFeature(image2, keypoints2[match->second], color,
-        line_thickness);
+    drawSiftPosition(image1, keypoints1[match->first], color, line_thickness);
+    drawSiftPosition(image2, keypoints2[match->second], color, line_thickness);
   }
 
   // Initialize large side-by-side image with black background.

@@ -12,16 +12,18 @@
 #include <opencv2/imgproc/imgproc.hpp>
 #include <opencv2/features2d/features2d.hpp>
 #include <ceres/ceres.h>
+
 #include "read_image.hpp"
 #include "warp.hpp"
 #include "similarity_warp.hpp"
-#include "similarity_feature.hpp"
+#include "sift_position.hpp"
 #include "flow.hpp"
 #include "track_list.hpp"
 #include "random_color.hpp"
+
 #include "vector_reader.hpp"
-#include "similarity_feature_reader.hpp"
-#include "similarity_feature_writer.hpp"
+#include "sift_position_reader.hpp"
+#include "sift_position_writer.hpp"
 #include "track_list_writer.hpp"
 #include "util.hpp"
 
@@ -88,7 +90,7 @@ cv::Mat makeGaussian(double sigma, int width) {
   return gaussian;
 }
 
-Params featureToParams(const SimilarityFeature& feature) {
+Params featureToParams(const SiftPosition& feature) {
   Params params(4);
 
   params[0] = feature.x;
@@ -103,8 +105,8 @@ Params featureToParams(const SimilarityFeature& feature) {
   return params;
 }
 
-SimilarityFeature paramsToFeature(const Params& params) {
-  SimilarityFeature feature;
+SiftPosition paramsToFeature(const Params& params) {
+  SiftPosition feature;
 
   feature.x = params[0];
   feature.y = params[1];
@@ -118,7 +120,7 @@ SimilarityFeature paramsToFeature(const Params& params) {
   return feature;
 }
 
-std::pair<int, SimilarityFeature> paramsPairToFeaturePair(
+std::pair<int, SiftPosition> paramsPairToFeaturePair(
     const std::pair<int, Params>& pair) {
   return std::make_pair(pair.first, paramsToFeature(pair.second));
 }
@@ -357,8 +359,8 @@ int main(int argc, char** argv) {
   std::string tracks_file = argv[4];
 
   // Load initial keypoints (x, y, size, theta).
-  std::vector<SimilarityFeature> keypoints;
-  SimilarityFeatureReader feature_reader;
+  std::vector<SiftPosition> keypoints;
+  SiftPositionReader feature_reader;
   bool ok = loadList(keypoints_file, keypoints, feature_reader);
   CHECK(ok) << "Could not load keypoints";
 
@@ -437,15 +439,15 @@ int main(int argc, char** argv) {
   }
 
   // Convert to features.
-  TrackList<SimilarityFeature> tracks(num_features);
+  TrackList<SiftPosition> tracks(num_features);
   for (int i = 0; i < num_features; i += 1) {
-    Track<SimilarityFeature> track;
+    Track<SiftPosition> track;
     std::transform(param_tracks[i].begin(), param_tracks[i].end(),
         std::inserter(track, track.begin()), paramsPairToFeaturePair);
     tracks[i].swap(track);
   }
 
-  SimilarityFeatureWriter feature_writer;
+  SiftPositionWriter feature_writer;
   ok = saveTrackList(tracks_file, tracks, feature_writer);
   CHECK(ok) << "Could not save tracks";
 

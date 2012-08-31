@@ -12,12 +12,14 @@
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/features2d/features2d.hpp>
 #include <gflags/gflags.h>
+
 #include "read_image.hpp"
 #include "track_list.hpp"
-#include "similarity_feature.hpp"
-#include "draw_similarity_feature.hpp"
+#include "sift_position.hpp"
+#include "draw_sift_position.hpp"
 #include "random_color.hpp"
-#include "similarity_feature_reader.hpp"
+
+#include "sift_position_reader.hpp"
 #include "track_list_reader.hpp"
 
 const double SATURATION = 0.99;
@@ -33,17 +35,17 @@ std::string makeFilename(const std::string& format, int n) {
 }
 
 void drawFeatures(cv::Mat& image,
-                  const std::map<int, SimilarityFeature>& features,
+                  const std::map<int, SiftPosition>& features,
                   const std::vector<cv::Scalar>& colors) {
-  typedef std::map<int, SimilarityFeature> FeatureSet;
+  typedef std::map<int, SiftPosition> FeatureSet;
   typedef std::vector<cv::Scalar> ColorList;
 
   FeatureSet::const_iterator mapping;
   for (mapping = features.begin(); mapping != features.end(); ++mapping) {
     int index = mapping->first;
-    const SimilarityFeature& feature = mapping->second;
+    const SiftPosition& feature = mapping->second;
 
-    drawSimilarityFeature(image, feature, colors[index], LINE_THICKNESS);
+    drawSiftPosition(image, feature, colors[index], LINE_THICKNESS);
   }
 }
 
@@ -73,8 +75,8 @@ int main(int argc, char** argv) {
   bool ok;
 
   // Load tracks.
-  TrackList<SimilarityFeature> tracks;
-  SimilarityFeatureReader feature_reader;
+  TrackList<SiftPosition> tracks;
+  SiftPositionReader feature_reader;
   ok = loadTrackList(tracks_file, tracks, feature_reader);
   CHECK(ok) << "Could not load tracks";
   LOG(INFO) << "Loaded " << tracks.size() << " tracks";
@@ -87,7 +89,7 @@ int main(int argc, char** argv) {
   }
 
   // Iterate through frames in which track was observed.
-  TrackListTimeIterator<SimilarityFeature> frame(tracks);
+  TrackListTimeIterator<SiftPosition> frame(tracks);
   frame.seekToStart();
 
   while (!frame.end()) {
@@ -101,7 +103,7 @@ int main(int argc, char** argv) {
     CHECK(ok) << "Could not read image";
 
     // Get the features.
-    typedef std::map<int, SimilarityFeature> FeatureSet;
+    typedef std::map<int, SiftPosition> FeatureSet;
     FeatureSet features;
     frame.getPoints(features);
 

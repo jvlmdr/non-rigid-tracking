@@ -9,16 +9,16 @@
 #include <gflags/gflags.h>
 #include <glog/logging.h>
 #include "multiview_track_list.hpp"
-#include "similarity_feature.hpp"
-#include "similarity_feature_reader.hpp"
+#include "sift_position.hpp"
+#include "sift_position_reader.hpp"
 #include "multiview_track_list_reader.hpp"
-#include "similarity_feature_writer.hpp"
+#include "sift_position_writer.hpp"
 #include "multiview_track_list_writer.hpp"
 
 DEFINE_bool(top_n, false, "Select best n tracks (versus a threshold)");
 DEFINE_bool(fraction, false, "When top_n is enabled, selects top fraction");
 
-void pathLength(const Track<SimilarityFeature>& track,
+void pathLength(const Track<SiftPosition>& track,
                 double& distance,
                 int& duration) {
   distance = 0;
@@ -26,7 +26,7 @@ void pathLength(const Track<SimilarityFeature>& track,
 
   int previous_time = 0;
   cv::Point2d previous_position;
-  TrackIterator<SimilarityFeature> iterator(track);
+  TrackIterator<SiftPosition> iterator(track);
 
   while (!iterator.end()) {
     int time = iterator.time();
@@ -45,7 +45,7 @@ void pathLength(const Track<SimilarityFeature>& track,
   }
 }
 
-double measureAverageStep(const MultiviewTrack<SimilarityFeature>& track) {
+double measureAverageStep(const MultiviewTrack<SiftPosition>& track) {
   double total_distance = 0;
   int total_duration = 0;
 
@@ -91,8 +91,8 @@ int main(int argc, char** argv) {
   const char* threshold = argv[3];
 
   // Load tracks from file.
-  MultiviewTrackList<SimilarityFeature> input_tracks;
-  SimilarityFeatureReader feature_reader;
+  MultiviewTrackList<SiftPosition> input_tracks;
+  SiftPositionReader feature_reader;
   bool ok = loadMultiviewTrackList(input_file, input_tracks, feature_reader);
   CHECK(ok) << "Could not load tracks";
 
@@ -130,12 +130,12 @@ int main(int argc, char** argv) {
   }
 
   int num_views = input_tracks.numViews();
-  MultiviewTrackList<SimilarityFeature> output_tracks(num_views);
+  MultiviewTrackList<SiftPosition> output_tracks(num_views);
 
   // Filter out distances which are too small.
   for (int i = 0; i < num_tracks; i += 1) {
     if (distances[i] >= min_distance_per_frame) {
-      MultiviewTrack<SimilarityFeature> copy(input_tracks.track(i));
+      MultiviewTrack<SiftPosition> copy(input_tracks.track(i));
       output_tracks.add(copy);
     }
   }
@@ -147,7 +147,7 @@ int main(int argc, char** argv) {
       fraction << ")";
 
   // Write out tracks.
-  SimilarityFeatureWriter feature_writer;
+  SiftPositionWriter feature_writer;
   ok = saveMultiviewTrackList(output_file, output_tracks, feature_writer);
   CHECK(ok) << "Could not save tracks";
 

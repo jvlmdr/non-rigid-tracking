@@ -4,7 +4,7 @@
 #include <glog/logging.h>
 #include <gflags/gflags.h>
 #include "multiview_track_list.hpp"
-#include "similarity_feature.hpp"
+#include "sift_position.hpp"
 
 #include "multiview_track_list_reader.hpp"
 #include "vector_reader.hpp"
@@ -36,7 +36,7 @@ void init(int& argc, char**& argv) {
 }
 
 typedef std::vector<int> IndexSet;
-typedef std::vector<SimilarityFeature> FeatureSet;
+typedef std::vector<SiftPosition> FeatureSet;
 
 /*
 void tracksToMultitracks(const MultiviewTrackList<int>& tracks,

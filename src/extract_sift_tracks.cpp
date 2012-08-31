@@ -14,16 +14,18 @@
 #include <ceres/ceres.h>
 #include <gflags/gflags.h>
 #include <glog/logging.h>
+
 #include "read_image.hpp"
 #include "track_list.hpp"
 #include "warp.hpp"
-#include "similarity_feature.hpp"
+#include "sift_position.hpp"
 #include "descriptor.hpp"
 #include "sift.hpp"
-#include "similarity_feature_reader.hpp"
+
+#include "sift_position_reader.hpp"
 #include "track_list_reader.hpp"
 #include "writer.hpp"
-#include "similarity_feature_writer.hpp"
+#include "sift_position_writer.hpp"
 #include "descriptor_writer.hpp"
 #include "track_list_writer.hpp"
 
@@ -36,7 +38,7 @@ std::string makeFilename(const std::string& format, int n) {
 
 struct Feature {
   // This is "position" in a general sense. More like 2D pose.
-  SimilarityFeature position;
+  SiftPosition position;
   // Fixed-size representation of appearance.
   Descriptor descriptor;
 };
@@ -46,7 +48,7 @@ class FeatureWriter : public Writer<Feature> {
     ~FeatureWriter() {}
 
     void write(cv::FileStorage& file, const Feature& feature) {
-      SimilarityFeatureWriter position_writer;
+      SiftPositionWriter position_writer;
       position_writer.write(file, feature.position);
 
       DescriptorWriter descriptor_writer;
@@ -80,8 +82,8 @@ int main(int argc, char** argv) {
   std::string descriptors_file = argv[3];
 
   // Load tracks.
-  TrackList<SimilarityFeature> position_tracks;
-  SimilarityFeatureReader position_reader;
+  TrackList<SiftPosition> position_tracks;
+  SiftPositionReader position_reader;
   bool ok = loadTrackList(positions_file, position_tracks, position_reader);
   CHECK(ok) << "Could not load tracks";
 
@@ -91,12 +93,12 @@ int main(int argc, char** argv) {
   TrackList<Feature> feature_tracks(num_features);
 
   // Iterate over each frame in the track.
-  TrackListTimeIterator<SimilarityFeature> frame(position_tracks);
+  TrackListTimeIterator<SiftPosition> frame(position_tracks);
   frame.seekToStart();
 
   while (!frame.end()) {
     // Get features in this frame.
-    typedef std::map<int, SimilarityFeature> FeatureSet;
+    typedef std::map<int, SiftPosition> FeatureSet;
     FeatureSet positions;
     frame.getPoints(positions);
 
@@ -121,7 +123,7 @@ int main(int argc, char** argv) {
          it != positions.end();
          ++it) {
       int i = it->first;
-      const SimilarityFeature& position = it->second;
+      const SiftPosition& position = it->second;
 
       Feature& feature = (feature_tracks[i][t] = Feature());
       feature.position = position;

@@ -6,7 +6,7 @@
 #include <opencv2/imgproc/imgproc.hpp>
 #include <opencv2/features2d/features2d.hpp>
 #include <opencv2/nonfree/nonfree.hpp>
-#include "similarity_feature.hpp"
+#include "sift_position.hpp"
 #include "descriptor.hpp"
 
 class SiftExtractor {
@@ -14,11 +14,11 @@ class SiftExtractor {
     SiftExtractor(const cv::Mat& image, int num_octave_layers, double sigma);
 
     // Extracts descriptors for a set of features.
-    void extractDescriptors(const std::vector<SimilarityFeature>& features,
+    void extractDescriptors(const std::vector<SiftPosition>& features,
                             std::vector<Descriptor>& descriptors) const;
 
     // Extracts a single descriptor. Less efficient.
-    void extractDescriptor(const SimilarityFeature& feature,
+    void extractDescriptor(const SiftPosition& feature,
                            Descriptor& descriptor) const;
 
     // Extracts a single descriptor. Less efficient.
@@ -27,7 +27,7 @@ class SiftExtractor {
 
     // Returns a cv::KeyPoint with necessary information.
     cv::KeyPoint featureToRegisteredKeypoint(
-        const SimilarityFeature& feature) const;
+        const SiftPosition& feature) const;
 
     // Finds the octave and layer from which to compute the descriptor.
     void calculatePyramidPosition(double size, int& octave, int& layer) const;
@@ -38,11 +38,11 @@ class SiftExtractor {
     double sigma_;
 };
 
-SimilarityFeature keypointToSimilarityFeature(const cv::KeyPoint& keypoint);
+SiftPosition keypointToSiftPosition(const cv::KeyPoint& keypoint);
 
-void extractSimilarityFeaturesFromKeypoints(
+void extractSiftPositionsFromKeypoints(
     const std::vector<cv::KeyPoint>& keypoints,
-    std::vector<SimilarityFeature>& features);
+    std::vector<SiftPosition>& features);
 
 void extractDescriptorsFromMatrix(const cv::Mat& matrix,
                                   std::vector<Descriptor>& descriptors);
