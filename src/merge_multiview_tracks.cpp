@@ -110,10 +110,8 @@ int main(int argc, char** argv) {
        tracks != track_lists.end();
        ++tracks) {
     // Add each track to the full list.
-    TrackList::List::const_iterator track;
-    for (track = tracks->tracks().begin();
-         track != tracks->tracks().end();
-         ++track) {
+    TrackList::const_iterator track;
+    for (track = tracks->begin(); track != tracks->end(); ++track) {
       MultiviewTrack<SimilarityFeature> copy(*track);
       merged.add(copy);
     }

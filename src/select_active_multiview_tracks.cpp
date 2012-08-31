@@ -101,7 +101,7 @@ int main(int argc, char** argv) {
 
   // Measure how much each point moved.
   std::vector<double> distances;
-  std::transform(input_tracks.tracks().begin(), input_tracks.tracks().end(),
+  std::transform(input_tracks.begin(), input_tracks.end(),
       std::back_inserter(distances), measureAverageStep);
 
   // Take tracks as long as the n-th value or x-th percentile.
@@ -135,7 +135,7 @@ int main(int argc, char** argv) {
   // Filter out distances which are too small.
   for (int i = 0; i < num_tracks; i += 1) {
     if (distances[i] >= min_distance_per_frame) {
-      MultiviewTrack<SimilarityFeature> copy(input_tracks.tracks()[i]);
+      MultiviewTrack<SimilarityFeature> copy(input_tracks.track(i));
       output_tracks.add(copy);
     }
   }

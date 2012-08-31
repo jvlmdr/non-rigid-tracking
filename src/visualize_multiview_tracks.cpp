@@ -56,7 +56,7 @@ void removeSingleViewTracks(const MultiviewTrackList<SimilarityFeature>& input,
 
   // Copy track list.
   typedef std::list<MultiviewTrack<SimilarityFeature> > TrackList;
-  TrackList tracks(input.tracks().begin(), input.tracks().end());
+  TrackList tracks(input.begin(), input.end());
 
   TrackList::iterator track;
   for (track = tracks.begin(); track != tracks.end(); ++track) {

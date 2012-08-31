@@ -20,6 +20,30 @@ MultiviewTrackList<T>::MultiviewTrackList(const MultiviewTrackList<T>& other)
       num_frames_(other.num_frames_) {}
 
 template<class T>
+typename MultiviewTrackList<T>::iterator
+MultiviewTrackList<T>::begin() {
+  return tracks_.begin();
+}
+
+template<class T>
+typename MultiviewTrackList<T>::iterator
+MultiviewTrackList<T>::end() {
+  return tracks_.end();
+}
+
+template<class T>
+typename MultiviewTrackList<T>::const_iterator
+MultiviewTrackList<T>::begin() const {
+  return tracks_.begin();
+}
+
+template<class T>
+typename MultiviewTrackList<T>::const_iterator
+MultiviewTrackList<T>::end() const {
+  return tracks_.end();
+}
+
+template<class T>
 void MultiviewTrackList<T>::reset(int num_views) {
   tracks_.clear();
   num_views_ = num_views;
@@ -51,11 +75,6 @@ const MultiviewTrack<T>& MultiviewTrackList<T>::track(int id) const {
 }
 
 template<class T>
-const std::vector<MultiviewTrack<T> >& MultiviewTrackList<T>::tracks() const {
-  return tracks_;
-}
-
-template<class T>
 int MultiviewTrackList<T>::numTracks() const {
   return tracks_.size();
 }
@@ -82,10 +101,10 @@ SingleViewTimeIterator<T>::SingleViewTimeIterator(
     int view)
     : view_(view), time_(0), cursors_() {
   // Populate cursor list.
-  typename std::vector<MultiviewTrack<T> >::const_iterator multiview_track;
+  typename MultiviewTrackList<T>::const_iterator multiview_track;
 
-  for (multiview_track = tracks.tracks().begin();
-       multiview_track != tracks.tracks().end();
+  for (multiview_track = tracks.begin();
+       multiview_track != tracks.end();
        ++multiview_track) {
     // Add cursor at beginning of track for given view.
     cursors_.push_back(TrackIterator<T>(multiview_track->view(view_)));

@@ -10,7 +10,7 @@ template<class T>
 TrackList<T>::TrackList() : list_() {}
 
 template<class T>
-TrackList<T>::TrackList(int size) : list_(size) {}
+TrackList<T>::TrackList(int size) : list_(size, Track<T>()) {}
 
 template<class T>
 int firstFrame(const Track<T>& track) {
@@ -117,26 +117,6 @@ typename TrackList<T>::iterator TrackList<T>::end() {
 template<class T>
 typename TrackList<T>::const_iterator TrackList<T>::end() const {
   return list_.end();
-}
-
-template<class T>
-typename TrackList<T>::reverse_iterator TrackList<T>::rbegin() {
-  return list_.rbegin();
-}
-
-template<class T>
-typename TrackList<T>::const_reverse_iterator TrackList<T>::rbegin() const {
-  return list_.rbegin();
-}
-
-template<class T>
-typename TrackList<T>::reverse_iterator TrackList<T>::rend() {
-  return list_.rend();
-}
-
-template<class T>
-typename TrackList<T>::const_reverse_iterator TrackList<T>::rend() const {
-  return list_.rend();
 }
 
 ////////////////////////////////////////////////////////////////////////////////

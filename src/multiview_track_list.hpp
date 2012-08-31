@@ -3,6 +3,7 @@
 
 #include "track.hpp"
 #include "multiview_track.hpp"
+#include "smart_vector.hpp"
 #include <vector>
 #include <list>
 
@@ -10,23 +11,28 @@
 template<class T>
 class MultiviewTrackList {
   public:
-    typedef std::vector<MultiviewTrack<T> > List;
-
     explicit MultiviewTrackList(int num_views);
     MultiviewTrackList(int num_views, int num_features);
     MultiviewTrackList();
     MultiviewTrackList(const MultiviewTrackList<T>& other);
 
+    typedef typename SmartVector<MultiviewTrack<T> >::iterator iterator;
+    typedef typename SmartVector<MultiviewTrack<T> >::const_iterator
+            const_iterator;
+
+    iterator begin();
+    iterator end();
+    const_iterator begin() const;
+    const_iterator end() const;
+
     void reset(int num_views);
     void swap(MultiviewTrackList<T>& other);
 
     // Swaps a multi-view track into the list.
-    // TODO: Growing vector should probably be disallowed.
     void add(MultiviewTrack<T>& track);
 
     // Read access.
     const MultiviewTrack<T>& track(int id) const;
-    const List& tracks() const;
 
     int numTracks() const;
     int numViews() const;
@@ -35,7 +41,7 @@ class MultiviewTrackList {
   private:
     // Store as a list of multiview tracks.
     // This seems like the most natural way to add() to the data structure.
-    List tracks_;
+    SmartVector<MultiviewTrack<T> > tracks_;
     int num_views_;
     int num_frames_;
 };

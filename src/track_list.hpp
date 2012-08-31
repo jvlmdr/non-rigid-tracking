@@ -1,11 +1,9 @@
 #ifndef TRACK_LIST_HPP_
 #define TRACK_LIST_HPP_
 
-#include <vector>
-#include <list>
-#include <map>
-#include <string>
+#include "smart_vector.hpp"
 #include "track.hpp"
+#include <map>
 
 // List of features which each has some value at a small subset of frames.
 //
@@ -17,9 +15,6 @@
 // TODO: Advantageous to enforce that tracks are ordered by their first frame?
 template<class T>
 class TrackList {
-  private:
-    typedef std::vector<Track<T> > List;
-
   public:
     // Returns the first frame in the track.
     int findFirstFrame() const;
@@ -27,15 +22,13 @@ class TrackList {
     // Returns the number of points in all tracks.
     int countPoints() const;
 
-    typedef typename List::iterator iterator;
-    typedef typename List::const_iterator const_iterator;
-    typedef typename List::reverse_iterator reverse_iterator;
-    typedef typename List::const_reverse_iterator const_reverse_iterator;
+    typedef typename SmartVector<Track<T> >::iterator iterator;
+    typedef typename SmartVector<Track<T> >::const_iterator const_iterator;
 
-    typedef typename List::reference reference;
-    typedef typename List::const_reference const_reference;
-    typedef typename List::pointer pointer;
-    typedef typename List::const_pointer const_pointer;
+    iterator begin();
+    iterator end();
+    const_iterator begin() const;
+    const_iterator end() const;
 
     TrackList();
     TrackList(int size);
@@ -45,8 +38,8 @@ class TrackList {
 
     void push_back(const Track<T>& x);
     Track<T>& back();
-    const Track<T>& back() const;
     Track<T>& front();
+    const Track<T>& back() const;
     const Track<T>& front() const;
 
     int size() const;
@@ -54,18 +47,8 @@ class TrackList {
     void clear();
     void swap(TrackList<T>& other);
 
-    iterator begin();
-    const_iterator begin() const;
-    iterator end();
-    const_iterator end() const;
-
-    reverse_iterator rbegin();
-    const_reverse_iterator rbegin() const;
-    reverse_iterator rend();
-    const_reverse_iterator rend() const;
-
   private:
-    List list_;
+    SmartVector<Track<T> > list_;
 };
 
 ////////////////////////////////////////////////////////////////////////////////
