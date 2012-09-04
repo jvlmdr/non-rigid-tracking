@@ -250,7 +250,7 @@ bool loadTracks(const MultiviewTrackList<IndexSet>& index_tracks,
   // Initialize list of empty tracks.
   int num_features = index_tracks.numTracks();
   int num_views = views.size();
-  tracks = MultiviewTrackList<FeatureSet>(num_views, num_features);
+  tracks = MultiviewTrackList<FeatureSet>(num_features, num_views);
 
   // Iterate through time (to avoid loading all features at once).
   MultiViewTimeIterator<IndexSet> iterator(index_tracks);
@@ -283,10 +283,12 @@ bool loadTracks(const MultiviewTrackList<IndexSet>& index_tracks,
         for (it = subset.begin(); it != subset.end(); ++it) {
           int id = it->first;
           const IndexSet& indices = it->second;
+          CHECK(id < num_features);
 
           IndexSet::const_iterator index;
           for (index = indices.begin(); index != indices.end(); ++index) {
             // Copy every point in the track.
+            CHECK(*index < int(features.size()));
             const Track<SiftPosition>& track = features[*index];
 
             Track<SiftPosition>::const_iterator point;
@@ -312,6 +314,7 @@ int main(int argc, char** argv) {
   std::string index_tracks_file = argv[1];
   std::string features_format = argv[2];
   std::string views_file = argv[3];
+  // TODO: Use number of frames instead of reading until failure.
   //int num_frames = boost::lexical_cast<int>(argv[4]);
   std::string feature_tracks_file = argv[5];
 
