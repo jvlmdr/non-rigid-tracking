@@ -7,7 +7,7 @@
 class SiftPositionReader : public Reader<SiftPosition> {
   public:
     ~SiftPositionReader();
-    void read(const cv::FileNode& node, SiftPosition& feature);
+    bool read(const cv::FileNode& node, SiftPosition& feature);
 };
 
 #endif

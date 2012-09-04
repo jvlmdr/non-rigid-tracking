@@ -2,6 +2,6 @@ template<class T>
 DefaultReader<T>::~DefaultReader() {}
 
 template<class T>
-void DefaultReader<T>::read(const cv::FileNode& node, T& x) {
-  x = static_cast<T>(node["x"]);
+bool DefaultReader<T>::read(const cv::FileNode& node, T& x) {
+  return ::read<T>(node["x"], x);
 }

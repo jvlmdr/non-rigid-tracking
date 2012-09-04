@@ -114,8 +114,7 @@ int main(int argc, char** argv) {
     // Add each track to the full list.
     TrackList::const_iterator track;
     for (track = tracks->begin(); track != tracks->end(); ++track) {
-      MultiviewTrack<SiftPosition> copy(*track);
-      merged.add(copy);
+      merged.push_back(*track);
     }
   }
 

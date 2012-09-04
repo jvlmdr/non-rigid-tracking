@@ -7,12 +7,12 @@
 template<class T>
 class TrackListReader : public Reader<TrackList<T> > {
   public:
-    TrackListReader(Reader<Track<T> >& reader);
+    TrackListReader(Reader<T>& reader);
     ~TrackListReader();
-    void read(const cv::FileNode& node, TrackList<T>& tracks);
+    bool read(const cv::FileNode& node, TrackList<T>& tracks);
 
   private:
-    Reader<Track<T> >* reader_;
+    Reader<T>* reader_;
 };
 
 template<class T>

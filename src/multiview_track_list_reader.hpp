@@ -7,12 +7,12 @@
 template<class T>
 class MultiviewTrackListReader : public Reader<MultiviewTrackList<T> > {
   public:
-    MultiviewTrackListReader(Reader<MultiviewTrack<T> >& reader);
+    MultiviewTrackListReader(Reader<T>& reader);
     ~MultiviewTrackListReader();
-    void read(const cv::FileNode& node, MultiviewTrackList<T>& tracks);
+    bool read(const cv::FileNode& node, MultiviewTrackList<T>& tracks);
 
   private:
-    Reader<MultiviewTrack<T> >* reader_;
+    Reader<T>* reader_;
 };
 
 template<class T>

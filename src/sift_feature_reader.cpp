@@ -4,10 +4,16 @@
 
 SiftFeatureReader::~SiftFeatureReader() {}
 
-void SiftFeatureReader::read(const cv::FileNode& node, SiftFeature& feature) {
+bool SiftFeatureReader::read(const cv::FileNode& node, SiftFeature& feature) {
   SiftPositionReader position_reader;
-  position_reader.read(node, feature.position);
+  if (!position_reader.read(node, feature.position)) {
+    return false;
+  }
 
   DescriptorReader descriptor_reader;
-  descriptor_reader.read(node, feature.descriptor);
+  if (!descriptor_reader.read(node, feature.descriptor)) {
+    return false;
+  }
+
+  return true;
 }

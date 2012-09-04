@@ -2,8 +2,18 @@
 
 WorldPointReader::~WorldPointReader() {}
 
-void WorldPointReader::read(const cv::FileNode& node, cv::Point3d& point) {
-  point.x = static_cast<double>(node["x"]);
-  point.y = static_cast<double>(node["y"]);
-  point.z = static_cast<double>(node["z"]);
+bool WorldPointReader::read(const cv::FileNode& node, cv::Point3d& point) {
+  if (!::read<double>(node["x"], point.x)) {
+    return false;
+  }
+
+  if (!::read<double>(node["y"], point.y)) {
+    return false;
+  }
+
+  if (!::read<double>(node["z"], point.z)) {
+    return false;
+  }
+
+  return true;
 }

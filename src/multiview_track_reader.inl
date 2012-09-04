@@ -1,23 +1,19 @@
+#include "track_reader.hpp"
 #include "vector_reader.hpp"
+#include "iterator_reader.hpp"
 
 template<class T>
-MultiviewTrackReader<T>::MultiviewTrackReader(Reader<Track<T> >& reader)
-    : reader_(&reader) {}
+MultiviewTrackReader<T>::MultiviewTrackReader(Reader<T>& reader, int num_views)
+    : reader_(&reader), num_views_(num_views) {}
 
 template<class T>
 MultiviewTrackReader<T>::~MultiviewTrackReader() {}
 
 template<class T>
-void MultiviewTrackReader<T>::read(const cv::FileNode& node,
+bool MultiviewTrackReader<T>::read(const cv::FileNode& node,
                                    MultiviewTrack<T>& multiview_track) {
-  std::vector<Track<T> > view_tracks;
-  VectorReader<Track<T> > list_reader(*reader_);
-  list_reader.read(node, view_tracks);
+  TrackReader<T> track_reader(*reader_);
 
-  int num_views = view_tracks.size();
-  multiview_track.reset(num_views);
-
-  for (int i = 0; i < num_views; i += 1) {
-    multiview_track.view(i).swap(view_tracks[i]);
-  }
+  multiview_track = MultiviewTrack<T>(num_views_);
+  return readSequence(node, track_reader, multiview_track.begin());
 }

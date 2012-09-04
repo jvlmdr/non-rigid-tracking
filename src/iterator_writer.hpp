@@ -3,16 +3,11 @@
 
 #include "writer.hpp"
 
-template<class T, class Container>
-class IteratorWriter : public Writer<Container> {
-  public:
-    IteratorWriter(Writer<T>& writer);
-    ~IteratorWriter();
-    void write(cv::FileStorage& file, const Container& container);
-
-  private:
-    Writer<T>* writer_;
-};
+template<class T, class InputIterator>
+void writeSequence(cv::FileStorage& file,
+                   Writer<T>& writer,
+                   InputIterator begin,
+                   InputIterator end);
 
 #include "iterator_writer.inl"
 

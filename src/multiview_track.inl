@@ -8,12 +8,6 @@ MultiviewTrack<T>::MultiviewTrack(int num_views)
     : view_tracks_(num_views, Track<T>()), num_frames_(0) {}
 
 template<class T>
-void MultiviewTrack<T>::reset(int num_views) {
-  num_frames_ = 0;
-  view_tracks_.assign(num_views, Track<T>());
-}
-
-template<class T>
 void MultiviewTrack<T>::swap(MultiviewTrack<T>& other) {
   view_tracks_.swap(other.view_tracks_);
   std::swap(num_frames_, other.num_frames_);

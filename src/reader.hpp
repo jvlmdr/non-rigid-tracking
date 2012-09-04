@@ -8,8 +8,13 @@ template<class T>
 class Reader {
   public:
     virtual ~Reader() {}
-    virtual void read(const cv::FileNode& node, T& x) = 0;
+    virtual bool read(const cv::FileNode& node, T& x) = 0;
 };
+
+// Parses a variable of type T and assigns it to a variable of type X.
+// Returns false if the node is empty.
+template<class T, class X>
+bool read(const cv::FileNode& node, X& x);
 
 // Loads anything which has an appropriate Reader.
 template<class T>

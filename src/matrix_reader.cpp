@@ -1,7 +1,17 @@
 #include "matrix_reader.hpp"
 
+bool readMatrix(const cv::FileNode& node, cv::Mat& A) {
+  if (node.type() == cv::FileNode::NONE) {
+    return false;
+  }
+
+  node >> A;
+
+  return true;
+}
+
 MatrixReader::~MatrixReader() {}
 
-void MatrixReader::read(const cv::FileNode& node, cv::Mat& A) {
-  node["matrix"] >> A;
+bool MatrixReader::read(const cv::FileNode& node, cv::Mat& A) {
+  return readMatrix(node, A);
 }

@@ -1,5 +1,16 @@
 #include <glog/logging.h>
 
+template<class T, class X>
+bool read(const cv::FileNode& node, X& x) {
+  if (node.type() == cv::FileNode::NONE) {
+    return false;
+  }
+
+  x = static_cast<T>(node);
+
+  return true;
+}
+
 template<class T>
 bool load(const std::string& filename, T& x, Reader<T>& reader) {
   // Try to open file.
@@ -9,7 +20,9 @@ bool load(const std::string& filename, T& x, Reader<T>& reader) {
     return false;
   }
 
-  reader.read(file.root(), x);
+  if (!reader.read(file.root(), x)) {
+    return false;
+  }
 
   return true;
 }

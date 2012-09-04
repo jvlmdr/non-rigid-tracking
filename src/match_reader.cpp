@@ -2,7 +2,14 @@
 
 MatchReader::~MatchReader() {}
 
-void MatchReader::read(const cv::FileNode& node, Match& match) {
-  match.first = static_cast<int>(node["index1"]);
-  match.second = static_cast<int>(node["index2"]);
+bool MatchReader::read(const cv::FileNode& node, Match& match) {
+  if (!::read<int>(node["index1"], match.first)) {
+    return false;
+  }
+
+  if (!::read<int>(node["index2"], match.second)) {
+    return false;
+  }
+
+  return true;
 }

@@ -24,6 +24,9 @@ class TrackList {
 
     typedef typename SmartVector<Track<T> >::iterator iterator;
     typedef typename SmartVector<Track<T> >::const_iterator const_iterator;
+    // For std::back_inserter and similar.
+    typedef Track<T>& reference;
+    typedef const Track<T>& const_reference;
 
     iterator begin();
     iterator end();

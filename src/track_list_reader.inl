@@ -1,31 +1,24 @@
 #include "track_reader.hpp"
+#include "iterator_reader.hpp"
 
 template<class T>
-TrackListReader<T>::TrackListReader(Reader<Track<T> >& reader)
+TrackListReader<T>::TrackListReader(Reader<T>& reader)
     : reader_(&reader) {}
 
 template<class T>
 TrackListReader<T>::~TrackListReader() {}
 
 template<class T>
-void TrackListReader<T>::read(const cv::FileNode& parent,
-                              TrackList<T>& tracks) {
-  // TODO: Avoid duplicating code from VectorReader.
-  const cv::FileNode& node = parent["list"];
-  tracks.clear();
-
-  cv::FileNodeIterator it;
-  for (it = node.begin(); it != node.end(); ++it) {
-    tracks.push_back(Track<T>());
-    reader_->read(*it, tracks.back());
-  }
+bool TrackListReader<T>::read(const cv::FileNode& node, TrackList<T>& tracks) {
+  tracks = TrackList<T>();
+  TrackReader<T> track_reader(*reader_);
+  return readSequence(node, track_reader, std::back_inserter(tracks));
 }
 
 template<class T>
 bool loadTrackList(const std::string& filename,
                    TrackList<T>& tracks,
                    Reader<T>& reader) {
-  TrackReader<T> track_reader(reader);
-  TrackListReader<T> list_reader(track_reader);
+  TrackListReader<T> list_reader(reader);
   return load(filename, tracks, list_reader);
 }

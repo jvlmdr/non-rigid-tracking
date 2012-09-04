@@ -20,6 +20,7 @@ class SmartVector {
     SmartVector();
     SmartVector(size_t n, const T& value);
     SmartVector(const SmartVector<T>& other);
+    SmartVector& operator=(const SmartVector<T>& other);
 
     iterator begin();
     iterator end();

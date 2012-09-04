@@ -183,7 +183,7 @@ void loadAllMatches(const std::string& matches_format,
 bool multitrackToTrack(const MultiviewTrack<FeatureSet>& multiview_multitrack,
                        MultiviewTrack<int>& multiview_track) {
   int num_views = multiview_multitrack.numViews();
-  multiview_track.reset(num_views);
+  multiview_track = MultiviewTrack<int>(num_views);
 
   MultiviewTrack<FeatureSet>::const_iterator multitrack;
   MultiviewTrack<int>::iterator track;
@@ -272,7 +272,8 @@ int main(int argc, char** argv) {
 
   MultiviewTrackList<FeatureSet> multitracks(num_views);
   for (int i = 0; i < num_components; i += 1) {
-    multitracks.add(multitrack_list[i]);
+    multitracks.push_back(MultiviewTrack<FeatureSet>());
+    multitracks.back().swap(multitrack_list[i]);
   }
 
   if (FLAGS_discard_inconsistent) {
@@ -285,7 +286,9 @@ int main(int argc, char** argv) {
       bool consistent = multitrackToTrack(multitracks.track(i), track);
 
       if (!consistent) {
-        tracks.add(track);
+        // Add to the list.
+        tracks.push_back(MultiviewTrack<int>());
+        tracks.back().swap(track);
       }
     }
 

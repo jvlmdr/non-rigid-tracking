@@ -1,19 +1,40 @@
 template<class T, class OutputIterator>
-IteratorReader<T, OutputIterator>::IteratorReader(Reader<T>& reader)
-    : reader_(&reader) {}
+bool readSequence(const cv::FileNode& node,
+                  Reader<T>& reader,
+                  OutputIterator output) {
+  // Check node is not empty.
+  if (node.type() == cv::FileNode::NONE) {
+    LOG(WARNING) << "Empty file node";
+    return false;
+  }
 
-template<class T, class OutputIterator>
-IteratorReader<T, OutputIterator>::~IteratorReader() {}
+  // Check node is a map.
+  if (node.type() != cv::FileNode::MAP) {
+    LOG(WARNING) << "Expected file node to be a map";
+    return false;
+  }
 
-template<class T, class OutputIterator>
-void IteratorReader<T, OutputIterator>::read(const cv::FileNode& parent,
-                                             OutputIterator& output) {
-  const cv::FileNode& node = parent["list"];
+  const cv::FileNode& child = node["list"];
 
-  cv::FileNodeIterator it;
-  for (it = node.begin(); it != node.end(); ++it) {
+  // Check that child exists.
+  if (child.type() == cv::FileNode::NONE) {
+    LOG(WARNING) << "Empty file node";
+    return false;
+  }
+
+  // Check that child is a sequence.
+  if (child.type() != cv::FileNode::SEQ) {
+    LOG(WARNING) << "Expected file node to be a sequence";
+    return false;
+  }
+
+  for (cv::FileNodeIterator it = child.begin(); it != child.end(); ++it) {
     T x;
-    reader->read(*it, x);
+    if (!reader.read(*it, x)) {
+      return false;
+    }
     *output++ = x;
   }
+
+  return true;
 }

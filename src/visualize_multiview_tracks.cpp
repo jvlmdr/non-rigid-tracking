@@ -54,7 +54,7 @@ std::string makeFrameFilename(const std::string& format,
 
 void removeSingleViewTracks(const MultiviewTrackList<SiftPosition>& input,
                             MultiviewTrackList<SiftPosition>& output) {
-  output.reset(input.numViews());
+  output = MultiviewTrackList<SiftPosition>(input.numViews());
 
   // Copy track list.
   typedef std::list<MultiviewTrack<SiftPosition> > TrackList;
@@ -64,7 +64,8 @@ void removeSingleViewTracks(const MultiviewTrackList<SiftPosition>& input,
   for (track = tracks.begin(); track != tracks.end(); ++track) {
     // Filter out single-view tracks.
     if (track->numViewsPresent() > 1) {
-      output.add(*track);
+      output.push_back(MultiviewTrack<SiftPosition>());
+      output.back().swap(*track);
     }
   }
 }
@@ -162,9 +163,10 @@ bool loadFeatures(const MultiviewTrackList<int>& id_tracks,
     iterator.next();
   }
 
-  tracks.reset(num_views);
+  tracks = MultiviewTrackList<SiftPosition>(num_views);
   for (int i = 0; i < num_features; i += 1) {
-    tracks.add(track_list[i]);
+    tracks.push_back(MultiviewTrack<SiftPosition>());
+    tracks.back().swap(track_list[i]);
   }
 
   return true;

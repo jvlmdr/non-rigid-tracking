@@ -7,7 +7,7 @@
 class CameraPoseReader : public Reader<CameraPose> {
   public:
     ~CameraPoseReader();
-    void read(const cv::FileNode& node, CameraPose& pose);
+    bool read(const cv::FileNode& node, CameraPose& pose);
 };
 
 #endif

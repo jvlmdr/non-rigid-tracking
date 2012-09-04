@@ -7,7 +7,7 @@ template<class T>
 class DefaultReader : public Reader<T> {
   public:
     ~DefaultReader();
-    void read(const cv::FileNode& node, T& x);
+    bool read(const cv::FileNode& node, T& x);
 };
 
 #include "default_reader.inl"

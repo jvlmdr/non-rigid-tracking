@@ -7,7 +7,7 @@
 class WorldPointReader : public Reader<cv::Point3d> {
   public:
     ~WorldPointReader();
-    void read(const cv::FileNode& node, cv::Point3d& point);
+    bool read(const cv::FileNode& node, cv::Point3d& point);
 };
 
 #endif

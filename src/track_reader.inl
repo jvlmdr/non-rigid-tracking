@@ -1,3 +1,37 @@
+namespace {
+
+template<class T>
+class PointReader : public Reader<std::pair<int, T> > {
+  public:
+    PointReader(Reader<T>& reader);
+    ~PointReader();
+    bool read(const cv::FileNode& node, std::pair<int, T>& point);
+
+  private:
+    Reader<T>* reader_;
+};
+
+template<class T>
+PointReader<T>::PointReader(Reader<T>& reader) : reader_(&reader) {}
+
+template<class T>
+PointReader<T>::~PointReader() {}
+
+template<class T>
+bool PointReader<T>::read(const cv::FileNode& node, std::pair<int, T>& pair) {
+  if (!::read<int>(node["t"], pair.first)) {
+    return false;
+  }
+
+  if (!reader_->read(node["point"], pair.second)) {
+    return false;
+  }
+
+  return true;
+}
+
+}
+
 template<class T>
 TrackReader<T>::TrackReader(Reader<T>& reader) : reader_(&reader) {}
 
@@ -5,16 +39,21 @@ template<class T>
 TrackReader<T>::~TrackReader() {}
 
 template<class T>
-void TrackReader<T>::read(const cv::FileNode& parent, Track<T>& track) {
-  const cv::FileNode& node = parent["list"];
+bool TrackReader<T>::read(const cv::FileNode& node, Track<T>& track) {
+  const cv::FileNode& child = node["list"];
   track.clear();
 
-  cv::FileNodeIterator it;
-  for (it = node.begin(); it != node.end(); ++it) {
-    int t = static_cast<int>((*it)["t"]);
-    T point;
-    reader_->read((*it)["point"], point);
+  PointReader<T> point_reader(*reader_);
 
-    track[t] = point;
+  for (cv::FileNodeIterator it = child.begin(); it != child.end(); ++it) {
+    std::pair<int, T> pair;
+
+    if (!point_reader.read(*it, pair)) {
+      return false;
+    }
+
+    track[pair.first] = pair.second;
   }
+
+  return true;
 }

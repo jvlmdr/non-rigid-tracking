@@ -12,6 +12,14 @@ SmartVector<T>::SmartVector(const SmartVector<T>& other)
     : list_(other.list_), vector_(other.vector_) {}
 
 template<class T>
+SmartVector<T>& SmartVector<T>::operator=(const SmartVector<T>& other) {
+  list_ = other.list_;
+  resetVector();
+
+  return *this;
+}
+
+template<class T>
 typename SmartVector<T>::iterator SmartVector<T>::begin() {
   return list_.begin();
 }

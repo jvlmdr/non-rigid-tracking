@@ -1,3 +1,5 @@
+#include "iterator_writer.hpp"
+
 template<class T>
 VectorWriter<T>::VectorWriter(Writer<T>& writer) : writer_(&writer) {}
 
@@ -6,16 +8,7 @@ VectorWriter<T>::~VectorWriter() {}
 
 template<class T>
 void VectorWriter<T>::write(cv::FileStorage& file, const std::vector<T>& list) {
-  typename std::vector<T>::const_iterator it;
-
-  file << "list";
-  file << "[";
-  for (it = list.begin(); it != list.end(); ++it) {
-    file << "{";
-    writer_->write(file, *it);
-    file << "}";
-  }
-  file << "]";
+  writeSequence(file, *writer_, list.begin(), list.end());
 }
 
 // Saves a list of anything which has an appropriate Writer.

@@ -135,8 +135,7 @@ int main(int argc, char** argv) {
   // Filter out distances which are too small.
   for (int i = 0; i < num_tracks; i += 1) {
     if (distances[i] >= min_distance_per_frame) {
-      MultiviewTrack<SiftPosition> copy(input_tracks.track(i));
-      output_tracks.add(copy);
+      output_tracks.push_back(input_tracks.track(i));
     }
   }
 

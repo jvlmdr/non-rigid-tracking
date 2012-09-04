@@ -14,9 +14,7 @@ void MultiviewTrackListWriter<T>::write(cv::FileStorage& file,
                                         const MultiviewTrackList<T>& tracks) {
   file << "num_views" << tracks.numViews();
   file << "tracks" << "{";
-  IteratorWriter<MultiviewTrack<T>, MultiviewTrackList<T> > list_writer(
-      *writer_);
-  list_writer.write(file, tracks);
+  writeSequence(file, *writer_, tracks.begin(), tracks.end());
   file << "}";
 }
 

@@ -12,27 +12,33 @@ template<class T>
 class MultiviewTrackList {
   public:
     explicit MultiviewTrackList(int num_views);
-    MultiviewTrackList(int num_views, int num_features);
+    MultiviewTrackList(int num_features, int num_views);
     MultiviewTrackList();
     MultiviewTrackList(const MultiviewTrackList<T>& other);
 
     typedef typename SmartVector<MultiviewTrack<T> >::iterator iterator;
     typedef typename SmartVector<MultiviewTrack<T> >::const_iterator
             const_iterator;
+    // For std::back_inserter and similar.
+    typedef MultiviewTrack<T>& reference;
+    typedef const MultiviewTrack<T>& const_reference;
 
     iterator begin();
     iterator end();
     const_iterator begin() const;
     const_iterator end() const;
 
-    void reset(int num_views);
+    void push_back(const MultiviewTrack<T>& x);
+    void pop_back(const MultiviewTrack<T>& x);
     void swap(MultiviewTrackList<T>& other);
+    void clear();
 
-    // Swaps a multi-view track into the list.
-    void add(MultiviewTrack<T>& track);
-
-    // Read access.
+    MultiviewTrack<T>& track(int id);
     const MultiviewTrack<T>& track(int id) const;
+    MultiviewTrack<T>& front();
+    const MultiviewTrack<T>& front() const;
+    MultiviewTrack<T>& back();
+    const MultiviewTrack<T>& back() const;
 
     int numTracks() const;
     int numViews() const;

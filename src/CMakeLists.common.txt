@@ -156,6 +156,7 @@ ADD_EXECUTABLE(undistort-image
     undistort_image.cpp
     camera_properties.cpp
     camera_properties_reader.cpp
+    matrix_reader.cpp
     distortion.cpp
     read_image.cpp)
 TARGET_LINK_LIBRARIES(undistort-image glog gflags)
@@ -167,6 +168,7 @@ ADD_EXECUTABLE(undistort-points
     image_point_writer.cpp
     camera_properties.cpp
     camera_properties_reader.cpp
+    matrix_reader.cpp
     distortion.cpp)
 TARGET_LINK_LIBRARIES(undistort-points glog gflags)
 TARGET_LINK_LIBRARIES(undistort-points ${OpenCV_LIBS})
@@ -178,6 +180,7 @@ ADD_EXECUTABLE(cameras-to-fund-mat
     world_point_reader.cpp
     camera_properties.cpp
     camera_properties_reader.cpp
+    matrix_reader.cpp
     geometry.cpp
     matrix_writer.cpp)
 TARGET_LINK_LIBRARIES(cameras-to-fund-mat glog gflags)
@@ -282,6 +285,10 @@ TARGET_LINK_LIBRARIES(match-tracks-using-min ${OpenCV_LIBS})
 
 ADD_EXECUTABLE(multiview-index-tracks-to-features
   multiview_index_tracks_to_features.cpp
-  multiview_track.cpp)
+  multiview_track.cpp
+  sift_position.cpp
+  read_lines.cpp
+  sift_position_reader.cpp
+  sift_position_writer.cpp)
 TARGET_LINK_LIBRARIES(multiview-index-tracks-to-features glog gflags)
 TARGET_LINK_LIBRARIES(multiview-index-tracks-to-features ${OpenCV_LIBS})

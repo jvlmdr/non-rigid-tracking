@@ -9,7 +9,7 @@ class TrackReader : public Reader<Track<T> > {
   public:
     TrackReader(Reader<T>& reader);
     ~TrackReader();
-    void read(const cv::FileNode& node, Track<T>& track);
+    bool read(const cv::FileNode& node, Track<T>& track);
 
   private:
     Reader<T>* reader_;

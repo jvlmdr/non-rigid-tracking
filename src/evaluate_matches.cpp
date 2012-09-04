@@ -73,8 +73,8 @@ int main(int argc, char** argv) {
        match != matches.end();
        ++match) {
     // Extract pair of points.
-    CHECK(match->first < points1.size()) << "Out of bounds";
-    CHECK(match->second < points2.size()) << "Out of bounds";
+    CHECK(match->first < int(points1.size())) << "Out of bounds";
+    CHECK(match->second < int(points2.size())) << "Out of bounds";
     cv::Point2d point1 = points1[match->first];
     cv::Point2d point2 = points2[match->second];
 

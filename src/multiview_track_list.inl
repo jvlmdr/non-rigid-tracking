@@ -6,8 +6,10 @@ MultiviewTrackList<T>::MultiviewTrackList(int num_views)
     : tracks_(), num_views_(num_views), num_frames_(0) {}
 
 template<class T>
-MultiviewTrackList<T>::MultiviewTrackList(int num_views, int num_features)
-    : tracks_(num_features), num_views_(num_views), num_frames_(0) {}
+MultiviewTrackList<T>::MultiviewTrackList(int num_features, int num_views)
+    : tracks_(num_features, MultiviewTrack<T>(num_views)),
+      num_views_(num_views),
+      num_frames_(0) {}
 
 template<class T>
 MultiviewTrackList<T>::MultiviewTrackList()
@@ -44,10 +46,13 @@ MultiviewTrackList<T>::end() const {
 }
 
 template<class T>
-void MultiviewTrackList<T>::reset(int num_views) {
-  tracks_.clear();
-  num_views_ = num_views;
-  num_frames_ = 0;
+void MultiviewTrackList<T>::push_back(const MultiviewTrack<T>& x) {
+  tracks_.push_back(x);
+}
+
+template<class T>
+void MultiviewTrackList<T>::pop_back(const MultiviewTrack<T>& x) {
+  tracks_.pop_back(x);
 }
 
 template<class T>
@@ -58,20 +63,40 @@ void MultiviewTrackList<T>::swap(MultiviewTrackList<T>& other) {
 }
 
 template<class T>
-void MultiviewTrackList<T>::add(MultiviewTrack<T>& track) {
-  CHECK(num_views_ == track.numViews());
+void MultiviewTrackList<T>::clear() {
+  tracks_.clear();
+  num_views_ = 0;
+  num_frames_ = 0;
+}
 
-  // Swap into list.
-  tracks_.push_back(MultiviewTrack<T>());
-  tracks_.back().swap(track);
-
-  // Update number of frames if necessary.
-  num_frames_ = std::max(num_frames_, track.numFrames());
+template<class T>
+MultiviewTrack<T>& MultiviewTrackList<T>::track(int id) {
+  return tracks_[id];
 }
 
 template<class T>
 const MultiviewTrack<T>& MultiviewTrackList<T>::track(int id) const {
   return tracks_[id];
+}
+
+template<class T>
+MultiviewTrack<T>& MultiviewTrackList<T>::front() {
+  return tracks_.front();
+}
+
+template<class T>
+const MultiviewTrack<T>& MultiviewTrackList<T>::front() const {
+  return tracks_.front();
+}
+
+template<class T>
+MultiviewTrack<T>& MultiviewTrackList<T>::back() {
+  return tracks_.back();
+}
+
+template<class T>
+const MultiviewTrack<T>& MultiviewTrackList<T>::back() const {
+  return tracks_.back();
 }
 
 template<class T>

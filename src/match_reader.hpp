@@ -7,7 +7,7 @@
 class MatchReader : public Reader<Match> {
   public:
     ~MatchReader();
-    void read(const cv::FileNode& node, Match& match);
+    bool read(const cv::FileNode& node, Match& match);
 };
 
 #endif

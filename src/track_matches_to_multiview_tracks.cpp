@@ -68,7 +68,8 @@ int main(int argc, char** argv) {
     track.view(0).swap(tracks1[matches[i].index1]);
     track.view(1).swap(tracks2[matches[i].index2]);
 
-    multiview_tracks.add(track);
+    multiview_tracks.push_back(MultiviewTrack<SiftPosition>());
+    multiview_tracks.back().swap(track);
   }
 
   // Save track list.

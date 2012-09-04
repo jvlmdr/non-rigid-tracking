@@ -7,7 +7,7 @@
 class MatrixReader : public Reader<cv::Mat> {
   public:
     ~MatrixReader();
-    void read(const cv::FileNode& node, cv::Mat& A);
+    bool read(const cv::FileNode& node, cv::Mat& A);
 };
 
 #endif

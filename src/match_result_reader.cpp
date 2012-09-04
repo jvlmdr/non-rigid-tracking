@@ -2,10 +2,26 @@
 
 MatchResultReader::~MatchResultReader() {}
 
-void MatchResultReader::read(const cv::FileNode& node, MatchResult& result) {
-  result.index1 = static_cast<int>(node["index1"]);
-  result.index2 = static_cast<int>(node["index2"]);
-  result.dist = static_cast<double>(node["dist"]);
-  result.second_dist1 = static_cast<double>(node["second_dist1"]);
-  result.second_dist2 = static_cast<double>(node["second_dist2"]);
+bool MatchResultReader::read(const cv::FileNode& node, MatchResult& result) {
+  if (!::read<int>(node["index1"], result.index1)) {
+    return false;
+  }
+
+  if (!::read<int>(node["index2"], result.index2)) {
+    return false;
+  }
+
+  if (!::read<double>(node["dist"], result.dist)) {
+    return false;
+  }
+
+  if (!::read<double>(node["second_dist1"], result.second_dist1)) {
+    return false;
+  }
+
+  if (!::read<double>(node["second_dist2"], result.second_dist2)) {
+    return false;
+  }
+
+  return true;
 }

@@ -10,7 +10,7 @@ class VectorReader : public Reader<std::vector<T> > {
     VectorReader(Reader<T>& reader);
     ~VectorReader();
 
-    void read(const cv::FileNode& node, std::vector<T>& list);
+    bool read(const cv::FileNode& node, std::vector<T>& list);
 
   private:
     Reader<T>* reader_;

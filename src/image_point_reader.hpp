@@ -7,7 +7,7 @@
 class ImagePointReader : public Reader<cv::Point2d> {
   public:
     ~ImagePointReader();
-    void read(const cv::FileNode& node, cv::Point2d& point);
+    bool read(const cv::FileNode& node, cv::Point2d& point);
 };
 
 #endif

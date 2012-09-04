@@ -7,7 +7,7 @@
 class SiftFeatureReader : public Reader<SiftFeature> {
   public:
     ~SiftFeatureReader();
-    void read(const cv::FileNode& node, SiftFeature& feature);
+    bool read(const cv::FileNode& node, SiftFeature& feature);
 };
 
 #endif

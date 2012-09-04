@@ -3,36 +3,50 @@
 #include "track_reader.hpp"
 
 template<class T>
-MultiviewTrackListReader<T>::MultiviewTrackListReader(
-    Reader<MultiviewTrack<T> >& reader) : reader_(&reader) {}
+MultiviewTrackListReader<T>::MultiviewTrackListReader(Reader<T>& reader)
+    : reader_(&reader) {}
 
 template<class T>
 MultiviewTrackListReader<T>::~MultiviewTrackListReader() {}
 
 template<class T>
-void MultiviewTrackListReader<T>::read(const cv::FileNode& node,
+bool MultiviewTrackListReader<T>::read(const cv::FileNode& node,
                                        MultiviewTrackList<T>& tracks) {
-  int num_views = static_cast<int>(node["num_views"]);
-  tracks.reset(num_views);
+  // Check node is not empty.
+  if (node.type() == cv::FileNode::NONE) {
+    LOG(WARNING) << "Empty file node";
+    return false;
+  }
+
+  // Check that node is a map.
+  if (node.type() != cv::FileNode::MAP) {
+    LOG(WARNING) << "Expected file node to be a map";
+    return false;
+  }
+
+  // Get number of views.
+  int num_views;
+  if (!::read<int>(node["num_views"], num_views)) {
+    LOG(WARNING) << "Could not read number of views";
+    return false;
+  }
+
+  // Initialize data structure.
+  tracks = MultiviewTrackList<T>(num_views);
 
   // Read tracks into vector.
-  std::vector<MultiviewTrack<T> > track_list;
-  VectorReader<MultiviewTrack<T> > list_reader(*reader_);
-  list_reader.read(node["tracks"], track_list);
-
-  // Swap each multiview track into data structure.
-  typename std::vector<MultiviewTrack<T> >::iterator track;
-  for (track = track_list.begin(); track != track_list.end(); ++track) {
-    tracks.add(*track);
+  MultiviewTrackReader<T> track_reader(*reader_, num_views);
+  if (!readSequence(node["tracks"], track_reader, std::back_inserter(tracks))) {
+    return false;
   }
+
+  return true;
 }
 
 template<class T>
 bool loadMultiviewTrackList(const std::string& filename,
                             MultiviewTrackList<T>& tracks,
                             Reader<T>& reader) {
-  TrackReader<T> track_reader(reader);
-  MultiviewTrackReader<T> multiview_reader(track_reader);
-  MultiviewTrackListReader<T> list_reader(multiview_reader);
+  MultiviewTrackListReader<T> list_reader(reader);
   return load(filename, tracks, list_reader);
 }

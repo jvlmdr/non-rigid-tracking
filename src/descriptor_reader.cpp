@@ -1,20 +1,11 @@
 #include "descriptor_reader.hpp"
-
-namespace {
-
-template<class Input, class Output>
-Output cast(const Input& x) {
-  return static_cast<Output>(x);
-}
-
-}
+#include "vector_reader.hpp"
+#include "default_reader.hpp"
 
 DescriptorReader::~DescriptorReader() {}
 
-void DescriptorReader::read(const cv::FileNode& node, Descriptor& descriptor) {
-  const cv::FileNode& list = node["list"];
-
-  descriptor.data.clear();
-  std::transform(list.begin(), list.end(), std::back_inserter(descriptor.data),
-      cast<const cv::FileNode&, double>);
+bool DescriptorReader::read(const cv::FileNode& node, Descriptor& descriptor) {
+  DefaultReader<double> number_reader;
+  VectorReader<double> reader(number_reader);
+  return reader.read(node["list"], descriptor.data);
 }

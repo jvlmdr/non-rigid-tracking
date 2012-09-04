@@ -7,7 +7,7 @@
 class DescriptorReader : public Reader<Descriptor> {
   public:
     ~DescriptorReader();
-    void read(const cv::FileNode& node, Descriptor& descriptor);
+    bool read(const cv::FileNode& node, Descriptor& descriptor);
 };
 
 #endif

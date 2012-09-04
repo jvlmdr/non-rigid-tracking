@@ -2,7 +2,14 @@
 
 ImagePointReader::~ImagePointReader() {}
 
-void ImagePointReader::read(const cv::FileNode& node, cv::Point2d& point) {
-  point.x = static_cast<double>(node["x"]);
-  point.y = static_cast<double>(node["y"]);
+bool ImagePointReader::read(const cv::FileNode& node, cv::Point2d& point) {
+  if (!::read<double>(node["x"], point.x)) {
+    return false;
+  }
+
+  if (!::read<double>(node["y"], point.y)) {
+    return false;
+  }
+
+  return true;
 }
