@@ -5,20 +5,7 @@
 const int SIFT_FIXPT_SCALE = 48;
 const double SIFT_INIT_SIGMA = 0.5;
 
-SiftPosition keypointToSiftPosition(const cv::KeyPoint& keypoint) {
-  double theta = keypoint.angle / 180. * CV_PI;
-  return SiftPosition(keypoint.pt.x, keypoint.pt.y, keypoint.size, theta);
-}
-
-////////////////////////////////////////////////////////////////////////////////
-
-void extractSiftPositionsFromKeypoints(
-    const std::vector<cv::KeyPoint>& keypoints,
-    std::vector<SiftPosition>& features) {
-  // Transform each element.
-  std::transform(keypoints.begin(), keypoints.end(),
-      std::back_inserter(features), keypointToSiftPosition);
-}
+namespace {
 
 void extractDescriptorFromRow(const cv::Mat& row, Descriptor& descriptor) {
   if (row.type() != cv::DataType<float>::type) {
@@ -42,6 +29,8 @@ void extractDescriptorsFromMatrix(const cv::Mat& matrix,
 
     extractDescriptorFromRow(matrix.row(i), descriptors.back());
   }
+}
+
 }
 
 void makePyramid(const cv::Mat& byte_image,
@@ -150,7 +139,7 @@ void SiftExtractor::calculatePyramidPosition(double size,
   }
 
   // It should never be above the limit.
-  if (octave >= pyramid_.size()) {
+  if (octave >= int(pyramid_.size())) {
     throw std::runtime_error("octave too large!");
   }
 }

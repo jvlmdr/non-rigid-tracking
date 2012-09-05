@@ -38,14 +38,4 @@ class SiftExtractor {
     double sigma_;
 };
 
-SiftPosition keypointToSiftPosition(const cv::KeyPoint& keypoint);
-
-void extractSiftPositionsFromKeypoints(
-    const std::vector<cv::KeyPoint>& keypoints,
-    std::vector<SiftPosition>& features);
-
-void extractDescriptorsFromMatrix(const cv::Mat& matrix,
-                                  std::vector<Descriptor>& descriptors);
-
-
 #endif

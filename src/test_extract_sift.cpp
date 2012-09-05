@@ -1,4 +1,5 @@
 #include <iostream>
+#include <stdexcept>
 #include <string>
 #include <vector>
 #include <list>
@@ -19,6 +20,43 @@ const int NUM_OCTAVE_LAYERS = 3;
 const double CONTRAST_THRESHOLD = 0.04;
 const double EDGE_THRESHOLD = 10;
 const double SIGMA = 1.6;
+
+SiftPosition keypointToSiftPosition(const cv::KeyPoint& keypoint) {
+  double theta = keypoint.angle / 180. * CV_PI;
+  return SiftPosition(keypoint.pt.x, keypoint.pt.y, keypoint.size, theta);
+}
+
+void extractSiftPositionsFromKeypoints(
+    const std::vector<cv::KeyPoint>& keypoints,
+    std::vector<SiftPosition>& features) {
+  // Transform each element.
+  std::transform(keypoints.begin(), keypoints.end(),
+      std::back_inserter(features), keypointToSiftPosition);
+}
+
+void extractDescriptorFromRow(const cv::Mat& row, Descriptor& descriptor) {
+  if (row.type() != cv::DataType<float>::type) {
+    throw std::runtime_error("expected 32-bit float");
+  }
+
+  if (row.total() != 128) {
+    throw std::runtime_error("expected 128-dimensional descriptor");
+  }
+
+  std::copy(row.begin<float>(), row.end<float>(),
+      std::back_inserter(descriptor.data));
+}
+
+void extractDescriptorsFromMatrix(const cv::Mat& matrix,
+                                  std::vector<Descriptor>& descriptors) {
+  // Extract descriptors from rows of matrix.
+  for (int i = 0; i < matrix.rows; i += 1) {
+    // Create a new descriptor.
+    descriptors.push_back(Descriptor());
+
+    extractDescriptorFromRow(matrix.row(i), descriptors.back());
+  }
+}
 
 void printReport(const std::vector<Descriptor>& descriptors1,
                  const std::vector<Descriptor>& descriptors2) {

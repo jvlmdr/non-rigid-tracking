@@ -121,16 +121,17 @@ ADD_EXECUTABLE(effect-of-sift-threshold
 TARGET_LINK_LIBRARIES(effect-of-sift-threshold glog gflags)
 TARGET_LINK_LIBRARIES(effect-of-sift-threshold ${OpenCV_LIBS})
 
-ADD_EXECUTABLE(find-keypoints-and-extract-descriptors
-  find_keypoints_and_extract_descriptors.cpp
+ADD_EXECUTABLE(find-keypoints
+  find_keypoints.cpp
   read_image.cpp
   sift_position.cpp
-  sift.cpp
+  sift_feature.cpp
+  sift_feature_writer.cpp
   sift_position_writer.cpp
   descriptor_writer.cpp
   descriptor.cpp)
-TARGET_LINK_LIBRARIES(find-keypoints-and-extract-descriptors glog gflags)
-TARGET_LINK_LIBRARIES(find-keypoints-and-extract-descriptors ${OpenCV_LIBS})
+TARGET_LINK_LIBRARIES(find-keypoints glog gflags)
+TARGET_LINK_LIBRARIES(find-keypoints ${OpenCV_LIBS})
 
 ADD_EXECUTABLE(optimal-triangulation-test
     optimal_triangulation_test.cpp

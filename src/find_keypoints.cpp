@@ -10,12 +10,9 @@
 #include <opencv2/features2d/features2d.hpp>
 #include <opencv2/nonfree/nonfree.hpp>
 #include "read_image.hpp"
-#include "sift_position.hpp"
-#include "sift.hpp"
+#include "sift_feature.hpp"
 
-#include "writer.hpp"
-#include "sift_position_writer.hpp"
-#include "descriptor_writer.hpp"
+#include "sift_feature_writer.hpp"
 #include "vector_writer.hpp"
 
 const int MAX_NUM_FEATURES = 0;
@@ -26,27 +23,12 @@ const double SIGMA = 1.6;
 DEFINE_double(contrast_threshold, 0.04,
     "Constrast threshold for feature detection");
 
-struct Feature {
-  // This is "position" in a general sense. More like 2D pose.
-  SiftPosition position;
-  // Fixed-size representation of appearance.
-  Descriptor descriptor;
-};
+typedef std::vector<SiftFeature> FeatureList;
 
-class FeatureWriter : public Writer<Feature> {
-  public:
-    ~FeatureWriter() {}
-
-    void write(cv::FileStorage& file, const Feature& feature) {
-      SiftPositionWriter position_writer;
-      position_writer.write(file, feature.position);
-
-      DescriptorWriter descriptor_writer;
-      descriptor_writer.write(file, feature.descriptor);
-    }
-};
-
-typedef std::vector<Feature> FeatureList;
+SiftPosition keypointToSiftPosition(const cv::KeyPoint& keypoint) {
+  double theta = keypoint.angle / 180. * CV_PI;
+  return SiftPosition(keypoint.pt.x, keypoint.pt.y, keypoint.size, theta);
+}
 
 void extractFeatures(const cv::Mat& image,
                      FeatureList& features,
@@ -70,7 +52,7 @@ void extractFeatures(const cv::Mat& image,
 
   // Convert to features.
   for (int i = 0; i < num_features; i += 1) {
-    Feature feature;
+    SiftFeature feature;
     feature.position = keypointToSiftPosition(keypoints[i]);
 
     // Copy descriptor contents.
@@ -121,7 +103,7 @@ int main(int argc, char** argv) {
   LOG(INFO) << "Found " << features.size() << " features";
 
   // Save out to file.
-  FeatureWriter feature_writer;
+  SiftFeatureWriter feature_writer;
   ok = saveList(features_filename, features, feature_writer);
   CHECK(ok) << "Could not save descriptors";
 
