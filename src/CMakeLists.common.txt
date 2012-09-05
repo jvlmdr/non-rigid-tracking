@@ -292,3 +292,32 @@ ADD_EXECUTABLE(multiview-index-tracks-to-features
   sift_position_writer.cpp)
 TARGET_LINK_LIBRARIES(multiview-index-tracks-to-features glog gflags)
 TARGET_LINK_LIBRARIES(multiview-index-tracks-to-features ${OpenCV_LIBS})
+
+ADD_EXECUTABLE(visualize-multiview-multitracks
+  visualize_multiview_multitracks.cpp
+  read_lines.cpp
+  multiview_track.cpp
+  random_color.cpp
+  sift_position.cpp
+  draw_sift_position.cpp
+  sift_position_reader.cpp
+  read_image.cpp)
+TARGET_LINK_LIBRARIES(visualize-multiview-multitracks glog gflags)
+TARGET_LINK_LIBRARIES(visualize-multiview-multitracks ${OpenCV_LIBS})
+
+ADD_EXECUTABLE(find-max-cliques
+  find_max_cliques.cpp
+  read_lines.cpp
+  sift_feature.cpp
+  sift_position.cpp
+  descriptor.cpp
+  multiview_track.cpp
+  match_reader.cpp
+  sift_feature_reader.cpp
+  descriptor_reader.cpp
+  sift_position_reader.cpp
+  sift_feature_writer.cpp
+  descriptor_writer.cpp
+  sift_position_writer.cpp)
+TARGET_LINK_LIBRARIES(find-max-cliques glog gflags)
+TARGET_LINK_LIBRARIES(find-max-cliques ${OpenCV_LIBS})

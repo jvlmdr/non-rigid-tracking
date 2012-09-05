@@ -120,58 +120,6 @@ bool loadImages(const std::string& image_format,
   return true;
 }
 
-bool loadFeatures(const MultiviewTrackList<int>& id_tracks,
-                  MultiviewTrackList<SiftPosition>& tracks,
-                  const std::string& features_format,
-                  const std::vector<std::string>& views) {
-  // Initialize list of empty tracks.
-  int num_features = id_tracks.numTracks();
-  int num_views = views.size();
-  std::vector<MultiviewTrack<SiftPosition> > track_list;
-  track_list.assign(num_features, MultiviewTrack<SiftPosition>(num_views));
-
-  // Iterate through time (to avoid loading all features at once).
-  MultiViewTimeIterator<int> iterator(id_tracks);
-
-  while (!iterator.end()) {
-    int time = iterator.time();
-
-    for (int i = 0; i < num_views; i += 1) {
-      std::vector<SiftPosition> all_features;
-
-      // Load features in this frame.
-      std::string file = makeFrameFilename(features_format, views[i], time);
-      SiftPositionReader feature_reader;
-      bool ok = loadList(file, all_features, feature_reader);
-      if (!ok) {
-        return false;
-      }
-      LOG(INFO) << "Loaded " << all_features.size() << " features for (" << i <<
-          ", " << time << ")";
-
-      // Get feature indices matched in this frame.
-      std::map<int, int> subset;
-      iterator.getView(i, subset);
-
-      // Copy into track.
-      std::map<int, int>::const_iterator id;
-      for (id = subset.begin(); id != subset.end(); ++id) {
-        track_list[id->first].view(i)[time] = all_features[id->second];
-      }
-    }
-
-    iterator.next();
-  }
-
-  tracks = MultiviewTrackList<SiftPosition>(num_views);
-  for (int i = 0; i < num_features; i += 1) {
-    tracks.push_back(MultiviewTrack<SiftPosition>());
-    tracks.back().swap(track_list[i]);
-  }
-
-  return true;
-}
-
 void drawFeatures(cv::Mat& image,
                   const std::map<int, SiftPosition>& features,
                   const std::vector<cv::Scalar>& colors) {
@@ -362,7 +310,8 @@ int main(int argc, char** argv) {
 
     if (FLAGS_save) {
       std::string output_file = makeTimeFilename(FLAGS_output_format, time);
-      cv::imwrite(output_file, collage.image);
+      ok = cv::imwrite(output_file, collage.image);
+      CHECK(ok) << "Could not save image";
     }
 
     if (FLAGS_display) {

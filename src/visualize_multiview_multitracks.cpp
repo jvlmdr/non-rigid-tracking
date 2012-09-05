@@ -6,17 +6,21 @@
 #include <boost/lexical_cast.hpp>
 #include <boost/format.hpp>
 #include <opencv2/highgui/highgui.hpp>
+
 #include "multiview_track.hpp"
 #include "multiview_track_list.hpp"
 #include "random_color.hpp"
 #include "sift_position.hpp"
 #include "draw_sift_position.hpp"
+
 #include "multiview_track_list_reader.hpp"
 #include "default_reader.hpp"
 #include "read_lines.hpp"
 #include "vector_reader.hpp"
 #include "sift_position_reader.hpp"
 #include "read_image.hpp"
+
+typedef std::vector<SiftPosition> FeatureSet;
 
 const double SATURATION = 0.99;
 const double BRIGHTNESS = 0.99;
@@ -50,19 +54,16 @@ std::string makeFrameFilename(const std::string& format,
   return boost::str(boost::format(format) % view % (time + 1));
 }
 
-void removeSingleViewTracks(const MultiviewTrackList<SiftPosition>& input,
-                            MultiviewTrackList<SiftPosition>& output) {
-  output.reset(input.numViews());
+void removeSingleViewTracks(const MultiviewTrackList<FeatureSet>& input,
+                            MultiviewTrackList<FeatureSet>& output) {
+  output = MultiviewTrackList<FeatureSet>(input.numViews());
 
-  // Copy track list.
-  typedef std::list<MultiviewTrack<SiftPosition> > TrackList;
-  TrackList tracks(input.tracks().begin(), input.tracks().end());
-
-  TrackList::iterator track;
-  for (track = tracks.begin(); track != tracks.end(); ++track) {
+  MultiviewTrackList<FeatureSet>::const_iterator track;
+  for (track = input.begin(); track != input.end(); ++track) {
     // Filter out single-view tracks.
     if (track->numViewsPresent() > 1) {
-      output.add(*track);
+      // Copy track.
+      output.push_back(*track);
     }
   }
 }
@@ -117,87 +118,41 @@ bool loadImages(const std::string& image_format,
   return true;
 }
 
-bool loadFeatures(const MultiviewTrackList<int>& id_tracks,
-                  MultiviewTrackList<SiftPosition>& tracks,
-                  const std::string& features_format,
-                  const std::vector<std::string>& views) {
-  // Initialize list of empty tracks.
-  int num_features = id_tracks.numTracks();
-  int num_views = views.size();
-  std::vector<MultiviewTrack<SiftPosition> > track_list;
-  track_list.assign(num_features, MultiviewTrack<SiftPosition>(num_views));
-
-  // Iterate through time (to avoid loading all features at once).
-  MultiViewTimeIterator<int> iterator(id_tracks);
-
-  while (!iterator.end()) {
-    int time = iterator.time();
-
-    for (int view = 0; view < num_views; view += 1) {
-      std::vector<SiftPosition> all_features;
-
-      // Load features in this frame.
-      std::string file = makeFrameFilename(features_format, views[view], time);
-      SiftPositionReader feature_reader;
-      bool ok = loadList(file, all_features, feature_reader);
-      if (!ok) {
-        return false;
-      }
-      LOG(INFO) << "Loaded " << all_features.size() << " features for (" <<
-          view << ", " << time << ")";
-
-      // Get feature indices matched in this frame.
-      std::map<int, int> subset;
-      iterator.getView(view, subset);
-
-      // Copy into track.
-      std::map<int, int>::const_iterator id;
-      for (id = subset.begin(); id != subset.end(); ++id) {
-        track_list[id->first].add(Frame(view, time), all_features[id->second]);
-      }
-    }
-
-    iterator.next();
+void drawFeatures(cv::Mat& image, 
+                  const FeatureSet& features,
+                  const cv::Scalar& color) {
+  FeatureSet::const_iterator feature;
+  for (feature = features.begin(); feature != features.end(); ++feature) {
+    drawSiftPosition(image, *feature, color, LINE_THICKNESS);
   }
-
-  tracks.reset(num_views);
-  for (int i = 0; i < num_features; i += 1) {
-    tracks.add(track_list[i]);
-  }
-
-  return true;
 }
 
-void drawFeatures(cv::Mat& image,
-                  const std::map<int, SiftPosition>& features,
-                  const std::vector<cv::Scalar>& colors) {
-  typedef std::map<int, SiftPosition> FeatureSet;
-  typedef std::vector<cv::Scalar> ColorList;
+void drawFeatureSets(cv::Mat& image,
+                     const std::map<int, FeatureSet>& features,
+                     const std::vector<cv::Scalar>& colors) {
+  typedef std::map<int, FeatureSet> Subset;
 
-  FeatureSet::const_iterator mapping;
-  for (mapping = features.begin(); mapping != features.end(); ++mapping) {
-    int index = mapping->first;
-    const SiftPosition& feature = mapping->second;
-
-    drawSiftPosition(image, feature, colors[index], LINE_THICKNESS);
+  Subset::const_iterator pair;
+  for (pair = features.begin(); pair != features.end(); ++pair) {
+    drawFeatures(image, pair->second, colors[pair->first]);
   }
 }
 
 void getFeaturesInView(
-    const std::map<int, std::map<int, SiftPosition> >& features,
+    const std::map<int, std::map<int, FeatureSet> >& features,
     int view,
-    std::map<int, SiftPosition>& subset) {
+    std::map<int, FeatureSet>& subset) {
   subset.clear();
 
   // Iterate through multiview observations of each feature.
-  std::map<int, std::map<int, SiftPosition> >::const_iterator observations;
+  std::map<int, std::map<int, FeatureSet> >::const_iterator observations;
   for (observations = features.begin();
        observations != features.end();
        ++observations) {
     int id = observations->first;
 
     // Check if this feature appeared in the current view.
-    std::map<int, SiftPosition>::const_iterator observation;
+    std::map<int, FeatureSet>::const_iterator observation;
     observation = observations->second.find(view);
 
     if (observation != observations->second.end()) {
@@ -208,7 +163,7 @@ void getFeaturesInView(
 }
 
 void drawFeaturesInAllViews(
-    const std::map<int, std::map<int, SiftPosition> >& features,
+    const std::map<int, std::map<int, FeatureSet> >& features,
     Collage& collage,
     const std::vector<cv::Scalar>& colors) {
   int num_views = collage.offsets.size();
@@ -219,13 +174,14 @@ void drawFeaturesInAllViews(
     cv::Mat viewport = collage.viewport(view);
 
     // Get features for this view.
-    std::map<int, SiftPosition> subset;
+    std::map<int, FeatureSet> subset;
     getFeaturesInView(features, view, subset);
 
-    drawFeatures(viewport, subset, colors);
+    drawFeatureSets(viewport, subset, colors);
   }
 }
 
+/*
 void drawInterViewMatches(
     const std::map<int, std::map<int, SiftPosition> >& features,
     Collage& collage,
@@ -285,6 +241,7 @@ void drawTrailsInAllViews(
     drawTrails(iterator.view(view), viewport, colors);
   }
 }
+*/
 
 int main(int argc, char** argv) {
   init(argc, argv);
@@ -303,9 +260,10 @@ int main(int argc, char** argv) {
   int num_views = views.size();
 
   // Load tracks.
-  MultiviewTrackList<SiftPosition> tracks;
+  MultiviewTrackList<FeatureSet> tracks;
   SiftPositionReader feature_reader;
-  ok = loadMultiviewTrackList(tracks_file, tracks, feature_reader);
+  VectorReader<SiftPosition> feature_set_reader(feature_reader);
+  ok = loadMultiviewTrackList(tracks_file, tracks, feature_set_reader);
   CHECK(ok) << "Could not load tracks";
   LOG(INFO) << "Loaded " << tracks.numTracks() << " multi-view tracks";
 
@@ -317,7 +275,7 @@ int main(int argc, char** argv) {
 
   // Remove any single-view tracks.
   if (FLAGS_exclude_single_view) {
-    MultiviewTrackList<SiftPosition> multi;
+    MultiviewTrackList<FeatureSet> multi;
     removeSingleViewTracks(tracks, multi);
     tracks.swap(multi);
   }
@@ -329,13 +287,13 @@ int main(int argc, char** argv) {
   }
 
   // Iterate through time.
-  MultiViewTimeIterator<SiftPosition> iterator(tracks);
+  MultiViewTimeIterator<FeatureSet> iterator(tracks);
 
   for (int time = 0; time < num_frames; time += 1) {
     LOG(INFO) << time;
 
     // Get points at this time instant, indexed by feature number.
-    std::map<int, std::map<int, SiftPosition> > features;
+    std::map<int, std::map<int, FeatureSet> > features;
     iterator.get(features);
 
     // Load image for each view.
@@ -346,19 +304,24 @@ int main(int argc, char** argv) {
     // Visualize all features.
     drawFeaturesInAllViews(features, collage, colors);
 
+    /*
     // Visualize inter-view matches.
     if (FLAGS_show_matches) {
       drawInterViewMatches(features, collage, colors);
     }
+    */
 
+    /*
     // Visualize optical flow trails.
     if (FLAGS_show_trails) {
       drawTrailsInAllViews(iterator, collage, colors);
     }
+    */
 
     if (FLAGS_save) {
       std::string output_file = makeTimeFilename(FLAGS_output_format, time);
-      cv::imwrite(output_file, collage.image);
+      ok = cv::imwrite(output_file, collage.image);
+      CHECK(ok) << "Could not save image";
     }
 
     if (FLAGS_display) {
