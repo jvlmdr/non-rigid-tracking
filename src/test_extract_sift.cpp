@@ -13,7 +13,7 @@
 #include "read_image.hpp"
 #include "sift_position.hpp"
 #include "descriptor.hpp"
-#include "sift.hpp"
+#include "extract_sift.hpp"
 
 const int MAX_NUM_FEATURES = 100;
 const int NUM_OCTAVE_LAYERS = 3;

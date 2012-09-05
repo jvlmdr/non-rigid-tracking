@@ -20,7 +20,7 @@
 #include "warp.hpp"
 #include "sift_position.hpp"
 #include "descriptor.hpp"
-#include "sift.hpp"
+#include "extract_sift.hpp"
 
 #include "sift_position_reader.hpp"
 #include "track_list_reader.hpp"

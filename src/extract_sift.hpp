@@ -1,5 +1,5 @@
-#ifndef SIFT_HPP_
-#define SIFT_HPP_
+#ifndef EXTRACT_SIFT_HPP_
+#define EXTRACT_SIFT_HPP_
 
 #include <vector>
 #include <opencv2/core/core.hpp>
@@ -9,6 +9,7 @@
 #include "sift_position.hpp"
 #include "descriptor.hpp"
 
+// Extracts SIFT descriptors at arbitrary detections.
 class SiftExtractor {
   public:
     SiftExtractor(const cv::Mat& image, int num_octave_layers, double sigma);

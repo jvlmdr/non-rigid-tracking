@@ -1,4 +1,4 @@
-#include "sift.hpp"
+#include "extract_sift.hpp"
 #include <boost/bind.hpp>
 #include <stdexcept>
 

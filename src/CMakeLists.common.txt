@@ -63,7 +63,7 @@ ADD_EXECUTABLE(extract-sift-tracks
   extract_sift_tracks.cpp
   read_image.cpp
   sift_position.cpp
-  sift.cpp
+  extract_sift.cpp
   sift_position_reader.cpp
   sift_position_writer.cpp
   descriptor_writer.cpp
@@ -75,7 +75,7 @@ ADD_EXECUTABLE(test-extract-sift
   test_extract_sift.cpp
   read_image.cpp
   sift_position.cpp
-  sift.cpp
+  extract_sift.cpp
   descriptor.cpp)
 TARGET_LINK_LIBRARIES(test-extract-sift glog gflags)
 TARGET_LINK_LIBRARIES(test-extract-sift ${OpenCV_LIBS})
@@ -124,6 +124,7 @@ TARGET_LINK_LIBRARIES(effect-of-sift-threshold ${OpenCV_LIBS})
 ADD_EXECUTABLE(find-keypoints
   find_keypoints.cpp
   read_image.cpp
+  detect_sift.cpp
   sift_position.cpp
   sift_feature.cpp
   sift_feature_writer.cpp
