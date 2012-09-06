@@ -264,7 +264,7 @@ int main(int argc, char** argv) {
 
   // Use the Bron-Kerbosch algorithm to find all cliques, printing them
   // as they are found.
-  boost::bron_kerbosch_all_cliques(graph, vis);
+  boost::bron_kerbosch_all_cliques(graph, vis, 8);
 
   return 0;
 }

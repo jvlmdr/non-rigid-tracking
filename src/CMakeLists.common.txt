@@ -71,14 +71,16 @@ ADD_EXECUTABLE(extract-sift-tracks
 TARGET_LINK_LIBRARIES(extract-sift-tracks glog gflags)
 TARGET_LINK_LIBRARIES(extract-sift-tracks ${OpenCV_LIBS})
 
-ADD_EXECUTABLE(test-extract-sift
-  test_extract_sift.cpp
+ADD_EXECUTABLE(extract-sift-test
+  extract_sift_test.cpp
   read_image.cpp
+  sift_feature.cpp
   sift_position.cpp
+  detect_sift.cpp
   extract_sift.cpp
   descriptor.cpp)
-TARGET_LINK_LIBRARIES(test-extract-sift glog gflags)
-TARGET_LINK_LIBRARIES(test-extract-sift ${OpenCV_LIBS})
+TARGET_LINK_LIBRARIES(extract-sift-test glog gflags)
+TARGET_LINK_LIBRARIES(extract-sift-test ${OpenCV_LIBS})
 
 ADD_EXECUTABLE(pca-descriptor
   pca_descriptor.cpp

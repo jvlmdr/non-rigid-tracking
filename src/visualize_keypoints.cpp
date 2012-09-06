@@ -14,7 +14,6 @@
 
 #include "read_image.hpp"
 #include "descriptor.hpp"
-#include "match.hpp"
 #include "random_color.hpp"
 #include "sift_position.hpp"
 #include "draw_sift_position.hpp"

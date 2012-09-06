@@ -59,9 +59,6 @@ const bool UPDATE_TEMPLATE = true;
 // (A value of 1 means anything is permitted.)
 const double MAX_RESIDUAL = 0.05;
 
-const double SATURATION = 0.99;
-const double BRIGHTNESS = 0.99;
-
 typedef std::vector<double> Params;
 
 std::string makeFilename(const std::string& format, int n) {
@@ -399,7 +396,6 @@ int main(int argc, char** argv) {
   // Construct mask.
   cv::Mat mask = makeGaussian(MASK_SIGMA, PATCH_SIZE);
   // Checks that scale is not vanishing or infinite.
-  // Use double 
   SimilarityWarpValidator validator(size, PATCH_SIZE, MIN_SCALE);
 
   // Check whether any of the features are initialized as invalid.

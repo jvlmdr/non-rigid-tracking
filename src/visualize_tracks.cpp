@@ -22,6 +22,7 @@
 #include "sift_position_reader.hpp"
 #include "track_list_reader.hpp"
 
+// Parameters for random color generation.
 const double SATURATION = 0.99;
 const double BRIGHTNESS = 0.99;
 const int LINE_THICKNESS = 1;
