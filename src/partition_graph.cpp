@@ -32,7 +32,7 @@
 #include "default_writer.hpp"
 
 const int MIN_GRAPH_SIZE = 3;
-const int MAX_GRAPH_SIZE = 10000;
+const int MAX_GRAPH_SIZE = 1000;
 
 // Identifies a feature in a multiview video.
 // TODO: Need a better name?
