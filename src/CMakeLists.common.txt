@@ -342,3 +342,15 @@ ADD_EXECUTABLE(partition-graph
   sift_position_writer.cpp)
 TARGET_LINK_LIBRARIES(partition-graph glog gflags)
 TARGET_LINK_LIBRARIES(partition-graph ${OpenCV_LIBS})
+
+ADD_EXECUTABLE(visualize-multiview-multitracks-time-slice
+  visualize_multiview_multitracks_time_slice.cpp
+  read_lines.cpp
+  multiview_track.cpp
+  random_color.cpp
+  sift_position.cpp
+  draw_sift_position.cpp
+  sift_position_reader.cpp
+  read_image.cpp)
+TARGET_LINK_LIBRARIES(visualize-multiview-multitracks-time-slice glog gflags)
+TARGET_LINK_LIBRARIES(visualize-multiview-multitracks-time-slice ${OpenCV_LIBS})
