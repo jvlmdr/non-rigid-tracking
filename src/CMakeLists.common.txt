@@ -325,3 +325,20 @@ ADD_EXECUTABLE(find-max-cliques
   sift_position_writer.cpp)
 TARGET_LINK_LIBRARIES(find-max-cliques glog gflags)
 TARGET_LINK_LIBRARIES(find-max-cliques ${OpenCV_LIBS})
+
+ADD_EXECUTABLE(partition-graph
+  partition_graph.cpp
+  read_lines.cpp
+  sift_feature.cpp
+  sift_position.cpp
+  descriptor.cpp
+  multiview_track.cpp
+  match_reader.cpp
+  sift_feature_reader.cpp
+  descriptor_reader.cpp
+  sift_position_reader.cpp
+  sift_feature_writer.cpp
+  descriptor_writer.cpp
+  sift_position_writer.cpp)
+TARGET_LINK_LIBRARIES(partition-graph glog gflags)
+TARGET_LINK_LIBRARIES(partition-graph ${OpenCV_LIBS})

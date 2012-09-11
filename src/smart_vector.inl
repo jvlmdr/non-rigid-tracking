@@ -108,6 +108,12 @@ void SmartVector<T>::swap(SmartVector<T>& other) {
 }
 
 template<class T>
+void SmartVector<T>::swap(std::list<T>& list) {
+  list_.swap(list);
+  resetVector();
+}
+
+template<class T>
 void SmartVector<T>::clear() {
   list_.clear();
   vector_.clear();

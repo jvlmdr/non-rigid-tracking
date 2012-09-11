@@ -41,6 +41,7 @@ class SmartVector {
     void push_back(const T& x);
     void pop_back(const T& x);
     void swap(SmartVector<T>& other);
+    void swap(std::list<T>& other);
     void clear();
 
   private:
