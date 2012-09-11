@@ -3,22 +3,23 @@
 
 #include "track.hpp"
 #include "multiview_track.hpp"
-#include "smart_vector.hpp"
 #include <vector>
-#include <list>
+#include <deque>
 
 // Describes a collection of multi-view tracks.
 template<class T>
 class MultiviewTrackList {
+  private:
+    typedef std::deque<MultiviewTrack<T> > Container;
+
   public:
     explicit MultiviewTrackList(int num_views);
     MultiviewTrackList(int num_features, int num_views);
     MultiviewTrackList();
     MultiviewTrackList(const MultiviewTrackList<T>& other);
 
-    typedef typename SmartVector<MultiviewTrack<T> >::iterator iterator;
-    typedef typename SmartVector<MultiviewTrack<T> >::const_iterator
-            const_iterator;
+    typedef typename Container::iterator iterator;
+    typedef typename Container::const_iterator const_iterator;
     // For std::back_inserter and similar.
     typedef MultiviewTrack<T>& reference;
     typedef const MultiviewTrack<T>& const_reference;
@@ -47,7 +48,7 @@ class MultiviewTrackList {
   private:
     // Store as a list of multiview tracks.
     // This seems like the most natural way to add() to the data structure.
-    SmartVector<MultiviewTrack<T> > tracks_;
+    Container tracks_;
     int num_views_;
     int num_frames_;
 };

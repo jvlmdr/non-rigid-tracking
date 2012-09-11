@@ -23,7 +23,6 @@
 #include "match.hpp"
 #include "multiview_track.hpp"
 #include "multiview_track_list.hpp"
-#include "smart_vector.hpp"
 
 #include "read_lines.hpp"
 #include "vector_reader.hpp"

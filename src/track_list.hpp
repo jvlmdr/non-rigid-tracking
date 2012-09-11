@@ -1,7 +1,7 @@
 #ifndef TRACK_LIST_HPP_
 #define TRACK_LIST_HPP_
 
-#include "smart_vector.hpp"
+#include <deque>
 #include "track.hpp"
 #include <map>
 
@@ -15,6 +15,9 @@
 // TODO: Advantageous to enforce that tracks are ordered by their first frame?
 template<class T>
 class TrackList {
+  private:
+    typedef std::deque<Track<T> > Container;
+
   public:
     // Returns the first frame in the track.
     int findFirstFrame() const;
@@ -22,8 +25,8 @@ class TrackList {
     // Returns the number of points in all tracks.
     int countPoints() const;
 
-    typedef typename SmartVector<Track<T> >::iterator iterator;
-    typedef typename SmartVector<Track<T> >::const_iterator const_iterator;
+    typedef typename Container::iterator iterator;
+    typedef typename Container::const_iterator const_iterator;
     // For std::back_inserter and similar.
     typedef Track<T>& reference;
     typedef const Track<T>& const_reference;
@@ -51,7 +54,7 @@ class TrackList {
     void swap(TrackList<T>& other);
 
   private:
-    SmartVector<Track<T> > list_;
+    Container list_;
 };
 
 ////////////////////////////////////////////////////////////////////////////////
