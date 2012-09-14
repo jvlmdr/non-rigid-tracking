@@ -59,6 +59,10 @@ struct Collage {
   }
 };
 
+std::string makeFeatureFilename(const std::string& format, int id) {
+  return boost::str(boost::format(format) % id);
+}
+
 std::string makeFrameFilename(const std::string& format,
                               const std::string& view,
                               int time) {
@@ -256,6 +260,8 @@ int main(int argc, char** argv) {
   int i = 0;
 
   for (track = tracks.begin(); track != tracks.end(); ++track) {
+    LOG(INFO) << "Feature " << (i + 1) << " of " << tracks.numTracks();
+
     // Copy background.
     Collage collage = background;
 
@@ -265,8 +271,16 @@ int main(int argc, char** argv) {
     // Draw multi-view track.
     drawMultiviewTrack(collage, *track, color, pixels_per_tick, radius);
 
-    cv::imshow("collage", collage.image);
-    cv::waitKey();
+    if (FLAGS_display) {
+      cv::imshow("collage", collage.image);
+      cv::waitKey();
+    }
+
+    if (FLAGS_save) {
+      std::string file = makeFeatureFilename(FLAGS_output_format, i);
+      ok = cv::imwrite(file, collage.image);
+      CHECK(ok) << "Could not write image";
+    }
 
     i += 1;
   }
