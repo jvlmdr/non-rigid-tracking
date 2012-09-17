@@ -15,6 +15,15 @@ inline cv::Point3d worldPointFromHomogeneous(const cv::Mat& X);
 
 double cond(const cv::Mat& A);
 
+template<class T>
+T* takeAddress(T& x);
+
+template<class U, class T>
+U cast(const T& t);
+
+template<class U, class T>
+U* takeAddressAndCast(T& x);
+
 #include "util.inl"
 
 #endif

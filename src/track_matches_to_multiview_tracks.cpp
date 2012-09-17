@@ -9,7 +9,7 @@
 #include "sift_position.hpp"
 #include "multiview_track_list.hpp"
 
-#include "vector_reader.hpp"
+#include "iterator_reader.hpp"
 #include "match_result_reader.hpp"
 #include "track_list_reader.hpp"
 #include "sift_position_reader.hpp"

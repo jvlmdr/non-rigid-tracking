@@ -19,7 +19,7 @@
 #include "draw_sift_position.hpp"
 
 #include "sift_position_reader.hpp"
-#include "vector_reader.hpp"
+#include "iterator_reader.hpp"
 
 const double SATURATION = 0.99;
 const double BRIGHTNESS = 0.99;

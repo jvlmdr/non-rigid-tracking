@@ -7,7 +7,7 @@
 #include "match.hpp"
 #include "match_reader.hpp"
 #include "image_point_reader.hpp"
-#include "vector_reader.hpp"
+#include "iterator_reader.hpp"
 #include "matrix_reader.hpp"
 #include "optimal_triangulation.hpp"
 #include "vector_writer.hpp"

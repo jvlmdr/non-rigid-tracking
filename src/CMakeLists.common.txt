@@ -354,3 +354,17 @@ ADD_EXECUTABLE(visualize-multiview-multitracks-time-slice
   read_image.cpp)
 TARGET_LINK_LIBRARIES(visualize-multiview-multitracks-time-slice glog gflags)
 TARGET_LINK_LIBRARIES(visualize-multiview-multitracks-time-slice ${OpenCV_LIBS})
+
+ADD_EXECUTABLE(cluster-descriptors
+  cluster_descriptors.cpp
+  kmeans.cpp
+  multiview_track.cpp
+  sift_feature.cpp
+  sift_position.cpp
+  descriptor.cpp
+  read_lines.cpp
+  sift_feature_reader.cpp
+  sift_position_reader.cpp
+  descriptor_reader.cpp)
+TARGET_LINK_LIBRARIES(cluster-descriptors glog gflags)
+TARGET_LINK_LIBRARIES(cluster-descriptors ${OpenCV_LIBS})

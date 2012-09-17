@@ -1,3 +1,49 @@
+template<class T, class Container>
+ContainerReader<T, Container>::ContainerReader(Reader<T>& reader)
+    : reader_(&reader) {}
+
+template<class T, class Container>
+ContainerReader<T, Container>::~ContainerReader() {}
+
+template<class T, class Container>
+bool ContainerReader<T, Container>::read(const cv::FileNode& node,
+                                         Container& list) {
+  list.clear();
+  return readSequence(node, *reader_, std::back_inserter(list));
+}
+
+template<class T, class Container>
+bool loadList(const std::string& file, Container& list, Reader<T>& reader) {
+  ContainerReader<T, Container> list_reader(reader);
+  return load(file, list, list_reader);
+}
+
+////////////////////////////////////////////////////////////////////////////////
+
+template<class T>
+VectorReader<T>::VectorReader(Reader<T>& reader) : reader_(reader) {}
+
+template<class T>
+VectorReader<T>::~VectorReader() {}
+
+template<class T>
+bool VectorReader<T>::read(const cv::FileNode& node, std::vector<T>& list) {
+  return reader_.read(node, list);
+}
+
+template<class T>
+DequeReader<T>::DequeReader(Reader<T>& reader) : reader_(reader) {}
+
+template<class T>
+DequeReader<T>::~DequeReader() {}
+
+template<class T>
+bool DequeReader<T>::read(const cv::FileNode& node, std::deque<T>& list) {
+  return reader_.read(node, list);
+}
+
+////////////////////////////////////////////////////////////////////////////////
+
 template<class T, class OutputIterator>
 bool readSequence(const cv::FileNode& node,
                   Reader<T>& reader,

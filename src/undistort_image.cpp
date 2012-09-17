@@ -9,7 +9,7 @@
 #include <glog/logging.h>
 #include "image_point_reader.hpp"
 #include "image_point_writer.hpp"
-#include "vector_reader.hpp"
+#include "iterator_reader.hpp"
 #include "vector_writer.hpp"
 #include "camera_properties_reader.hpp"
 #include "distortion.hpp"

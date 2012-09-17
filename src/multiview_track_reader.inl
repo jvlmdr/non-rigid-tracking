@@ -1,5 +1,4 @@
 #include "track_reader.hpp"
-#include "vector_reader.hpp"
 #include "iterator_reader.hpp"
 
 template<class T>

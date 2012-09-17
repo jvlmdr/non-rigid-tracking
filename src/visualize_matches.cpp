@@ -16,7 +16,7 @@
 #include "draw_matches.hpp"
 #include "sift_position.hpp"
 
-#include "vector_reader.hpp"
+#include "iterator_reader.hpp"
 #include "match_reader.hpp"
 #include "sift_position_reader.hpp"
 

@@ -12,7 +12,7 @@
 
 #include "read_lines.hpp"
 #include "multiview_track_list_reader.hpp"
-#include "vector_reader.hpp"
+#include "iterator_reader.hpp"
 #include "default_reader.hpp"
 #include "sift_position_reader.hpp"
 #include "track_list_reader.hpp"

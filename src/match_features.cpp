@@ -13,7 +13,7 @@
 #include "match_result.hpp"
 #include "find_matches.hpp"
 #include "descriptor_reader.hpp"
-#include "vector_reader.hpp"
+#include "iterator_reader.hpp"
 #include "writer.hpp"
 #include "vector_writer.hpp"
 #include "match_result_writer.hpp"

@@ -15,7 +15,7 @@
 #include "multiview_track_list.hpp"
 
 #include "read_lines.hpp"
-#include "vector_reader.hpp"
+#include "iterator_reader.hpp"
 #include "match_reader.hpp"
 #include "multiview_track_list_writer.hpp"
 #include "vector_writer.hpp"

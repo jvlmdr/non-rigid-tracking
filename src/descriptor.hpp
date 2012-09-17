@@ -10,6 +10,9 @@ struct Descriptor {
   Descriptor();
   explicit Descriptor(int n);
   Descriptor(int n, double x);
+
+  void swap(Descriptor& other);
+  void clear();
 };
 
 #endif

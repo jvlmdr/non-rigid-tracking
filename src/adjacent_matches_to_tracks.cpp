@@ -13,7 +13,7 @@
 #include "sift_position.hpp"
 #include "match.hpp"
 #include "match_reader.hpp"
-#include "vector_reader.hpp"
+#include "iterator_reader.hpp"
 #include "sift_position_writer.hpp"
 #include "track_list_writer.hpp"
 #include "sift_position_reader.hpp"
@@ -105,8 +105,7 @@ int main(int argc, char** argv) {
       std::string matches_file = makeFilename(matches_format, t);
 
       MatchReader match_reader;
-      VectorReader<Match> match_list_reader(match_reader);
-      ok = load(matches_file, matches, match_list_reader);
+      ok = loadList(matches_file, matches, match_reader);
       if (!ok) {
         continue;
       }

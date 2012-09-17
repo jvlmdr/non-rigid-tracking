@@ -10,7 +10,7 @@
 #include <gflags/gflags.h>
 #include <glog/logging.h>
 #include "read_lines.hpp"
-#include "vector_reader.hpp"
+#include "iterator_reader.hpp"
 #include "default_reader.hpp"
 #include "lexical_cast_parser.hpp"
 #include "stats.hpp"

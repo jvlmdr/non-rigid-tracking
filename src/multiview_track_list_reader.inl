@@ -1,4 +1,4 @@
-#include "vector_reader.hpp"
+#include "iterator_reader.hpp"
 #include "multiview_track_reader.hpp"
 #include "track_reader.hpp"
 

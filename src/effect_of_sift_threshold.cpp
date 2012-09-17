@@ -13,7 +13,7 @@
 #include "read_image.hpp"
 #include "descriptor.hpp"
 #include "match.hpp"
-#include "vector_reader.hpp"
+#include "iterator_reader.hpp"
 #include "descriptor_reader.hpp"
 
 typedef std::vector<Descriptor> DescriptorList;

@@ -21,7 +21,7 @@
 #include "track_list.hpp"
 #include "random_color.hpp"
 
-#include "vector_reader.hpp"
+#include "iterator_reader.hpp"
 #include "sift_position_reader.hpp"
 #include "sift_position_writer.hpp"
 #include "track_list_writer.hpp"

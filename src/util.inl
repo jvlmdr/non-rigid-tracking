@@ -28,3 +28,18 @@ inline cv::Point3d worldPointFromHomogeneous(const cv::Mat& X) {
   double w = X.at<double>(3);
   return 1. / w * x;
 }
+
+template<class T>
+T* takeAddress(T& x) {
+  return &x;
+}
+
+template<class U, class T>
+U cast(const T& t) {
+  return static_cast<U>(t);
+}
+
+template<class U, class T>
+U* takeAddressAndCast(T& x) {
+  return static_cast<U*>(&x);
+}

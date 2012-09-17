@@ -10,6 +10,13 @@ class DefaultReader : public Reader<T> {
     bool read(const cv::FileNode& node, T& x);
 };
 
+template<class T>
+class InlineDefaultReader : public Reader<T> {
+  public:
+    ~InlineDefaultReader();
+    bool read(const cv::FileNode& node, T& x);
+};
+
 #include "default_reader.inl"
 
 #endif

@@ -6,7 +6,7 @@
 #include <gflags/gflags.h>
 #include <glog/logging.h>
 #include "match_result.hpp"
-#include "vector_reader.hpp"
+#include "iterator_reader.hpp"
 #include "match_result_reader.hpp"
 #include "vector_writer.hpp"
 #include "match_result_writer.hpp"

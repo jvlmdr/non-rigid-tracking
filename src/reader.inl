@@ -20,9 +20,5 @@ bool load(const std::string& filename, T& x, Reader<T>& reader) {
     return false;
   }
 
-  if (!reader.read(file.root(), x)) {
-    return false;
-  }
-
-  return true;
+  return reader.read(file.root(), x);
 }
