@@ -210,7 +210,7 @@ void splitIntoComponents(Graph& graph, std::vector<Graph*>& subgraphs) {
   subgraphs.clear();
   for (int i = 0; i < num_components; i += 1) {
     // Initialize subgraphs.
-    subgraphs.push_back(&graph.create_subgraph());
+    subgraphs.push_back(&graph.root().create_subgraph());
   }
 
   // Add each vertex to one subgraph.
@@ -281,12 +281,12 @@ void recursiveCut(std::vector<Graph*>& subgraphs) {
 
   while (!pending.empty()) {
     Graph* subgraph = pending.top();
+    pending.pop();
+
     int num_vertices = boost::num_vertices(*subgraph);
 
     if (num_vertices > MAX_GRAPH_SIZE) {
       // Too big for the cut algorithm to handle.
-      pending.pop();
-
       LOG(WARNING) << "Skipping subgraph with too many vertices (" <<
           num_vertices << " > " << MAX_GRAPH_SIZE << ")";
       continue;
@@ -294,8 +294,6 @@ void recursiveCut(std::vector<Graph*>& subgraphs) {
 
     if (num_vertices < MIN_GRAPH_SIZE) {
       // Not enough observations, forget about it.
-      pending.pop();
-
       DLOG(INFO) << "Skipping subgraph with too few vertices (" <<
           num_vertices << " < " << MIN_GRAPH_SIZE << ")";
       continue;
@@ -304,8 +302,6 @@ void recursiveCut(std::vector<Graph*>& subgraphs) {
     if (isConsistent(*subgraph)) {
       // Move to list of valid subgraphs.
       subgraphs.push_back(subgraph);
-      pending.pop();
-
       DLOG(INFO) << "Found consistent subgraph with " << num_vertices <<
           " vertices";
       continue;
@@ -316,8 +312,8 @@ void recursiveCut(std::vector<Graph*>& subgraphs) {
     Graph* subgraph2;
     int n = cut(*subgraph, subgraph1, subgraph2);
 
-    // Remove the parent subgraph.
-    pending.pop();
+    // Can't actually delete subgraph, but we can at least empty it.
+    *subgraph = Graph();
     // Add both children.
     pending.push(subgraph1);
     pending.push(subgraph2);
