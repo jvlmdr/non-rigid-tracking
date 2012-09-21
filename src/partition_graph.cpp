@@ -210,7 +210,7 @@ void splitIntoComponents(Graph& graph, std::vector<Graph*>& subgraphs) {
   subgraphs.clear();
   for (int i = 0; i < num_components; i += 1) {
     // Initialize subgraphs.
-    subgraphs.push_back(&graph.root().create_subgraph());
+    subgraphs.push_back(&graph.create_subgraph());
   }
 
   // Add each vertex to one subgraph.
@@ -258,8 +258,8 @@ int cut(Graph& parent, Graph*& child1, Graph*& child2) {
       boost::get(boost::edge_weight, parent),
       boost::parity_map(parities));
 
-  child1 = &parent.create_subgraph();
-  child2 = &parent.create_subgraph();
+  child1 = &parent.root().create_subgraph();
+  child2 = &parent.root().create_subgraph();
 
   for (int j = 0; j < num_vertices; j += 1) {
     if (boost::get(parities, j)) {
