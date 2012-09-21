@@ -368,3 +368,29 @@ ADD_EXECUTABLE(cluster-descriptors
   descriptor_reader.cpp)
 TARGET_LINK_LIBRARIES(cluster-descriptors glog gflags)
 TARGET_LINK_LIBRARIES(cluster-descriptors ${OpenCV_LIBS})
+
+ADD_EXECUTABLE(spectral-partition-graph
+  spectral_partition_graph.cpp
+  normalized_cut.cpp
+  sparse_mat.cpp
+  read_lines.cpp
+  sift_feature.cpp
+  sift_position.cpp
+  descriptor.cpp
+  multiview_track.cpp
+  match_reader.cpp
+  sift_feature_reader.cpp
+  descriptor_reader.cpp
+  sift_position_reader.cpp
+  sift_feature_writer.cpp
+  descriptor_writer.cpp
+  sift_position_writer.cpp)
+TARGET_LINK_LIBRARIES(spectral-partition-graph glog gflags)
+TARGET_LINK_LIBRARIES(spectral-partition-graph ${OpenCV_LIBS})
+TARGET_LINK_LIBRARIES(spectral-partition-graph arpack gfortran)
+
+ADD_EXECUTABLE(sparse-mat-unittest
+    sparse_mat_unittest.cpp
+    sparse_mat.cpp)
+TARGET_LINK_LIBRARIES(sparse-mat-unittest gtest_main gtest gflags glog)
+TARGET_LINK_LIBRARIES(sparse-mat-unittest ${OpenCV_LIBS})

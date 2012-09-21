@@ -20,8 +20,13 @@ INCLUDE_DIRECTORIES("/home/jvalmadr/local/include/eigen3")
 # BLAS and LAPACK
 SET(LAPACK_LIB blas lapack)
 
-# KLT
-INCLUDE_DIRECTORIES("../klt")
-LINK_DIRECTORIES("../klt")
+# arpack++
+INCLUDE_DIRECTORIES("/home/jvalmadr/src/arpack++/include")
+# ARPACK
+LINK_DIRECTORIES("/home/jvalmadr/src/ARPACK")
+
+# google-test
+INCLUDE_DIRECTORIES("/home/jvalmadr/src/gtest-1.6.0/include")
+LINK_DIRECTORIES("/home/jvalmadr/src/gtest-1.6.0/release")
 
 INCLUDE("CMakeLists.common.txt")
