@@ -26,10 +26,9 @@ void graphEdgesToSparseMatrix(const Graph& graph, cv::SparseMat& A) {
   edges = boost::edges(graph);
 
   // Get edge weight property map.
-  Graph& trust_me = const_cast<Graph&>(graph);
-  typedef typename boost::property_map<Graph, boost::edge_weight_t>::type
+  typedef typename boost::property_map<Graph, boost::edge_weight_t>::const_type
           WeightMap;
-  WeightMap weights = boost::get(boost::edge_weight_t(), trust_me);
+  WeightMap weights = boost::get(boost::edge_weight_t(), graph);
 
   EdgeIterator edge;
   for (edge = edges.first; edge != edges.second; ++edge) {
@@ -67,10 +66,9 @@ double quantizeUpToPositiveScale(const std::multimap<double, int>& map,
   std::multimap<double, int>::const_iterator iter = map.begin();;
 
   // Get edge weight property map.
-  Graph& trust_me = const_cast<Graph&>(graph);
-  typedef typename boost::property_map<Graph, boost::edge_weight_t>::type
+  typedef typename boost::property_map<Graph, boost::edge_weight_t>::const_type
           WeightMap;
-  WeightMap weights = boost::get(boost::edge_weight_t(), trust_me);
+  WeightMap weights = boost::get(boost::edge_weight_t(), graph);
 
   while (iter != map.end()) {
     // Get value of current element.
