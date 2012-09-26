@@ -1,14 +1,6 @@
-#include "random_color.hpp"
-#include <cstdlib>
 #include "hsv.hpp"
 
-// Returns a random color with given saturation and brightness.
-// http://en.wikipedia.org/wiki/HSL_and_HSV
-cv::Scalar randomColor(double saturation, double brightness) {
-  double h = double(std::rand()) / RAND_MAX;
-  double s = saturation;
-  double v = brightness;
-
+cv::Scalar hsvToRgb(double h, double s, double v) {
   double c = v * s;
   double h_dash = 6 * h;
   double x = c * (1 - std::abs(1 - std::fmod(h_dash, 2)));
@@ -35,4 +27,16 @@ cv::Scalar randomColor(double saturation, double brightness) {
   rgb *= 255;
 
   return rgb;
+}
+
+void evenlySpacedColors(int n,
+                        double s,
+                        double v,
+                        std::vector<cv::Scalar>& colors) {
+  colors.clear();
+
+  for (int i = 0; i < n; i += 1) {
+    double h = double(i) / n;
+    colors.push_back(hsvToRgb(h, s, v));
+  }
 }

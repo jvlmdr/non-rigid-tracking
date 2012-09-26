@@ -14,6 +14,11 @@ void MultiviewTrack<T>::swap(MultiviewTrack<T>& other) {
 }
 
 template<class T>
+void swap(MultiviewTrack<T>& lhs, MultiviewTrack<T>& rhs) {
+  lhs.swap(rhs);
+}
+
+template<class T>
 const T* MultiviewTrack<T>::point(const Frame& frame) const {
   typename Track<T>::const_iterator result;
 

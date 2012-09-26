@@ -53,6 +53,9 @@ class MultiviewTrackList {
     int num_frames_;
 };
 
+template<class T>
+void swap(MultiviewTrackList<T>& lhs, MultiviewTrackList<T>& rhs);
+
 // Iterates over all tracks in one view of a MultiviewTrackList in time order.
 template<class T>
 class SingleViewTimeIterator {

@@ -100,6 +100,11 @@ void TrackList<T>::swap(TrackList<T>& other) {
 }
 
 template<class T>
+void swap(TrackList<T>& lhs, TrackList<T>& rhs) {
+  return lhs.swap(rhs);
+}
+
+template<class T>
 typename TrackList<T>::iterator TrackList<T>::begin() {
   return list_.begin();
 }

@@ -52,6 +52,9 @@ class Track {
     Map map_;
 };
 
+template<class T>
+void swap(Track<T>& lhs, Track<T>& rhs);
+
 ////////////////////////////////////////////////////////////////////////////////
 
 // Iterates through a track.

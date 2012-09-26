@@ -60,6 +60,11 @@ void Track<T>::swap(Track<T>& other) {
 }
 
 template<class T>
+void swap(Track<T>& lhs, Track<T>& rhs) {
+  lhs.swap(rhs);
+}
+
+template<class T>
 typename Track<T>::iterator Track<T>::begin() {
   return map_.begin();
 }

@@ -63,6 +63,11 @@ void MultiviewTrackList<T>::swap(MultiviewTrackList<T>& other) {
 }
 
 template<class T>
+void swap(MultiviewTrackList<T>& lhs, MultiviewTrackList<T>& rhs) {
+  lhs.swap(rhs);
+}
+
+template<class T>
 void MultiviewTrackList<T>::clear() {
   tracks_.clear();
   num_views_ = 0;

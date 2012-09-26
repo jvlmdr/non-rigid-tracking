@@ -1,9 +1,10 @@
 #include "kmeans.hpp"
-#include <boost/random/uniform_int_distribution.hpp>
 #include <set>
+#include <boost/random/uniform_int_distribution.hpp>
 #include <glog/logging.h>
 #include <opencv2/core/core.hpp>
 #include "util.hpp"
+#include "random.hpp"
 
 // "m << n" means "MUCH_LARGER * m < n"
 // Expected number of trials to draw m unique elements from n versus O(n).
@@ -320,24 +321,6 @@ void uniqueRandomNumbersByTrialAndError(int m,
   }
 }
 
-namespace {
-
-class GenerateFunction {
-  public:
-    GenerateFunction(boost::random::mt19937& generator)
-        : generator_(&generator) {}
-
-    int operator()(int n) {
-      boost::random::uniform_int_distribution<> dist(0, n - 1);
-      return dist(*generator_);
-    }
-
-  private:
-    boost::random::mt19937* generator_;
-};
-
-}
-
 void uniqueRandomNumbersByFullShuffle(int m,
                                       int n,
                                       std::vector<int>& seq,
@@ -349,8 +332,7 @@ void uniqueRandomNumbersByFullShuffle(int m,
   }
 
   // Shuffle full range.
-  GenerateFunction function(generator);
-  std::random_shuffle(range.begin(), range.end(), function);
+  randomShuffle(range.begin(), range.end(), generator);
 
   // Copy first m elements to seq.
   seq.clear();

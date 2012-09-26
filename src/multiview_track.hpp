@@ -52,6 +52,9 @@ class MultiviewTrack {
     int num_frames_;
 };
 
+template<class T>
+void swap(MultiviewTrack<T>& lhs, MultiviewTrack<T>& rhs);
+
 #include "multiview_track.inl"
 
 #endif

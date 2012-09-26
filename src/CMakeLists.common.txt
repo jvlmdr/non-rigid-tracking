@@ -6,7 +6,8 @@ ADD_EXECUTABLE(visualize-keypoints
   sift_position.cpp
   sift_position_reader.cpp
   draw_sift_position.cpp
-  random_color.cpp)
+  random_color.cpp
+  hsv.cpp)
 TARGET_LINK_LIBRARIES(visualize-keypoints glog gflags)
 TARGET_LINK_LIBRARIES(visualize-keypoints ${OpenCV_LIBS})
 
@@ -25,6 +26,7 @@ ADD_EXECUTABLE(visualize-matches
   draw_matches.cpp
   sift_position.cpp
   random_color.cpp
+  hsv.cpp
   match_reader.cpp
   draw_sift_position.cpp
   sift_position_reader.cpp)
@@ -51,7 +53,8 @@ ADD_EXECUTABLE(track-features-bidir
   sift_position.cpp
   sift_position_reader.cpp
   sift_position_writer.cpp
-  random_color.cpp)
+  random_color.cpp
+  hsv.cpp)
 TARGET_LINK_LIBRARIES(track-features-bidir glog gflags)
 TARGET_LINK_LIBRARIES(track-features-bidir ${OpenCV_LIBS})
 TARGET_LINK_LIBRARIES(track-features-bidir ceres)
@@ -85,6 +88,7 @@ TARGET_LINK_LIBRARIES(extract-sift-test ${OpenCV_LIBS})
 ADD_EXECUTABLE(pca-descriptor
   pca_descriptor.cpp
   random_color.cpp
+  hsv.cpp
   descriptor_reader.cpp
   descriptor.cpp)
 TARGET_LINK_LIBRARIES(pca-descriptor glog gflags)
@@ -96,6 +100,7 @@ ADD_EXECUTABLE(visualize-tracks
   draw_sift_position.cpp
   read_image.cpp
   random_color.cpp
+  hsv.cpp
   sift_position_reader.cpp)
 TARGET_LINK_LIBRARIES(visualize-tracks glog gflags)
 TARGET_LINK_LIBRARIES(visualize-tracks ${OpenCV_LIBS})
@@ -236,6 +241,7 @@ ADD_EXECUTABLE(visualize-multiview-tracks
   read_lines.cpp
   multiview_track.cpp
   random_color.cpp
+  hsv.cpp
   sift_position.cpp
   draw_sift_position.cpp
   sift_position_reader.cpp
@@ -302,6 +308,7 @@ ADD_EXECUTABLE(visualize-multiview-multitracks
   read_lines.cpp
   multiview_track.cpp
   random_color.cpp
+  hsv.cpp
   sift_position.cpp
   draw_sift_position.cpp
   sift_position_reader.cpp
@@ -348,6 +355,7 @@ ADD_EXECUTABLE(visualize-multiview-multitracks-time-slice
   read_lines.cpp
   multiview_track.cpp
   random_color.cpp
+  hsv.cpp
   sift_position.cpp
   draw_sift_position.cpp
   sift_position_reader.cpp
@@ -358,6 +366,7 @@ TARGET_LINK_LIBRARIES(visualize-multiview-multitracks-time-slice ${OpenCV_LIBS})
 ADD_EXECUTABLE(cluster-descriptors
   cluster_descriptors.cpp
   kmeans.cpp
+  random.cpp
   multiview_track.cpp
   sift_feature.cpp
   sift_position.cpp
@@ -394,3 +403,17 @@ ADD_EXECUTABLE(sparse-mat-unittest
     sparse_mat.cpp)
 TARGET_LINK_LIBRARIES(sparse-mat-unittest gtest_main gtest gflags glog)
 TARGET_LINK_LIBRARIES(sparse-mat-unittest ${OpenCV_LIBS})
+
+ADD_EXECUTABLE(visualize-some-multiview-tracks
+  visualize_some_multiview_tracks.cpp
+  random.cpp
+  multiview_track.cpp
+  random_color.cpp
+  hsv.cpp
+  sift_position.cpp
+  draw_sift_position.cpp
+  read_lines.cpp
+  sift_position_reader.cpp
+  read_image.cpp)
+TARGET_LINK_LIBRARIES(visualize-some-multiview-tracks glog gflags)
+TARGET_LINK_LIBRARIES(visualize-some-multiview-tracks ${OpenCV_LIBS})

@@ -57,6 +57,9 @@ class TrackList {
     Container list_;
 };
 
+template<class T>
+void swap(TrackList<T>& lhs, TrackList<T>& rhs);
+
 ////////////////////////////////////////////////////////////////////////////////
 
 // Iterates through a list of tracks one frame at a time.
