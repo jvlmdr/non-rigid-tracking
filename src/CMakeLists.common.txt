@@ -260,7 +260,7 @@ ADD_EXECUTABLE(track-matches-to-multiview-tracks
   track_matches_to_multiview_tracks.cpp
   sift_position.cpp
   multiview_track.cpp
-  match_result_reader.cpp
+  match_reader.cpp
   sift_position_reader.cpp
   sift_position_writer.cpp)
 TARGET_LINK_LIBRARIES(track-matches-to-multiview-tracks glog gflags)
@@ -417,3 +417,15 @@ ADD_EXECUTABLE(visualize-some-multiview-tracks
   read_image.cpp)
 TARGET_LINK_LIBRARIES(visualize-some-multiview-tracks glog gflags)
 TARGET_LINK_LIBRARIES(visualize-some-multiview-tracks ${OpenCV_LIBS})
+
+ADD_EXECUTABLE(select-rigid-matches
+    select_rigid_matches.cpp
+    optimal_triangulation.cpp
+    roots.cpp
+    match_result_reader.cpp
+    matrix_reader.cpp
+    image_point_reader.cpp
+    match_result_writer.cpp)
+TARGET_LINK_LIBRARIES(select-rigid-matches glog gflags)
+TARGET_LINK_LIBRARIES(select-rigid-matches ${OpenCV_LIBS})
+TARGET_LINK_LIBRARIES(select-rigid-matches gsl ${LAPACK_LIB})

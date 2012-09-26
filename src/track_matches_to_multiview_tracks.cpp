@@ -4,13 +4,13 @@
 #include <glog/logging.h>
 #include <gflags/gflags.h>
 
-#include "match_result.hpp"
+#include "match.hpp"
 #include "track_list.hpp"
 #include "sift_position.hpp"
 #include "multiview_track_list.hpp"
 
 #include "iterator_reader.hpp"
-#include "match_result_reader.hpp"
+#include "match_reader.hpp"
 #include "track_list_reader.hpp"
 #include "sift_position_reader.hpp"
 #include "multiview_track_list_writer.hpp"
@@ -41,12 +41,12 @@ int main(int argc, char** argv) {
   std::string multiview_tracks_file = argv[4];
 
   bool ok;
-  std::vector<MatchResult> matches;
+  std::vector<Match> matches;
   TrackList<SiftPosition> tracks1;
   TrackList<SiftPosition> tracks2;
 
   // Load matches.
-  MatchResultReader match_reader;
+  MatchReader match_reader;
   ok = loadList(matches_file, matches, match_reader);
   CHECK(ok) << "Could not load matches";
 
@@ -65,8 +65,8 @@ int main(int argc, char** argv) {
   int num_matches = matches.size();
   for (int i = 0; i < num_matches; i += 1) {
     MultiviewTrack<SiftPosition> track(2);
-    track.view(0).swap(tracks1[matches[i].index1]);
-    track.view(1).swap(tracks2[matches[i].index2]);
+    track.view(0).swap(tracks1[matches[i].first]);
+    track.view(1).swap(tracks2[matches[i].second]);
 
     multiview_tracks.push_back(MultiviewTrack<SiftPosition>());
     multiview_tracks.back().swap(track);

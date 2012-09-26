@@ -13,5 +13,9 @@ bool readMatrix(const cv::FileNode& node, cv::Mat& A) {
 MatrixReader::~MatrixReader() {}
 
 bool MatrixReader::read(const cv::FileNode& node, cv::Mat& A) {
-  return readMatrix(node, A);
+  if (node.type() != cv::FileNode::MAP) {
+    return false;
+  }
+
+  return readMatrix(node["matrix"], A);
 }
