@@ -77,7 +77,7 @@ struct Collage {
     int image_height = size.height;
     int depth = num_frames * pixels_per_tick;
 
-    // View consists of image and xt- and yt-projections.
+    // View consists of image and xt- and ty-projections.
     int view_width = image_width + depth;
     int view_height = image_height + depth;
     cv::Size view_size(view_width, view_height);
@@ -368,6 +368,9 @@ void drawTrackTimeSlices(const Track<SiftPosition>& track,
                          int t) {
   Track<SiftPosition>::const_iterator element;
 
+  cv::Point prev_ty;
+  cv::Point prev_xt;
+
   for (element = track.begin(); element != track.end(); ++element) {
     int u = element->first;
     const SiftPosition& feature = element->second;
@@ -381,9 +384,18 @@ void drawTrackTimeSlices(const Track<SiftPosition>& track,
     // First draw in ty plot.
     center = cv::Point((u + 0.5) * PIXELS_PER_TICK + 0.5, feature.y);
     cv::circle(collage.ty, center, radius, color, -1);
+    if (element != track.begin()) {
+      cv::line(collage.ty, prev_ty, center, color, LINE_THICKNESS);
+    }
+    prev_ty = center;
+
     // Then in xt plot.
     center = cv::Point(feature.x, (u + 0.5) * PIXELS_PER_TICK + 0.5);
     cv::circle(collage.xt, center, radius, color, -1);
+    if (element != track.begin()) {
+      cv::line(collage.xt, prev_xt, center, color, LINE_THICKNESS);
+    }
+    prev_xt = center;
   }
 }
 
