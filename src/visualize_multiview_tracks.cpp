@@ -15,7 +15,6 @@
 #include "draw_sift_position.hpp"
 
 #include "multiview_track_list_reader.hpp"
-#include "default_reader.hpp"
 #include "read_lines.hpp"
 #include "sift_position_reader.hpp"
 #include "read_image.hpp"
