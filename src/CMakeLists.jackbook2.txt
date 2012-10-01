@@ -5,14 +5,14 @@ PROJECT(nrtrack)
 FIND_PACKAGE(OpenCV COMPONENTS core highgui imgproc features2d nonfree video)
 INCLUDE_DIRECTORIES(${OpenCV_INCLUDE_DIRS})
 
-# KLT
-INCLUDE_DIRECTORIES("../klt")
-LINK_DIRECTORIES("../klt")
-
 # Ceres
 INCLUDE_DIRECTORIES("/Users/jack/src/ceres-solver/include")
 LINK_DIRECTORIES("/Users/jack/src/ceres-solver/release/internal/ceres")
 INCLUDE_DIRECTORIES("/usr/local/include/eigen3")
 FIND_LIBRARY(LAPACK_LIB NAMES vecLib)
+
+# google-test
+INCLUDE_DIRECTORIES("/Users/jack/src/gtest-1.6.0/include")
+LINK_DIRECTORIES("/Users/jack/src/gtest-1.6.0/release")
 
 INCLUDE("CMakeLists.common.txt")

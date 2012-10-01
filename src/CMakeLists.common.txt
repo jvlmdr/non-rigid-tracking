@@ -429,3 +429,12 @@ ADD_EXECUTABLE(select-rigid-matches
 TARGET_LINK_LIBRARIES(select-rigid-matches glog gflags)
 TARGET_LINK_LIBRARIES(select-rigid-matches ${OpenCV_LIBS})
 TARGET_LINK_LIBRARIES(select-rigid-matches gsl ${LAPACK_LIB})
+
+ADD_EXECUTABLE(select-tracked-matches
+    select_tracked_matches.cpp
+    sift_position.cpp
+    match_result_reader.cpp
+    sift_position_reader.cpp
+    match_result_writer.cpp)
+TARGET_LINK_LIBRARIES(select-tracked-matches glog gflags)
+TARGET_LINK_LIBRARIES(select-tracked-matches ${OpenCV_LIBS})
