@@ -10,6 +10,7 @@
 #include <boost/graph/connected_components.hpp>
 #include <glog/logging.h>
 #include <gflags/gflags.h>
+
 #include "match.hpp"
 #include "multiview_track.hpp"
 #include "multiview_track_list.hpp"
@@ -23,6 +24,10 @@
 
 DEFINE_bool(discard_inconsistent, false,
     "Discard any feature which appears twice in one frame.");
+DEFINE_bool(temporal_chain, false,
+    "Restrict matching across time to adjacent frames.");
+DEFINE_bool(simultaneous_only, false,
+    "Only use matches from the same time instant.");
 
 // More than one feature may be observed in each frame.
 typedef std::vector<int> FeatureSet;
@@ -125,56 +130,100 @@ MatchGraph::vertex_descriptor findOrInsert(MatchGraph& graph,
   return vertex;
 }
 
-void loadAllMatches(const std::string& matches_format,
+void allFrames(int num_views, int num_frames, std::set<Frame>& frames) {
+  frames.clear();
+
+  for (int v = 0; v < num_views; v += 1) {
+    for (int t = 0; t < num_frames; t += 1) {
+      frames.insert(Frame(v, t));
+    }
+  }
+}
+
+void loadMatches(const std::string& format,
+                 const std::vector<std::string>& views,
+                 int v1,
+                 int v2,
+                 int t1,
+                 int t2,
+                 MatchGraph& graph,
+                 VertexLookup& vertices) {
+  // Construct filename.
+  const std::string& view1 = views[v1];
+  const std::string& view2 = views[v2];
+  std::string file = makeMatchFilename(format, view1, view2, t1, t2);
+
+  // Load matches from file.
+  std::vector<Match> matches;
+  MatchReader reader;
+  bool ok = loadList(file, matches, reader);
+  CHECK(ok) << "Could not load matches";
+  DLOG(INFO) << "Loaded " << matches.size() << " matches for (" << view1 <<
+      ", " << t1 << "), (" << view2 << ", " << t2 << ")";
+
+  // Add matches to map.
+  Frame frame1(v1, t1);
+  Frame frame2(v2, t2);
+
+  std::vector<Match>::const_iterator match;
+  for (match = matches.begin(); match != matches.end(); ++match) {
+    FeatureIndex feature1(frame1, match->first);
+    FeatureIndex feature2(frame2, match->second);
+
+    // Find existing vertex for feature, or insert one.
+    MatchGraph::vertex_descriptor vertex1;
+    MatchGraph::vertex_descriptor vertex2;
+    vertex1 = findOrInsert(graph, vertices, feature1);
+    vertex2 = findOrInsert(graph, vertices, feature2);
+
+    // Add vertex to graph.
+    boost::add_edge(vertex1, vertex2, graph);
+  }
+}
+
+void loadAllMatches(const std::string& format,
                     const std::vector<std::string>& views,
                     int num_frames,
+                    bool simultaneous_only,
+                    bool temporal_chain,
                     MatchGraph& graph) {
   int num_views = views.size();
-  int n = num_views * num_frames;
-  int num_matches = 0;
 
   VertexLookup vertices;
 
-  for (int i1 = 0; i1 < n; i1 += 1) {
-    // Match all unique pairs.
-    for (int i2 = i1 + 1; i2 < n; i2 += 1) {
-      // Extract view and time indices.
-      int t1 = i1 % num_frames;
-      int t2 = i2 % num_frames;
-      int v1 = i1 / num_frames;
-      int v2 = i2 / num_frames;
+  if (!simultaneous_only && !temporal_chain) {
+    // Load exhaustive matches.
+    int n = num_views * num_frames;
+    for (int i1 = 0; i1 < n; i1 += 1) {
+      // Match all unique pairs.
+      for (int i2 = i1 + 1; i2 < n; i2 += 1) {
+        // Extract view and time indices.
+        int t1 = i1 % num_frames;
+        int t2 = i2 % num_frames;
+        int v1 = i1 / num_frames;
+        int v2 = i2 / num_frames;
+        loadMatches(format, views, v1, v2, t1, t2, graph, vertices);
+      }
+    }
+  } else { // (simultaneous_only || temporal_chain)
+    // Match between all views in every frame.
+    // For every frame...
+    for (int t = 0; t < num_frames; t += 1) {
+      // ...take all unordered pairs of views.
+      for (int p = 0; p < num_views; p += 1) {
+        for (int q = p + 1; q < num_views; q += 1) {
+          loadMatches(format, views, p, q, t, t, graph, vertices);
+        }
+      }
+    }
 
-      // Construct filename.
-      std::string matches_file = makeMatchFilename(matches_format, views[v1],
-          views[v2], t1, t2);
-
-      // Load matches from file.
-      std::vector<Match> match_list;
-      MatchReader reader;
-      bool ok = loadList(matches_file, match_list, reader);
-      CHECK(ok) << "Could not load matches";
-      DLOG(INFO) << "Loaded " << match_list.size() << " matches for (" <<
-          views[v1] << ", " << t1 << "), (" << views[v2] << ", " << t2 << ")";
-      num_matches += match_list.size();
-
-      // Add matches to map.
-      Frame frame1(v1, t1);
-      Frame frame2(v2, t2);
-
-      for (std::vector<Match>::const_iterator match = match_list.begin();
-           match != match_list.end();
-           ++match) {
-        FeatureIndex feature1(frame1, match->first);
-        FeatureIndex feature2(frame2, match->second);
-
-        // Find existing vertex for feature, or insert one.
-        MatchGraph::vertex_descriptor vertex1;
-        MatchGraph::vertex_descriptor vertex2;
-        vertex1 = findOrInsert(graph, vertices, feature1);
-        vertex2 = findOrInsert(graph, vertices, feature2);
-
-        // Add vertex to graph.
-        boost::add_edge(vertex1, vertex2, graph);
+    if (temporal_chain) {
+      // For all views...
+      for (int v = 0; v < num_views; v += 1) {
+        // ...match between adjacent frames.
+        for (int t = 0; t < num_frames - 1; t += 1) {
+          loadMatches(format, views, v, v, t, t + 1, graph, vertices);
+        }
       }
     }
   }
@@ -233,7 +282,8 @@ int main(int argc, char** argv) {
 
   // Load matches.
   MatchGraph graph;
-  loadAllMatches(matches_format, views, num_frames, graph);
+  loadAllMatches(matches_format, views, num_frames, FLAGS_simultaneous_only,
+      FLAGS_temporal_chain, graph);
   int num_vertices = boost::num_vertices(graph);
   int num_edges = boost::num_edges(graph);
   LOG(INFO) << "Loaded " << num_edges << " matches between " << num_vertices <<
@@ -285,7 +335,7 @@ int main(int argc, char** argv) {
       MultiviewTrack<int> track;
       bool consistent = multitrackToTrack(multitracks.track(i), track);
 
-      if (!consistent) {
+      if (consistent) {
         // Add to the list.
         tracks.push_back(MultiviewTrack<int>());
         tracks.back().swap(track);

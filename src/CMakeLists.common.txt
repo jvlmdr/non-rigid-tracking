@@ -219,23 +219,6 @@ ADD_EXECUTABLE(match-tracks-using-mean
 TARGET_LINK_LIBRARIES(match-tracks-using-mean glog gflags)
 TARGET_LINK_LIBRARIES(match-tracks-using-mean ${OpenCV_LIBS})
 
-ADD_EXECUTABLE(exhaustive-matches-to-multiview-tracks
-  exhaustive_matches_to_multiview_tracks.cpp
-  read_lines.cpp
-  sift_feature.cpp
-  sift_position.cpp
-  descriptor.cpp
-  multiview_track.cpp
-  match_reader.cpp
-  sift_feature_reader.cpp
-  descriptor_reader.cpp
-  sift_position_reader.cpp
-  sift_feature_writer.cpp
-  descriptor_writer.cpp
-  sift_position_writer.cpp)
-TARGET_LINK_LIBRARIES(exhaustive-matches-to-multiview-tracks glog gflags)
-TARGET_LINK_LIBRARIES(exhaustive-matches-to-multiview-tracks ${OpenCV_LIBS})
-
 ADD_EXECUTABLE(visualize-multiview-tracks
   visualize_multiview_tracks.cpp
   read_lines.cpp
@@ -438,3 +421,20 @@ ADD_EXECUTABLE(select-tracked-matches
     match_result_writer.cpp)
 TARGET_LINK_LIBRARIES(select-tracked-matches glog gflags)
 TARGET_LINK_LIBRARIES(select-tracked-matches ${OpenCV_LIBS})
+
+ADD_EXECUTABLE(matches-to-multiview-tracks
+  matches_to_multiview_tracks.cpp
+  read_lines.cpp
+  sift_feature.cpp
+  sift_position.cpp
+  descriptor.cpp
+  multiview_track.cpp
+  match_reader.cpp
+  sift_feature_reader.cpp
+  descriptor_reader.cpp
+  sift_position_reader.cpp
+  sift_feature_writer.cpp
+  descriptor_writer.cpp
+  sift_position_writer.cpp)
+TARGET_LINK_LIBRARIES(matches-to-multiview-tracks glog gflags)
+TARGET_LINK_LIBRARIES(matches-to-multiview-tracks ${OpenCV_LIBS})
