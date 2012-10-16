@@ -44,6 +44,9 @@ class MultiviewTrack {
     int numFrames() const;
     bool empty() const;
 
+    // Returns the number of image features in all views.
+    int numImageFeatures() const;
+
     // Returns the number of views in which the feature was present.
     int numViewsPresent() const;
 
@@ -54,6 +57,9 @@ class MultiviewTrack {
 
 template<class T>
 void swap(MultiviewTrack<T>& lhs, MultiviewTrack<T>& rhs);
+
+template<class T>
+int addMultiviewTrackImageFeatures(int x, const MultiviewTrack<T>& track);
 
 #include "multiview_track.inl"
 

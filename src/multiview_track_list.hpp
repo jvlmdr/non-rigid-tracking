@@ -44,6 +44,7 @@ class MultiviewTrackList {
     int numTracks() const;
     int numViews() const;
     int numFrames() const;
+    int numImageFeatures() const;
 
   private:
     // Store as a list of multiview tracks.

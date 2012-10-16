@@ -1,4 +1,5 @@
 #include <glog/logging.h>
+#include <numeric>
 
 template<class T>
 MultiviewTrack<T>::MultiviewTrack() : view_tracks_(), num_frames_(0) {}
@@ -107,6 +108,12 @@ bool MultiviewTrack<T>::empty() const {
 }
 
 template<class T>
+int MultiviewTrack<T>::numImageFeatures() const {
+  return std::accumulate(view_tracks_.begin(), view_tracks_.end(), 0,
+      addTrackSize<T>);
+}
+
+template<class T>
 int MultiviewTrack<T>::numViewsPresent() const {
   int num_views = view_tracks_.size();
   int count = 0;
@@ -118,4 +125,9 @@ int MultiviewTrack<T>::numViewsPresent() const {
   }
 
   return count;
+}
+
+template<class T>
+int addMultiviewTrackImageFeatures(int x, const MultiviewTrack<T>& track) {
+  return x + track.numImageFeatures();
 }

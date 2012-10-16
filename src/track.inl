@@ -104,6 +104,11 @@ typename Track<T>::const_reverse_iterator Track<T>::rend() const {
   return map_.rend();
 }
 
+template<class T>
+int addTrackSize(int x, const Track<T>& track) {
+  return x + track.size();
+}
+
 ////////////////////////////////////////////////////////////////////////////////
 // TrackIterator
 

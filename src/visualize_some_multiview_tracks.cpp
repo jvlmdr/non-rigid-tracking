@@ -113,13 +113,10 @@ std::string makeFrameFilename(const std::string& format,
   return boost::str(boost::format(format) % view % (time + 1));
 }
 
-int addTrackSize(int n, const Track<SiftPosition>& track) {
-  return n + track.size();
-}
-
 int numObservations(const MultiviewTrack<SiftPosition>& track) {
   // Add size of all tracks.
-  return std::accumulate(track.begin(), track.end(), 0, addTrackSize);
+  return std::accumulate(track.begin(), track.end(), 0,
+      addTrackSize<SiftPosition>);
 }
 
 bool hasMoreObservations(const MultiviewTrack<SiftPosition>& lhs,

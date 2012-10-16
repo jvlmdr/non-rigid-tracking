@@ -105,6 +105,11 @@ void swap(TrackList<T>& lhs, TrackList<T>& rhs) {
 }
 
 template<class T>
+int TrackList<T>::numImageFeatures() const {
+  return std::accumulate(list_.begin(), list_.end(), 0, addTrackSize<T>);
+}
+
+template<class T>
 typename TrackList<T>::iterator TrackList<T>::begin() {
   return list_.begin();
 }

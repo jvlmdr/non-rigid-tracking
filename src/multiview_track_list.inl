@@ -1,4 +1,5 @@
 #include <algorithm>
+#include <numeric>
 #include <glog/logging.h>
 
 template<class T>
@@ -117,6 +118,12 @@ int MultiviewTrackList<T>::numViews() const {
 template<class T>
 int MultiviewTrackList<T>::numFrames() const {
   return num_frames_;
+}
+
+template<class T>
+int MultiviewTrackList<T>::numImageFeatures() const {
+  return std::accumulate(tracks_.begin(), tracks_.end(), 0,
+      addMultiviewTrackImageFeatures<T>);
 }
 
 ////////////////////////////////////////////////////////////////////////////////

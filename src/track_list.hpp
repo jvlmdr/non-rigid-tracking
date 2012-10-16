@@ -53,6 +53,8 @@ class TrackList {
     void clear();
     void swap(TrackList<T>& other);
 
+    int numImageFeatures() const;
+
   private:
     Container list_;
 };

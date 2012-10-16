@@ -55,6 +55,9 @@ class Track {
 template<class T>
 void swap(Track<T>& lhs, Track<T>& rhs);
 
+template<class T>
+int addTrackSize(int x, const Track<T>& track);
+
 ////////////////////////////////////////////////////////////////////////////////
 
 // Iterates through a track.

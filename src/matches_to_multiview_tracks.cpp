@@ -342,9 +342,17 @@ int main(int argc, char** argv) {
       }
     }
 
-    int num_discarded = multitracks.numTracks() - tracks.numTracks();
-    LOG(INFO) << "Discarded " << num_discarded << " inconsistent tracks (" <<
-        tracks.numTracks() << "/" << multitracks.numTracks() << " remain)";
+    int num_tracks_discarded = multitracks.numTracks() - tracks.numTracks();
+    LOG(INFO) << "Discarded " << num_tracks_discarded <<
+        " inconsistent tracks (" << tracks.numTracks() << "/" <<
+        multitracks.numTracks() << " remain)";
+
+    // More interested in the number of features we threw out!
+    int num_features_discarded = multitracks.numImageFeatures() -
+      tracks.numImageFeatures();
+    LOG(INFO) << "Discarded " << num_features_discarded <<
+        " features (" << tracks.numImageFeatures() << "/" <<
+        multitracks.numImageFeatures() << " remain)";
 
     // Save track list.
     DefaultWriter<int> feature_writer;
