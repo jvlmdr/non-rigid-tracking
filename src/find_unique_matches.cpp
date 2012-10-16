@@ -7,10 +7,8 @@
 
 namespace {
 
-// The result of a single match from one image to the other.
-typedef cv::DMatch RawMatch;
 // A list of single matches.
-typedef std::vector<RawMatch> RawMatchList;
+typedef std::vector<cv::DMatch> RawMatchList;
 
 }
 
@@ -190,6 +188,7 @@ void unionOfUniqueMatches(
         forward = false;
       } else {
         reciprocal = true;
+        forward = true; // irrelevant
       }
     }
 

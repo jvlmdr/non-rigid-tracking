@@ -16,10 +16,8 @@ DirectedMatch::DirectedMatch(int index, double distance)
 
 namespace {
 
-// The result of a single match from one image to the other.
-typedef cv::DMatch RawMatch;
 // A list of single matches.
-typedef std::vector<RawMatch> RawMatchList;
+typedef std::vector<cv::DMatch> RawMatchList;
 
 // Converts from raw cv::Matches to DirectedMatches.
 DirectedMatch convertMatch(const cv::DMatch& match) {
@@ -37,7 +35,7 @@ void convertMatchLists(const std::vector<RawMatchList>& raw,
   directed.assign(raw.size(), DirectedMatchList());
 
   std::vector<RawMatchList>::const_iterator raw_matches = raw.begin();
-  std::vector<RawMatchList>::iterator directed_matches = directed.begin();
+  std::vector<DirectedMatchList>::iterator directed_matches = directed.begin();
 
   while (raw_matches != raw.end()) {
     convertMatchList(*raw_matches, *directed_matches);
@@ -50,18 +48,26 @@ void convertMatchLists(const std::vector<RawMatchList>& raw,
 
 // Iteratively finds matches within a relative radius of the best match.
 // Iterative in case of approximate techniques finding better "best" matches.
+//
+// Parameters:
+// query -- Single-row matrix
 void relativeRadiusMatchIterative(const cv::Mat& query,
                                   cv::DescriptorMatcher& matcher,
                                   RawMatchList& matches,
                                   double nearest,
                                   double max_relative_distance) {
+  CHECK(query.rows == 1);
+  // Even though we're only matching one element, vector of vectors returned.
+  std::vector<RawMatchList> singleton;
+
   bool changed = true;
 
   while (changed) {
     // Compute new radius.
     double radius = nearest / max_relative_distance;
     // Find matches within radius.
-    matcher->radiusMatch(query.row(i), matches, radius);
+    matcher.radiusMatch(query, singleton, radius);
+    matches.swap(singleton.front());
 
     // Buffer previous distance.
     double prev_nearest = nearest;
@@ -78,11 +84,11 @@ void relativeRadiusMatch(const cv::Mat& query,
                          std::vector<RawMatchList>& match_lists,
                          double max_relative_distance) {
   // Initialize output.
-  match_lists.assign(query.rows);
+  match_lists.assign(query.rows, RawMatchList());
 
   // Find the single best match for each.
   RawMatchList best;
-  matcher->match(query, best);
+  matcher.match(query, best);
 
   std::vector<RawMatchList>::iterator matches = match_lists.begin();
 
@@ -93,7 +99,7 @@ void relativeRadiusMatch(const cv::Mat& query,
 
     // Iteratively find nearest.
     // In the case of brute force, will only iterate once.
-    relativeRadiusMatchIterative(query, *matcher, *matches, nearest,
+    relativeRadiusMatchIterative(query.row(i), matcher, *matches, nearest,
         max_relative_distance);
 
     ++matches;
@@ -157,9 +163,7 @@ void match(const cv::Mat& query,
   // Put one element in a singleton list to train the matcher.
   std::vector<cv::Mat> singleton;
   singleton.push_back(train);
-  matcher.add(singleton);
-
-  std::vector<DirectedMatch> matches;
+  matcher->add(singleton);
 
   if (max_num_matches > 0) {
     // Take top few matches.
@@ -181,7 +185,7 @@ void match(const cv::Mat& query,
 
     // Retrieve based on relative distance.
     std::vector<std::vector<cv::DMatch> > raw;
-    relativeRadiusMatch(query, matcher, raw, max_relative_distance);
+    relativeRadiusMatch(query, *matcher, raw, max_relative_distance);
 
     // Convert from cv::DMatch to our match.
     convertMatchLists(raw, matches);

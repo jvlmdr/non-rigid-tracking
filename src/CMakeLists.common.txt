@@ -14,10 +14,11 @@ TARGET_LINK_LIBRARIES(visualize-keypoints ${OpenCV_LIBS})
 ADD_EXECUTABLE(match-features
   match_features.cpp
   descriptor.cpp
+  find_matches.cpp
   find_unique_matches.cpp
   find_matches_util.cpp
-  unique_match_result.cpp
   match_result.cpp
+  unique_match_result.cpp
   descriptor_reader.cpp
   unique_match_result_writer.cpp
   match_result_writer.cpp)

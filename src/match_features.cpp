@@ -13,11 +13,13 @@
 #include "descriptor.hpp"
 #include "match_result.hpp"
 #include "unique_match_result.hpp"
+#include "find_matches.hpp"
 #include "find_unique_matches.hpp"
 
 #include "descriptor_reader.hpp"
 #include "iterator_reader.hpp"
 #include "vector_writer.hpp"
+#include "match_result_writer.hpp"
 #include "unique_match_result_writer.hpp"
 
 DEFINE_bool(unique, true,
@@ -92,37 +94,60 @@ int main(int argc, char** argv) {
   CHECK(ok) << "Could not load second descriptors file";
   LOG(INFO) << "Loaded " << descriptors2.size() << " descriptors";
 
-  // Match in both directions.
-  std::vector<UniqueDirectedMatch> forward_matches;
-  std::vector<UniqueDirectedMatch> reverse_matches;
-  matchUniqueBothDirections(descriptors1, descriptors2, forward_matches,
-      reverse_matches, FLAGS_use_flann);
+  if (FLAGS_unique) {
+    // Find one match in each direction.
+    std::vector<UniqueDirectedMatch> forward_matches;
+    std::vector<UniqueDirectedMatch> reverse_matches;
+    matchUniqueBothDirections(descriptors1, descriptors2, forward_matches,
+        reverse_matches, FLAGS_use_flann);
 
-  // Merge directional matches.
-  std::vector<UniqueMatchResult> matches;
-  if (FLAGS_reciprocal) {
-    // Reduce to a consistent set.
-    intersectionOfUniqueMatches(forward_matches, reverse_matches, matches);
-    LOG(INFO) << "Found " << matches.size() << " reciprocal matches";
-  } else {
-    // Throw all matches together.
-    unionOfUniqueMatches(forward_matches, reverse_matches, matches);
-    LOG(INFO) << "Found " << matches.size() << " matches";
-  }
+    // Merge directional matches.
+    std::vector<UniqueMatchResult> matches;
+    if (FLAGS_reciprocal) {
+      // Reduce to a consistent set.
+      intersectionOfUniqueMatches(forward_matches, reverse_matches, matches);
+      LOG(INFO) << "Found " << matches.size() << " reciprocal matches";
+    } else {
+      // Throw all matches together.
+      unionOfUniqueMatches(forward_matches, reverse_matches, matches);
+      LOG(INFO) << "Found " << matches.size() << " matches";
+    }
 
-  // Filter the matches by the distance ratio.
-  {
+    // Filter the matches by the distance ratio.
     std::vector<UniqueMatchResult> distinctive;
     std::remove_copy_if(matches.begin(), matches.end(),
         std::back_inserter(distinctive),
         boost::bind(isNotDistinctive, _1, SECOND_BEST_RATIO));
     matches.swap(distinctive);
-  }
-  LOG(INFO) << "Pruned to " << matches.size() << " distinctive matches";
+    LOG(INFO) << "Pruned to " << matches.size() << " distinctive matches";
 
-  UniqueMatchResultWriter writer;
-  ok = saveList(matches_file, matches, writer);
-  CHECK(ok) << "Could not save list of matches";
+    UniqueMatchResultWriter writer;
+    ok = saveList(matches_file, matches, writer);
+    CHECK(ok) << "Could not save list of matches";
+  } else {
+    // Find several matches in each direction.
+    std::vector<DirectedMatchList> forward_matches;
+    std::vector<DirectedMatchList> reverse_matches;
+    matchBothDirections(descriptors1, descriptors2, forward_matches,
+        reverse_matches, FLAGS_max_num_matches, FLAGS_max_relative_distance,
+        FLAGS_use_flann);
+
+    // Merge directional matches.
+    std::vector<MatchResult> matches;
+    if (FLAGS_reciprocal) {
+      // Reduce to a consistent set.
+      intersectionOfMatchLists(forward_matches, reverse_matches, matches);
+      LOG(INFO) << "Found " << matches.size() << " reciprocal matches";
+    } else {
+      // Throw all matches together.
+      unionOfMatchLists(forward_matches, reverse_matches, matches);
+      LOG(INFO) << "Found " << matches.size() << " matches";
+    }
+
+    MatchResultWriter writer;
+    ok = saveList(matches_file, matches, writer);
+    CHECK(ok) << "Could not save list of matches";
+  }
 
   return 0;
 }

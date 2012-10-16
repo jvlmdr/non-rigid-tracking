@@ -99,6 +99,12 @@ int main(int argc, char** argv) {
   std::remove_copy_if(matches.begin(), matches.end(),
       std::back_inserter(inliers), match_is_outlier);
 
+  int num_input = matches.size();
+  int num_output = inliers.size();
+  double fraction = static_cast<double>(num_output) / num_input;
+  LOG(INFO) << "Kept " << num_output << " / " << num_input << " matches (" <<
+      fraction << ")";
+
   MatchResultWriter match_writer;
   ok = saveList(inliers_file, inliers, match_writer);
   CHECK(ok) << "Could not save rigid matches to file";
