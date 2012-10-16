@@ -2,31 +2,37 @@
 #include "descriptor.hpp"
 #include <vector>
 
-struct DirectedMatchResult {
-  int match;
-  double dist;
-  double second_dist;
+// Matching in both directions returns directed matches.
+struct DirectedMatch {
+  int index;
+  double distance;
+
+  DirectedMatch();
+  DirectedMatch(int index, double distance);
 };
 
-void matchBothDirections(const std::vector<Descriptor>& list1,
-                         const std::vector<Descriptor>& list2,
-                         std::vector<DirectedMatchResult>& forward_matches,
-                         std::vector<DirectedMatchResult>& reverse_matches,
+// And in fact, multiple directed matches.
+typedef std::vector<DirectedMatch> DirectedMatchList;
+
+// Finds all matches for each point in the other set.
+// Limited by max_num_matches and max_relative_distance.
+// Outputs a list of matched points for each point.
+void matchBothDirections(const std::vector<Descriptor>& points1,
+                         const std::vector<Descriptor>& points2,
+                         std::vector<DirectedMatchList>& forward_matches,
+                         std::vector<DirectedMatchList>& reverse_matches,
+                         int max_num_matches,
+                         double max_relative_distance,
                          bool use_flann);
 
-void intersectionOfMatches(
-    const std::vector<DirectedMatchResult>& forward_matches,
-    const std::vector<DirectedMatchResult>& reverse_matches,
+// Finds the reciprocal matches.
+void intersectionOfMatchLists(
+    const std::vector<DirectedMatchList>& forward_matches,
+    const std::vector<DirectedMatchList>& reverse_matches,
     std::vector<MatchResult>& matches);
 
-void unionOfMatches(const std::vector<DirectedMatchResult>& forward_matches,
-                    const std::vector<DirectedMatchResult>& reverse_matches,
-                    std::vector<MatchResult>& matches);
-
-typedef std::vector<Descriptor> DescriptorBag;
-
-void matchBagsBothDirections(const std::vector<DescriptorBag>& bags1,
-                             const std::vector<DescriptorBag>& bags2,
-                             std::vector<DirectedMatchResult>& forward_matches,
-                             std::vector<DirectedMatchResult>& reverse_matches,
-                             bool use_flann);
+// Combines all matches.
+void unionOfMatchLists(
+    const std::vector<DirectedMatchList>& forward_matches,
+    const std::vector<DirectedMatchList>& reverse_matches,
+    std::vector<MatchResult>& matches);

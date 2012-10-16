@@ -5,13 +5,13 @@
 #include <opencv2/core/core.hpp>
 #include <gflags/gflags.h>
 #include <glog/logging.h>
-#include "match_result.hpp"
+#include "unique_match_result.hpp"
 #include "iterator_reader.hpp"
-#include "match_result_reader.hpp"
+#include "unique_match_result_reader.hpp"
 #include "vector_writer.hpp"
-#include "match_result_writer.hpp"
+#include "unique_match_result_writer.hpp"
 
-typedef std::vector<MatchResult> MatchList;
+typedef std::vector<UniqueMatchResult> MatchList;
 
 void init(int& argc, char**& argv) {
   std::ostringstream usage;
@@ -42,7 +42,7 @@ int main(int argc, char** argv) {
 
   // Load matches from file.
   MatchList matches;
-  MatchResultReader match_reader;
+  UniqueMatchResultReader match_reader;
   bool ok = loadList(input_file, matches, match_reader);
   CHECK(ok) << "Could not load matches";
 
@@ -52,8 +52,8 @@ int main(int argc, char** argv) {
   MatchList::const_iterator match;
   for (match = matches.begin(); match != matches.end(); ++match) {
     // Calculate distinctiveness.
-    double nearest = std::min(match->second_dist1, match->second_dist2);
-    double relative_distance = match->dist / nearest;
+    double nearest = match->minNextBest();
+    double relative_distance = match->distance / nearest;
 
     // Only keep if below threshold.
     if (relative_distance < max_relative_distance) {
@@ -68,7 +68,7 @@ int main(int argc, char** argv) {
       fraction << ")";
 
   // Write out matches.
-  MatchResultWriter match_writer;
+  UniqueMatchResultWriter match_writer;
   ok = saveList(output_file, distinctive, match_writer);
   CHECK(ok) << "Could not save tracks";
 

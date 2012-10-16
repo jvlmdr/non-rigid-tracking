@@ -8,35 +8,46 @@
 #include <opencv2/core/core.hpp>
 #include <gflags/gflags.h>
 #include <glog/logging.h>
+
 #include "read_image.hpp"
 #include "descriptor.hpp"
 #include "match_result.hpp"
-#include "find_matches.hpp"
+#include "unique_match_result.hpp"
+#include "find_unique_matches.hpp"
+
 #include "descriptor_reader.hpp"
 #include "iterator_reader.hpp"
-#include "writer.hpp"
 #include "vector_writer.hpp"
-#include "match_result_writer.hpp"
+#include "unique_match_result_writer.hpp"
 
-DEFINE_double(second_best_ratio, 1.0,
-    "Maximum distance relative to second-best match. >= 1 has no effect.");
+DEFINE_bool(unique, true,
+    "Each feature is associated to at most one other feature");
+// Settings for when unique == true.
+DEFINE_double(min_relative_clearance, 1.0,
+    "Unique matching. "
+    "Specifies the minimum relative distance that the second-best match must "
+    "be from the first in order to be considered distinctive. "
+    "0.7 or 0.8 is typical, >= 1 has no effect.");
+// Settings for when unique == false.
+DEFINE_int32(max_num_matches, 0,
+    "Non-unique matching. Maximum number of matches. "
+    "Unused if non-positive.");
+DEFINE_double(max_relative_distance, 0.,
+    "Non-unique matching. "
+    "Return all matches within this fraction of the nearest match. "
+    "0.9 is typical, 0 means all matches, 1 means only the nearest.");
+
+DEFINE_bool(reciprocal, true, "Require matches to be reciprocal.");
 DEFINE_bool(use_flann, true,
     "Use FLANN (fast but approximate) to find nearest neighbours.");
-DEFINE_bool(reciprocal, true,
-    "Require matches to be reciprocal between images.");
 
-typedef std::vector<Descriptor> DescriptorList;
-typedef std::vector<MatchResult> MatchResultList;
-typedef std::vector<DirectedMatchResult> DirectedMatchResultList;
-
-bool isNotDistinctive(const MatchResult& match, double ratio) {
+bool isNotDistinctive(const UniqueMatchResult& match, double ratio) {
   // Pick nearest second-best match.
-  double second_dist = std::min(match.second_dist1, match.second_dist2);
-
+  double next_best = match.minNextBest();
   // The best match must be within a fraction of that.
-  double max_dist = ratio * second_dist;
+  double max_distance = ratio * next_best;
 
-  return !(match.dist <= max_dist);
+  return !(match.distance <= max_distance);
 }
 
 void init(int& argc, char**& argv) {
@@ -65,50 +76,51 @@ int main(int argc, char** argv) {
   std::string descriptors_file1 = argv[1];
   std::string descriptors_file2 = argv[2];
   std::string matches_file = argv[3];
-  double SECOND_BEST_RATIO = FLAGS_second_best_ratio;
+  double SECOND_BEST_RATIO = FLAGS_min_relative_clearance;
 
   bool ok;
 
   // Load descriptors.
-  DescriptorList descriptors1;
-  DescriptorList descriptors2;
-
   DescriptorReader descriptor_reader;
+  std::vector<Descriptor> descriptors1;
   ok = loadList(descriptors_file1, descriptors1, descriptor_reader);
-  CHECK(ok) << "Could not load descriptors";
+  CHECK(ok) << "Could not load first descriptors file";
   LOG(INFO) << "Loaded " << descriptors1.size() << " descriptors";
 
+  std::vector<Descriptor> descriptors2;
   ok = loadList(descriptors_file2, descriptors2, descriptor_reader);
-  CHECK(ok) << "Could not load descriptors";
+  CHECK(ok) << "Could not load second descriptors file";
   LOG(INFO) << "Loaded " << descriptors2.size() << " descriptors";
 
   // Match in both directions.
-  DirectedMatchResultList forward_matches;
-  DirectedMatchResultList reverse_matches;
-  matchBothDirections(descriptors1, descriptors2, forward_matches,
+  std::vector<UniqueDirectedMatch> forward_matches;
+  std::vector<UniqueDirectedMatch> reverse_matches;
+  matchUniqueBothDirections(descriptors1, descriptors2, forward_matches,
       reverse_matches, FLAGS_use_flann);
 
   // Merge directional matches.
-  MatchResultList matches;
+  std::vector<UniqueMatchResult> matches;
   if (FLAGS_reciprocal) {
     // Reduce to a consistent set.
-    intersectionOfMatches(forward_matches, reverse_matches, matches);
+    intersectionOfUniqueMatches(forward_matches, reverse_matches, matches);
     LOG(INFO) << "Found " << matches.size() << " reciprocal matches";
   } else {
     // Throw all matches together.
-    unionOfMatches(forward_matches, reverse_matches, matches);
+    unionOfUniqueMatches(forward_matches, reverse_matches, matches);
     LOG(INFO) << "Found " << matches.size() << " matches";
   }
 
   // Filter the matches by the distance ratio.
-  MatchResultList distinctive;
-  std::remove_copy_if(matches.begin(), matches.end(),
-      std::back_inserter(distinctive),
-      boost::bind(isNotDistinctive, _1, SECOND_BEST_RATIO));
-  matches.swap(distinctive);
+  {
+    std::vector<UniqueMatchResult> distinctive;
+    std::remove_copy_if(matches.begin(), matches.end(),
+        std::back_inserter(distinctive),
+        boost::bind(isNotDistinctive, _1, SECOND_BEST_RATIO));
+    matches.swap(distinctive);
+  }
   LOG(INFO) << "Pruned to " << matches.size() << " distinctive matches";
 
-  MatchResultWriter writer;
+  UniqueMatchResultWriter writer;
   ok = saveList(matches_file, matches, writer);
   CHECK(ok) << "Could not save list of matches";
 

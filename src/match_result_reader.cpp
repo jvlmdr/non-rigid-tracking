@@ -11,15 +11,7 @@ bool MatchResultReader::read(const cv::FileNode& node, MatchResult& result) {
     return false;
   }
 
-  if (!::read<double>(node["dist"], result.dist)) {
-    return false;
-  }
-
-  if (!::read<double>(node["second_dist1"], result.second_dist1)) {
-    return false;
-  }
-
-  if (!::read<double>(node["second_dist2"], result.second_dist2)) {
+  if (!::read<double>(node["dist"], result.distance)) {
     return false;
   }
 

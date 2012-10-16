@@ -1,260 +1,276 @@
 #include "find_matches.hpp"
+#include <set>
 #include <glog/logging.h>
+#include <algorithm>
+#include <boost/bind.hpp>
 #include <opencv2/core/core.hpp>
 #include <opencv2/features2d/features2d.hpp>
+#include "find_matches_util.hpp"
+
+DirectedMatch::DirectedMatch() : index(-1), distance(-1) {}
+
+DirectedMatch::DirectedMatch(int index, double distance)
+    : index(index), distance(distance) {}
+
+////////////////////////////////////////////////////////////////////////////////
+
+namespace {
 
 // The result of a single match from one image to the other.
-typedef cv::DMatch SingleDirectedMatchResult;
+typedef cv::DMatch RawMatch;
 // A list of single matches.
-typedef std::vector<SingleDirectedMatchResult> SingleDirectedMatchResultList;
+typedef std::vector<RawMatch> RawMatchList;
 
-void listToMatrix(const std::vector<Descriptor>& list, cv::Mat& matrix) {
-  int num_descriptors = list.size();
-  CHECK(!list.empty());
-  int num_dimensions = list.front().data.size();
-  matrix.create(num_descriptors, num_dimensions, cv::DataType<float>::type);
+// Converts from raw cv::Matches to DirectedMatches.
+DirectedMatch convertMatch(const cv::DMatch& match) {
+  return DirectedMatch(match.trainIdx, match.distance);
+}
 
-  for (int i = 0; i < num_descriptors; i += 1) {
-    std::copy(list[i].data.begin(), list[i].data.end(),
-        matrix.row(i).begin<float>());
+void convertMatchList(const RawMatchList& raw, DirectedMatchList& matches) {
+  matches.clear();
+  std::transform(raw.begin(), raw.end(), std::back_inserter(matches),
+      convertMatch);
+}
+
+void convertMatchLists(const std::vector<RawMatchList>& raw,
+                       std::vector<DirectedMatchList>& directed) {
+  directed.assign(raw.size(), DirectedMatchList());
+
+  std::vector<RawMatchList>::const_iterator raw_matches = raw.begin();
+  std::vector<RawMatchList>::iterator directed_matches = directed.begin();
+
+  while (raw_matches != raw.end()) {
+    convertMatchList(*raw_matches, *directed_matches);
+
+    ++raw_matches;
+    ++directed_matches;
   }
 }
 
-void bagsToMatrices(const std::vector<DescriptorBag>& bags,
-                    std::vector<cv::Mat>& matrices) {
-  int num_bags = bags.size();
-  // Initialize list of matrices.
-  matrices.assign(num_bags, cv::Mat());
-  // Copy lists of descriptors into matrices.
-  for (int i = 0; i < num_bags; i += 1) {
-    listToMatrix(bags[i], matrices[i]);
+
+// Iteratively finds matches within a relative radius of the best match.
+// Iterative in case of approximate techniques finding better "best" matches.
+void relativeRadiusMatchIterative(const cv::Mat& query,
+                                  cv::DescriptorMatcher& matcher,
+                                  RawMatchList& matches,
+                                  double nearest,
+                                  double max_relative_distance) {
+  bool changed = true;
+
+  while (changed) {
+    // Compute new radius.
+    double radius = nearest / max_relative_distance;
+    // Find matches within radius.
+    matcher->radiusMatch(query.row(i), matches, radius);
+
+    // Buffer previous distance.
+    double prev_nearest = nearest;
+    // Find new nearest distance.
+    nearest = matches.front().distance;
+
+    // Was the new nearest-distance different to the old one?
+    changed = (nearest != prev_nearest);
   }
 }
 
-// Converts a pair of matches to a top-two match.
-DirectedMatchResult pairToResult(const SingleDirectedMatchResultList& pair) {
-  DirectedMatchResult result;
+void relativeRadiusMatch(const cv::Mat& query,
+                         cv::DescriptorMatcher& matcher,
+                         std::vector<RawMatchList>& match_lists,
+                         double max_relative_distance) {
+  // Initialize output.
+  match_lists.assign(query.rows);
 
-  // Every element in the query set matched to one element in the training set.
-  result.match = pair[0].trainIdx;
-  result.dist = pair[0].distance;
-  result.second_dist = pair[1].distance;
+  // Find the single best match for each.
+  RawMatchList best;
+  matcher->match(query, best);
 
-  return result;
+  std::vector<RawMatchList>::iterator matches = match_lists.begin();
+
+  // Now search for each query descriptor using a different search radius.
+  for (int i = 0; i < query.rows; i += 1) {
+    // Compute search radius using best match.
+    double nearest = best[i].distance;
+
+    // Iteratively find nearest.
+    // In the case of brute force, will only iterate once.
+    relativeRadiusMatchIterative(query, *matcher, *matches, nearest,
+        max_relative_distance);
+
+    ++matches;
+  }
 }
 
-void matchBothDirections(const std::vector<Descriptor>& list1,
-                         const std::vector<Descriptor>& list2,
-                         std::vector<DirectedMatchResult>& forward_matches,
-                         std::vector<DirectedMatchResult>& reverse_matches,
+// Removes matches which are not within the max relative distance.
+void filterMatches(const DirectedMatchList& matches,
+                   DirectedMatchList& subset,
+                   double max_relative_distance) {
+  // Matches are ordered by distance.
+  // Find the point at which they exceed the distance.
+  double nearest = matches.front().distance;
+  double radius = nearest / max_relative_distance;
+
+  DirectedMatchList::const_iterator last = matches.begin();
+  while (last != matches.end() && last->distance <= radius) {
+    ++last;
+  }
+
+  subset.clear();
+  std::copy(matches.begin(), last, std::back_inserter(subset));
+}
+
+void filterMatchLists(const std::vector<DirectedMatchList>& input,
+                      std::vector<DirectedMatchList>& output,
+                      double max_relative_distance) {
+  output.assign(input.size(), DirectedMatchList());
+
+  std::vector<DirectedMatchList>::const_iterator input_matches = input.begin();
+  std::vector<DirectedMatchList>::iterator output_matches = output.begin();
+
+  while (input_matches != input.begin()) {
+    filterMatches(*input_matches, *output_matches, max_relative_distance);
+
+    ++input_matches;
+    ++output_matches;
+  }
+}
+
+// If max_num_matches is greater than zero, the number of matches will be
+// limited. If max_relative_distance is greater than zero, the distance of the
+// matches from the best match will be limited.
+//
+// If both constraints are active, the fixed number will be retrieved and
+// results that are too far away will be removed.
+void match(const cv::Mat& query,
+           const cv::Mat& train,
+           std::vector<DirectedMatchList>& matches,
+           int max_num_matches,
+           double max_relative_distance,
+           bool use_flann) {
+  // Construct matching object.
+  cv::Ptr<cv::DescriptorMatcher> matcher;
+  if (use_flann) {
+    matcher = cv::DescriptorMatcher::create("FlannBased");
+  } else {
+    matcher = cv::DescriptorMatcher::create("BruteForce");
+  }
+
+  // Put one element in a singleton list to train the matcher.
+  std::vector<cv::Mat> singleton;
+  singleton.push_back(train);
+  matcher.add(singleton);
+
+  std::vector<DirectedMatch> matches;
+
+  if (max_num_matches > 0) {
+    // Take top few matches.
+    std::vector<std::vector<cv::DMatch> > raw;
+    matcher->knnMatch(query, raw, max_num_matches);
+
+    // Convert from cv::DMatch to our match.
+    convertMatchLists(raw, matches);
+
+    if (max_relative_distance > 0) {
+      // Remove any results that are too far away.
+      std::vector<DirectedMatchList> filtered;
+      filterMatchLists(matches, filtered, max_relative_distance);
+      matches.swap(filtered);
+    }
+  } else {
+    // No maximum number of matches specified.
+    CHECK(max_relative_distance > 0) << "No limit on number of matches";
+
+    // Retrieve based on relative distance.
+    std::vector<std::vector<cv::DMatch> > raw;
+    relativeRadiusMatch(query, matcher, raw, max_relative_distance);
+
+    // Convert from cv::DMatch to our match.
+    convertMatchLists(raw, matches);
+  }
+}
+
+}
+
+void matchBothDirections(const std::vector<Descriptor>& points1,
+                         const std::vector<Descriptor>& points2,
+                         std::vector<DirectedMatchList>& forward,
+                         std::vector<DirectedMatchList>& reverse,
+                         int max_num_matches,
+                         double max_relative_distance,
                          bool use_flann) {
-  // Load descriptors into matrices for cv::DescriptorMatcher.
+  // Copy descriptors into matrices for cv::DescriptorMatcher.
   cv::Mat mat1;
   cv::Mat mat2;
-  listToMatrix(list1, mat1);
-  listToMatrix(list2, mat2);
+  listToMatrix(points1, mat1);
+  listToMatrix(points2, mat2);
 
-  // Find two nearest neighbours, match in each direction.
-  std::vector<SingleDirectedMatchResultList> forward_match_pairs;
-  std::vector<SingleDirectedMatchResultList> reverse_match_pairs;
-
-  // Construct matcher.
-  cv::Ptr<cv::DescriptorMatcher> matcher;
-  if (use_flann) {
-    matcher = cv::DescriptorMatcher::create("FlannBased");
-  } else {
-    matcher = cv::DescriptorMatcher::create("BruteForce");
-  }
-
-  // Match all points in both directions.
-  // Get top two matches as this is what we'll be doing in practice.
-  matcher->knnMatch(mat1, mat2, forward_match_pairs, 2);
-  matcher->knnMatch(mat2, mat1, reverse_match_pairs, 2);
-
-  // Convert pairs to match results.
-  forward_matches.clear();
-  std::transform(forward_match_pairs.begin(), forward_match_pairs.end(),
-      std::back_inserter(forward_matches), pairToResult);
-
-  reverse_matches.clear();
-  std::transform(reverse_match_pairs.begin(), reverse_match_pairs.end(),
-      std::back_inserter(reverse_matches), pairToResult);
+  // Match forwards and backwards.
+  match(mat1, mat2, forward, max_num_matches, max_relative_distance, use_flann);
+  match(mat2, mat1, reverse, max_num_matches, max_relative_distance, use_flann);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 
-MatchResult consistentMatchFromTwoDirected(const DirectedMatchResult& forward,
-                                           const DirectedMatchResult& reverse) {
-  MatchResult result;
+namespace {
 
-  result.index1 = reverse.match;
-  result.index2 = forward.match;
-  result.dist = forward.dist;
-  result.second_dist1 = forward.second_dist;
-  result.second_dist2 = reverse.second_dist;
+void addMatchesToSet(const DirectedMatchList& directed,
+                     int index,
+                     bool forward,
+                     std::set<MatchResult>& undirected) {
+  DirectedMatchList::const_iterator d;
 
-  return result;
+  for (d = directed.begin(); d != directed.end(); ++d) {
+    int index1 = index;
+    int index2 = d->index;
+
+    if (!forward) {
+      std::swap(index1, index2);
+    }
+
+    MatchResult u(index1, index2, d->distance);
+    undirected.insert(u);
+  }
 }
 
-void intersectionOfMatches(
-    const std::vector<DirectedMatchResult>& forward_matches,
-    const std::vector<DirectedMatchResult>& reverse_matches,
+void addAllMatchesToSet(const std::vector<DirectedMatchList>& directed,
+                        bool forward,
+                        std::set<MatchResult>& undirected) {
+  std::vector<DirectedMatchList>::const_iterator d;
+  int index = 0;
+
+  for (d = directed.begin(); d != directed.end(); ++d) {
+    addMatchesToSet(*d, index, forward, undirected);
+    index += 1;
+  }
+}
+
+}
+
+void intersectionOfMatchLists(
+    const std::vector<DirectedMatchList>& forward_matches,
+    const std::vector<DirectedMatchList>& reverse_matches,
     std::vector<MatchResult>& matches) {
+  // Construct a set of undirected matches from both sets of directed matches.
+  std::set<MatchResult> forward_set;
+  std::set<MatchResult> reverse_set;
+  addAllMatchesToSet(forward_matches, true, forward_set);
+  addAllMatchesToSet(reverse_matches, false, reverse_set);
+
   matches.clear();
-
-  // Have two lists of pairs (i, j).
-  // Only keep pair (i, j) if there exists a pair (j, i) in the other list.
-  // The first index i is unique in both lists.
-
-  int num_forward_matches = forward_matches.size();
-
-  for (int i = 0; i < num_forward_matches; i += 1) {
-    // Get corresponding reverse match.
-    const DirectedMatchResult& forward = forward_matches[i];
-    const DirectedMatchResult& reverse = reverse_matches[forward.match];
-
-    if (reverse.match == i) {
-      // The reverse match points back. This match was consistent!
-      matches.push_back(consistentMatchFromTwoDirected(forward, reverse));
-    }
-  }
+  std::set_intersection(forward_set.begin(), forward_set.end(),
+      reverse_set.begin(), reverse_set.end(), std::back_inserter(matches));
 }
 
-void unionOfMatches(const std::vector<DirectedMatchResult>& forward_matches,
-                    const std::vector<DirectedMatchResult>& reverse_matches,
-                    std::vector<MatchResult>& matches) {
+void unionOfMatchLists(
+    const std::vector<DirectedMatchList>& forward_matches,
+    const std::vector<DirectedMatchList>& reverse_matches,
+    std::vector<MatchResult>& matches) {
+  // Construct a set of undirected matches from both sets of directed matches.
+  std::set<MatchResult> forward_set;
+  std::set<MatchResult> reverse_set;
+  addAllMatchesToSet(forward_matches, true, forward_set);
+  addAllMatchesToSet(reverse_matches, false, reverse_set);
+
   matches.clear();
-
-  // Have two lists of pairs (i, j).
-  // Add all pairs from reverse list.
-  // Only add (i, j) from forward list if (j, i) is not in reverse list.
-  // The first index i is unique in both lists.
-
-  int num_forward_matches = forward_matches.size();
-  int num_reverse_matches = reverse_matches.size();
-
-  for (int i = 0; i < num_reverse_matches; i += 1) {
-    // Get corresponding reverse match.
-    const DirectedMatchResult& reverse = reverse_matches[i];
-    const DirectedMatchResult& forward = forward_matches[reverse.match];
-
-    matches.push_back(consistentMatchFromTwoDirected(forward, reverse));
-  }
-
-  for (int i = 0; i < num_forward_matches; i += 1) {
-    // Get corresponding reverse match.
-    const DirectedMatchResult& forward = forward_matches[i];
-    const DirectedMatchResult& reverse = reverse_matches[forward.match];
-
-    if (reverse.match != i) {
-      // The reverse match doesn't point back. This is a new match.
-      matches.push_back(consistentMatchFromTwoDirected(forward, reverse));
-    }
-  }
-}
-
-////////////////////////////////////////////////////////////////////////////////
-
-int findBestMatch(const std::vector<SingleDirectedMatchResultList>& list) {
-  CHECK(list.size() > 0);
-  int n = list.size();
-  int arg = 0;
-
-  for (int i = 1; i < n; i += 1) {
-    if (list[i].front() < list[arg].front()) {
-      arg = i;
-    }
-  }
-
-  return arg;
-}
-
-int sizeOfLargestBag(const std::vector<cv::Mat>& matrices) {
-  int max = 0;
-  int n = matrices.size();
-
-  for (int i = 0; i < n; i += 1) {
-    max = std::max(matrices[i].rows, max);
-  }
-
-  return max;
-}
-
-void flattenMatches(const std::vector<SingleDirectedMatchResultList>& matches,
-                    SingleDirectedMatchResultList& flat) {
-  int n = matches.size();
-  flat.clear();
-
-  for (int i = 0; i < n; i += 1) {
-    std::copy(matches[i].begin(), matches[i].end(), std::back_inserter(flat));
-  }
-}
-
-void matchBags(const std::vector<cv::Mat>& query,
-               const std::vector<cv::Mat>& train,
-               std::vector<DirectedMatchResult>& results,
-               bool use_flann) {
-  cv::Ptr<cv::DescriptorMatcher> matcher;
-  if (use_flann) {
-    matcher = cv::DescriptorMatcher::create("FlannBased");
-  } else {
-    matcher = cv::DescriptorMatcher::create("BruteForce");
-  }
-
-  int num_query_features = query.size();
-  results.clear();
-
-  // Find a match in the train image for every feature in the query image.
-  matcher->add(train);
-  // Find largest bag in train image.
-  int largest = sizeOfLargestBag(train);
-
-  for (int i = 0; i < num_query_features; i += 1) {
-    int num_queries = query[i].rows;
-    CHECK(num_queries > 0);
-
-    // Find best match for each feature in the bag.
-    std::vector<SingleDirectedMatchResultList> grouped_matches;
-    matcher->knnMatch(query[i], grouped_matches, largest + 1);
-
-    // Flatten out into a single list.
-    SingleDirectedMatchResultList matches;
-    flattenMatches(grouped_matches, matches);
-
-    // Sort all of them. (This could be more efficient!)
-    std::sort(matches.begin(), matches.end());
-
-    // Read best match from front of list.
-    DirectedMatchResult result;
-    result.match = matches.front().imgIdx;
-    result.dist = matches.front().distance;
-
-    // Find first match belonging to a different feature.
-    int j = 0;
-    int num_matches = matches.size();
-    while (matches[j].imgIdx == result.match) {
-      j += 1;
-      CHECK(j < num_matches);
-    }
-    result.second_dist = matches[j].distance;
-
-    results.push_back(result);
-  }
-}
-
-void matchBagsBothDirections(const std::vector<DescriptorBag>& bags1,
-                             const std::vector<DescriptorBag>& bags2,
-                             std::vector<DirectedMatchResult>& forward_matches,
-                             std::vector<DirectedMatchResult>& reverse_matches,
-                             bool use_flann) {
-  // Load descriptors into matrices for cv::DescriptorMatcher.
-  std::vector<cv::Mat> matrices1;
-  std::vector<cv::Mat> matrices2;
-  bagsToMatrices(bags1, matrices1);
-  bagsToMatrices(bags2, matrices2);
-
-  // Find a match in the second image for each feature in the first image...
-  matchBags(matrices1, matrices2, forward_matches, use_flann);
-  // ...and vice versa.
-  matchBags(matrices2, matrices1, reverse_matches, use_flann);
+  std::set_union(forward_set.begin(), forward_set.end(), reverse_set.begin(),
+      reverse_set.end(), std::back_inserter(matches));
 }
