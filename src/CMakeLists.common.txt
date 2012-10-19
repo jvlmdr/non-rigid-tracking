@@ -447,3 +447,25 @@ ADD_EXECUTABLE(matches-to-multiview-tracks
   sift_position_writer.cpp)
 TARGET_LINK_LIBRARIES(matches-to-multiview-tracks glog gflags)
 TARGET_LINK_LIBRARIES(matches-to-multiview-tracks ${OpenCV_LIBS})
+
+ADD_EXECUTABLE(agglomerative-cluster
+  agglomerative_cluster.cpp
+  read_lines.cpp
+  sift_feature.cpp
+  sift_position.cpp
+  descriptor.cpp
+  multiview_track.cpp
+  match_reader.cpp
+  sift_feature_reader.cpp
+  descriptor_reader.cpp
+  sift_position_reader.cpp
+  sift_feature_writer.cpp
+  descriptor_writer.cpp
+  sift_position_writer.cpp
+  find_smooth_trajectory.cpp)
+TARGET_LINK_LIBRARIES(agglomerative-cluster glog gflags)
+TARGET_LINK_LIBRARIES(agglomerative-cluster ${OpenCV_LIBS})
+TARGET_LINK_LIBRARIES(agglomerative-cluster ceres)
+TARGET_LINK_LIBRARIES(agglomerative-cluster cxsparse)
+TARGET_LINK_LIBRARIES(agglomerative-cluster cholmod ccolamd camd colamd amd)
+TARGET_LINK_LIBRARIES(agglomerative-cluster ${LAPACK_LIB})

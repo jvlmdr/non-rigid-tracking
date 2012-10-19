@@ -7,6 +7,13 @@ template<class T>
 Track<T>::Track() : map_() {}
 
 template<class T>
+void Track<T>::resetRange(int first, int last) {
+  for (int t = first; t <= last; t += 1) {
+    map_[t];
+  }
+}
+
+template<class T>
 T& Track<T>::operator[](int x) {
   return map_[x];
 }

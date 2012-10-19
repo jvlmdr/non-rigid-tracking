@@ -23,6 +23,7 @@ class Track {
     typedef typename Map::value_type value_type;
 
     Track();
+    void resetRange(int first, int last);
 
     T& operator[](int x);
     std::pair<iterator, bool> insert(const value_type& x);
