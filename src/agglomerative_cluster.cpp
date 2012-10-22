@@ -207,6 +207,8 @@ void subsetsToTracks(const MatchGraph& graph,
                      const FeatureSets& sets,
                      MultiviewTrackList<int>& tracks,
                      int num_views) {
+  tracks = MultiviewTrackList<int>(num_views);
+
   FeatureSets::const_iterator set;
   for (set = sets.begin(); set != sets.end(); ++set) {
     MultiviewTrack<int> track;
@@ -288,8 +290,8 @@ int main(int argc, char** argv) {
     MatchGraph::vertex_iterator begin;
     MatchGraph::vertex_iterator end;
     boost::tie(begin, end) = boost::vertices(graph);
-    LOG(INFO) << "Initially " << sets.count() << " sets of " <<
-        num_vertices << " vertices";
+    LOG(INFO) << "Initially " << num_vertices << " vertices amongst " <<
+        sets.count() << " sets";
   }
 
   LOG(INFO) << "Building edge list";
@@ -320,10 +322,10 @@ int main(int argc, char** argv) {
         sets.join(edge.source, edge.target);
       }
     }
-
-    LOG(INFO) << sets.count() << " sets, " << edges.size() <<
-        " edges remaining";
   }
+
+  LOG(INFO) << "Split " << num_vertices << " vertices into " << sets.count() <<
+      " sets";
 
   // Convert each consistent subgraph to a multi-view track of indices.
   MultiviewTrackList<int> tracks;
