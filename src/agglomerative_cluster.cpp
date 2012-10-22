@@ -315,11 +315,15 @@ int main(int argc, char** argv) {
 
     // Skip if elements are already in the same set.
     if (!sets.together(edge.source, edge.target)) {
-      DLOG(INFO) << "(" << edge.source << ", " << edge.target << ")";
+      DLOG(INFO) << "(" << edge.source << ", " << edge.target << ") => " <<
+          edge.weight;
 
       // Only merge if sets are compatible.
       if (sets.compatible(edge.source, edge.target)) {
         sets.join(edge.source, edge.target);
+        DLOG(INFO) << "Merged: " << sets.count() << " sets";
+      } else {
+        DLOG(INFO) << "Inconsistent";
       }
     }
   }
