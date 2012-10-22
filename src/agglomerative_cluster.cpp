@@ -4,91 +4,41 @@
 #include <stack>
 #include <map>
 #include <set>
+#include <algorithm>
 #include <boost/lexical_cast.hpp>
 #include <boost/format.hpp>
 #include <boost/bind.hpp>
 
 #include <boost/graph/adjacency_list.hpp>
-#include <boost/graph/incremental_components.hpp>
 #include <boost/graph/graph_traits.hpp>
 #include <boost/property_map/property_map.hpp>
-#include <boost/typeof/typeof.hpp>
 
 #include <glog/logging.h>
 #include <gflags/gflags.h>
-#include "match.hpp"
+#include "match_result.hpp"
 #include "multiview_track.hpp"
 #include "multiview_track_list.hpp"
+#include "feature_index.hpp"
+#include "match_graph.hpp"
+#include "feature_sets.hpp"
 
 #include "read_lines.hpp"
 #include "multiview_track_list_reader.hpp"
 #include "default_reader.hpp"
 #include "iterator_reader.hpp"
-#include "match_reader.hpp"
+#include "match_result_reader.hpp"
 #include "multiview_track_list_writer.hpp"
 #include "vector_writer.hpp"
 #include "default_writer.hpp"
 
-// Identifies a feature in a multiview video.
-// TODO: Need a better name?
-struct FeatureIndex {
-  int view;
-  int time;
-  int id;
+typedef boost::property_map<MatchGraph, boost::edge_weight_t>::const_type
+        EdgeWeightMap;
 
-  FeatureIndex();
-  FeatureIndex(int view, int time, int id);
-  FeatureIndex(const Frame& frame, int id);
-
-  // Defines an ordering over feature indices.
-  bool operator<(const FeatureIndex& other) const;
-};
-
-FeatureIndex::FeatureIndex() : view(-1), time(-1), id(-1) {}
-
-FeatureIndex::FeatureIndex(int view, int time, int id)
-    : view(view), time(time), id(id) {}
-
-FeatureIndex::FeatureIndex(const Frame& frame, int id)
-    : view(frame.view), time(frame.time), id(id) {}
-
-bool FeatureIndex::operator<(const FeatureIndex& other) const {
-  if (view < other.view) {
-    return true;
-  } else if (other.view < view) {
-    return false;
-  } else {
-    if (time < other.time) {
-      return true;
-    } else if (other.time < time) {
-      return false;
-    } else {
-      return id < other.id;
-    }
-  }
-}
-
-typedef FeatureIndex VertexProperty;
-typedef boost::property<boost::edge_weight_t, int> EdgeProperty;
-typedef boost::adjacency_list<boost::vecS,
-                              boost::vecS,
-                              boost::undirectedS,
-                              VertexProperty,
-                              EdgeProperty>
-        Graph;
-
-typedef Graph::vertex_descriptor Vertex;
+typedef MatchGraph::vertex_descriptor Vertex;
 typedef std::map<FeatureIndex, Vertex> VertexLookup;
-typedef boost::disjoint_sets<int*, Vertex*> DisjointSets;
+typedef std::set<Vertex> VertexSet;
 
-std::ostream& operator<<(std::ostream& stream, const FeatureIndex& feature) {
-  return stream << "(" << feature.view << ", " << feature.time << ", " <<
-      feature.id << ")";
-}
-
-std::ostream& operator<<(std::ostream& stream, const Frame& frame) {
-  return stream << "(" << frame.view << ", " << frame.time << ")";
-}
+////////////////////////////////////////////////////////////////////////////////
 
 void init(int& argc, char**& argv) {
   std::ostringstream usage;
@@ -116,7 +66,7 @@ std::string makeMatchFilename(const std::string& format,
       boost::format(format) % view1 % view2 % (time1 + 1) % (time2 + 1));
 }
 
-Vertex findOrInsert(Graph& graph,
+Vertex findOrInsert(MatchGraph& graph,
                     VertexLookup& vertices,
                     const FeatureIndex& feature) {
   Vertex vertex;
@@ -141,7 +91,7 @@ Vertex findOrInsert(Graph& graph,
 void loadAllMatches(const std::string& matches_format,
                     const std::vector<std::string>& views,
                     int num_frames,
-                    Graph& graph,
+                    MatchGraph& graph,
                     VertexLookup& vertices) {
   vertices.clear();
 
@@ -163,8 +113,8 @@ void loadAllMatches(const std::string& matches_format,
           views[v2], t1, t2);
 
       // Load matches from file.
-      std::vector<Match> match_list;
-      MatchReader reader;
+      std::vector<MatchResult> match_list;
+      MatchResultReader reader;
       bool ok = loadList(matches_file, match_list, reader);
       CHECK(ok) << "Could not load matches";
       DLOG(INFO) << "Loaded " << match_list.size() << " matches for (" <<
@@ -175,18 +125,17 @@ void loadAllMatches(const std::string& matches_format,
       Frame frame1(v1, t1);
       Frame frame2(v2, t2);
 
-      for (std::vector<Match>::const_iterator match = match_list.begin();
-           match != match_list.end();
-           ++match) {
-        FeatureIndex feature1(frame1, match->first);
-        FeatureIndex feature2(frame2, match->second);
+      std::vector<MatchResult>::const_iterator match;
+      for (match = match_list.begin(); match != match_list.end(); ++match) {
+        FeatureIndex feature1(frame1, match->index1);
+        FeatureIndex feature2(frame2, match->index2);
 
         // Find existing vertex for feature, or insert one.
         Vertex vertex1 = findOrInsert(graph, vertices, feature1);
         Vertex vertex2 = findOrInsert(graph, vertices, feature2);
 
-        // Add vertex to graph. Set edge weight to 1.
-        EdgeProperty edge(1);
+        // Add vertex to graph. Set edge weight to distance.
+        MatchGraphEdgeProperty edge(match->distance);
         boost::add_edge(vertex1, vertex2, edge, graph);
       }
     }
@@ -194,7 +143,7 @@ void loadAllMatches(const std::string& matches_format,
 }
 
 void addTracks(const MultiviewTrackList<int>& tracks,
-               DisjointSets& sets,
+               FeatureSets& sets,
                const VertexLookup& lookup) {
   MultiviewTrackList<int>::const_iterator track;
   for (track = tracks.begin(); track != tracks.end(); ++track) {
@@ -218,12 +167,83 @@ void addTracks(const MultiviewTrackList<int>& tracks,
         first_vertex = vertex;
       } else {
         // Join the two components.
-        sets.union_set(first_vertex, vertex);
+        sets.join(first_vertex, vertex);
       }
 
       first = false;
     }
   }
+}
+
+class CompareEdges {
+  public:
+    CompareEdges(const MatchGraph& graph) : weights_() {
+      weights_ = boost::get(boost::edge_weight_t(), graph);
+    }
+
+    bool operator()(const MatchGraph::edge_descriptor& lhs,
+                    const MatchGraph::edge_descriptor& rhs) {
+      return weights_[lhs] > weights_[rhs];
+    }
+
+  private:
+    EdgeWeightMap weights_;
+};
+
+void subsetToTrack(const MatchGraph& graph,
+                   const FeatureSets::Set& set,
+                   MultiviewTrack<int>& track,
+                   int num_views) {
+  track = MultiviewTrack<int>(num_views);
+
+  FeatureSets::Set::const_iterator feature;
+  for (feature = set.begin(); feature != set.end(); ++feature) {
+    const FeatureIndex& index = graph[feature->second];
+    track.view(index.view)[index.time] = index.id;
+  }
+}
+
+void subsetsToTracks(const MatchGraph& graph,
+                     const FeatureSets& sets,
+                     MultiviewTrackList<int>& tracks,
+                     int num_views) {
+  FeatureSets::const_iterator set;
+  for (set = sets.begin(); set != sets.end(); ++set) {
+    MultiviewTrack<int> track;
+    subsetToTrack(graph, set->second, track, num_views);
+
+    tracks.push_back(MultiviewTrack<int>());
+    tracks.back().swap(track);
+  }
+}
+
+struct Edge {
+  Vertex source;
+  Vertex target;
+  double weight;
+
+  Edge(Vertex source, Vertex target, double weight);
+
+  bool operator<(const Edge& other) const;
+
+  static Edge make(MatchGraph::edge_descriptor edge, const MatchGraph& graph);
+};
+
+Edge::Edge(Vertex source, Vertex target, double weight)
+    : source(source), target(target), weight(weight) {}
+
+bool Edge::operator<(const Edge& other) const {
+  return weight > other.weight;
+}
+
+Edge Edge::make(MatchGraph::edge_descriptor edge, const MatchGraph& graph) {
+  EdgeWeightMap weights = boost::get(boost::edge_weight_t(), graph);
+
+  Vertex source = boost::source(edge, graph);
+  Vertex target = boost::target(edge, graph);
+  double weight = weights[edge];
+
+  return Edge(source, target, weight);
 }
 
 int main(int argc, char** argv) {
@@ -250,7 +270,7 @@ int main(int argc, char** argv) {
   CHECK(ok) << "Could not load initial tracks";
 
   // Load all matches into graph.
-  Graph graph;
+  MatchGraph graph;
   VertexLookup lookup;
   loadAllMatches(matches_format, views, num_frames, graph, lookup);
   int num_vertices = boost::num_vertices(graph);
@@ -259,31 +279,60 @@ int main(int argc, char** argv) {
       " features";
 
   // Use a disjoint-sets data structure for union-find operations.
-  std::vector<int> rank(num_vertices);
-  std::vector<Vertex> parent(num_vertices);
-  DisjointSets sets(&rank.front(), &parent.front());
-  // Assign each vertex to a set.
-  boost::initialize_incremental_components(graph, sets);
+  FeatureSets sets(graph);
 
   // Incorporate initial tracks into components.
   addTracks(initial_tracks, sets, lookup);
 
-  Graph::vertex_iterator begin;
-  Graph::vertex_iterator end;
-  boost::tie(begin, end) = boost::vertices(graph);
-  LOG(INFO) << "Initially " << sets.count_sets(begin, end) << " sets of " <<
-      num_vertices << " vertices";
+  {
+    MatchGraph::vertex_iterator begin;
+    MatchGraph::vertex_iterator end;
+    boost::tie(begin, end) = boost::vertices(graph);
+    LOG(INFO) << "Initially " << sets.count() << " sets of " <<
+        num_vertices << " vertices";
+  }
 
-  /*
+  LOG(INFO) << "Building edge list";
+  std::vector<Edge> edges;
+  {
+    MatchGraph::edge_iterator begin;
+    MatchGraph::edge_iterator end;
+    boost::tie(begin, end) = boost::edges(graph);
+    std::transform(begin, end, std::back_inserter(edges),
+        boost::bind(Edge::make, _1, graph));
+  }
+
+  LOG(INFO) << "Building heap";
+  std::make_heap(edges.begin(), edges.end());
+
+  while (!edges.empty()) {
+    // Pull the first edge off the heap.
+    Edge edge = edges.front();
+    std::pop_heap(edges.begin(), edges.end());
+    edges.pop_back();
+
+    // Skip if elements are already in the same set.
+    if (!sets.together(edge.source, edge.target)) {
+      DLOG(INFO) << "(" << edge.source << ", " << edge.target << ")";
+
+      // Only merge if sets are compatible.
+      if (sets.compatible(edge.source, edge.target)) {
+        sets.join(edge.source, edge.target);
+      }
+    }
+
+    LOG(INFO) << sets.count() << " sets, " << edges.size() <<
+        " edges remaining";
+  }
+
   // Convert each consistent subgraph to a multi-view track of indices.
   MultiviewTrackList<int> tracks;
-  subgraphsToTracks(subgraphs, tracks, num_views);
+  subsetsToTracks(graph, sets, tracks, num_views);
 
   // Save.
   DefaultWriter<int> writer;
   ok = saveMultiviewTrackList(tracks_file, tracks, writer);
   CHECK(ok) << "Could not save tracks file";
-  */
   
   return 0;
 }

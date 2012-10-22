@@ -3,6 +3,7 @@
 
 #include "track.hpp"
 #include <vector>
+#include <ostream>
 
 // A frame is identified by a video stream and a time instant.
 struct Frame {
@@ -14,7 +15,15 @@ struct Frame {
 
   // Defines an ordering over frame indices.
   bool operator<(const Frame& other) const;
+  bool operator>(const Frame& other) const;
+  bool operator>=(const Frame& other) const;
+  bool operator<=(const Frame& other) const;
+
+  bool operator==(const Frame& other) const;
+  bool operator!=(const Frame& other) const;
 };
+
+std::ostream& operator<<(std::ostream& stream, const Frame& frame);
 
 // Describes observations of a feature in multiple views at multiple times.
 // Assumes the number of views is known but the number of frames is unknown.

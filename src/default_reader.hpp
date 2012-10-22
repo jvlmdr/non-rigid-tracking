@@ -1,5 +1,5 @@
-#ifndef DEFAULT_WRITER_HPP_
-#define DEFAULT_WRITER_HPP_
+#ifndef DEFAULT_READER_HPP_
+#define DEFAULT_READER_HPP_
 
 #include "reader.hpp"
 
