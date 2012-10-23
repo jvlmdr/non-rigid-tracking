@@ -218,6 +218,18 @@ Edge Edge::make(MatchGraph::edge_descriptor edge, const MatchGraph& graph) {
   return Edge(source, target, weight);
 }
 
+// The properties of joining two sets.
+struct JoinProperties {
+  double residual;
+  double uncertainty;
+};
+
+// The properties associated with a set.
+struct SetProperties {
+  // For each set, store a compatibility with connected sets.
+  std::map<int, JoinProperties> affinity;
+};
+
 int main(int argc, char** argv) {
   init(argc, argv);
 
@@ -251,7 +263,7 @@ int main(int argc, char** argv) {
       " features";
 
   // Use a disjoint-sets data structure for union-find operations.
-  FeatureSets<int> sets;
+  FeatureSets<SetProperties> sets;
   
   std::vector<Frame> frames;
   {
@@ -298,6 +310,8 @@ int main(int argc, char** argv) {
       if (sets.compatible(edge.source, edge.target)) {
         sets.join(edge.source, edge.target);
         DLOG(INFO) << "Merged: " << sets.count() << " sets";
+
+        // TODO: Compute set properties...
       } else {
         DLOG(INFO) << "Inconsistent";
       }

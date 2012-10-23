@@ -44,8 +44,6 @@ class FeatureSets {
       T property;
     };
 
-    typedef const Set& ConstSetReference;
-
     typedef typename std::map<int, Set>::const_iterator const_iterator;
     const_iterator begin() const;
     const_iterator end() const;
