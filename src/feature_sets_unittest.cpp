@@ -35,30 +35,28 @@ bool operator!=(const std::map<Key, Value>& lhs,
 }
 
 TEST(FeatureSets, Count) {
-  MatchGraph graph;
-
-  // Add two features in each of two frames.
-  boost::add_vertex(FeatureIndex(0, 0, 0), graph);
-  boost::add_vertex(FeatureIndex(0, 0, 1), graph);
-  boost::add_vertex(FeatureIndex(0, 1, 2), graph);
-  boost::add_vertex(FeatureIndex(0, 1, 3), graph);
+  std::vector<Frame> vertices(4);
+  vertices[0] = Frame(0, 0);
+  vertices[1] = Frame(0, 0);
+  vertices[2] = Frame(0, 1);
+  vertices[3] = Frame(0, 2);
 
   // Check that there are four sets.
-  FeatureSets sets(graph);
+  FeatureSets sets;
+  sets.init(vertices);
 
   ASSERT_EQ(sets.count(), 4);
 }
 
 TEST(FeatureSets, Join) {
-  MatchGraph graph;
+  std::vector<Frame> vertices(4);
+  vertices[0] = Frame(0, 0);
+  vertices[1] = Frame(0, 0);
+  vertices[2] = Frame(0, 1);
+  vertices[3] = Frame(0, 2);
 
-  // Add two features in each of two frames.
-  boost::add_vertex(FeatureIndex(0, 0, 0), graph);
-  boost::add_vertex(FeatureIndex(0, 0, 1), graph);
-  boost::add_vertex(FeatureIndex(0, 1, 2), graph);
-  boost::add_vertex(FeatureIndex(0, 1, 3), graph);
-
-  FeatureSets sets(graph);
+  FeatureSets sets;
+  sets.init(vertices);
   sets.join(0, 2);
 
   ASSERT_EQ(sets.count(), 3);
@@ -66,28 +64,27 @@ TEST(FeatureSets, Join) {
   std::map<Frame, int> desired;
   desired[Frame(0, 0)] = 0;
   desired[Frame(0, 1)] = 2;
-  ASSERT_EQ(sets.find(0), desired);
-  ASSERT_EQ(sets.find(2), desired);
+  ASSERT_EQ(sets.find(0).elements, desired);
+  ASSERT_EQ(sets.find(2).elements, desired);
 
   desired.clear();
   desired[Frame(0, 0)] = 1;
-  ASSERT_EQ(sets.find(1), desired);
+  ASSERT_EQ(sets.find(1).elements, desired);
 
   desired.clear();
-  desired[Frame(0, 1)] = 3;
-  ASSERT_EQ(sets.find(3), desired);
+  desired[Frame(0, 2)] = 3;
+  ASSERT_EQ(sets.find(3).elements, desired);
 }
 
 TEST(FeatureSets, SeparateJoin) {
-  MatchGraph graph;
+  std::vector<Frame> vertices(4);
+  vertices[0] = Frame(0, 0);
+  vertices[1] = Frame(0, 0);
+  vertices[2] = Frame(0, 1);
+  vertices[3] = Frame(0, 2);
 
-  // Add two features in each of two frames.
-  boost::add_vertex(FeatureIndex(0, 0, 0), graph);
-  boost::add_vertex(FeatureIndex(0, 0, 1), graph);
-  boost::add_vertex(FeatureIndex(0, 1, 2), graph);
-  boost::add_vertex(FeatureIndex(0, 1, 3), graph);
-
-  FeatureSets sets(graph);
+  FeatureSets sets;
+  sets.init(vertices);
   sets.join(0, 2);
   sets.join(1, 3);
 
@@ -97,26 +94,25 @@ TEST(FeatureSets, SeparateJoin) {
   std::map<Frame, int> desired;
   desired[Frame(0, 0)] = 0;
   desired[Frame(0, 1)] = 2;
-  ASSERT_EQ(sets.find(0), desired);
-  ASSERT_EQ(sets.find(2), desired);
+  ASSERT_EQ(sets.find(0).elements, desired);
+  ASSERT_EQ(sets.find(2).elements, desired);
 
   desired.clear();
   desired[Frame(0, 0)] = 1;
-  desired[Frame(0, 1)] = 3;
-  ASSERT_EQ(sets.find(1), desired);
-  ASSERT_EQ(sets.find(3), desired);
+  desired[Frame(0, 2)] = 3;
+  ASSERT_EQ(sets.find(1).elements, desired);
+  ASSERT_EQ(sets.find(3).elements, desired);
 }
 
 TEST(FeatureSets, CompoundJoin) {
-  MatchGraph graph;
+  std::vector<Frame> vertices(4);
+  vertices[0] = Frame(0, 0);
+  vertices[1] = Frame(0, 0);
+  vertices[2] = Frame(0, 1);
+  vertices[3] = Frame(0, 2);
 
-  // Add two features in each of two frames.
-  boost::add_vertex(FeatureIndex(0, 0, 0), graph);
-  boost::add_vertex(FeatureIndex(0, 0, 1), graph);
-  boost::add_vertex(FeatureIndex(0, 1, 2), graph);
-  boost::add_vertex(FeatureIndex(0, 2, 3), graph);
-
-  FeatureSets sets(graph);
+  FeatureSets sets;
+  sets.init(vertices);
   sets.join(0, 2);
   sets.join(2, 3);
 
@@ -127,25 +123,24 @@ TEST(FeatureSets, CompoundJoin) {
   desired[Frame(0, 0)] = 0;
   desired[Frame(0, 1)] = 2;
   desired[Frame(0, 2)] = 3;
-  ASSERT_EQ(sets.find(0), desired);
-  ASSERT_EQ(sets.find(2), desired);
-  ASSERT_EQ(sets.find(3), desired);
+  ASSERT_EQ(sets.find(0).elements, desired);
+  ASSERT_EQ(sets.find(2).elements, desired);
+  ASSERT_EQ(sets.find(3).elements, desired);
 
   desired.clear();
   desired[Frame(0, 0)] = 1;
-  ASSERT_EQ(sets.find(1), desired);
+  ASSERT_EQ(sets.find(1).elements, desired);
 }
 
 TEST(FeatureSets, RedundantJoin) {
-  MatchGraph graph;
+  std::vector<Frame> vertices(4);
+  vertices[0] = Frame(0, 0);
+  vertices[1] = Frame(0, 0);
+  vertices[2] = Frame(0, 1);
+  vertices[3] = Frame(0, 2);
 
-  // Add two features in each of two frames.
-  boost::add_vertex(FeatureIndex(0, 0, 0), graph);
-  boost::add_vertex(FeatureIndex(0, 0, 1), graph);
-  boost::add_vertex(FeatureIndex(0, 1, 2), graph);
-  boost::add_vertex(FeatureIndex(0, 2, 3), graph);
-
-  FeatureSets sets(graph);
+  FeatureSets sets;
+  sets.init(vertices);
   sets.join(0, 2);
   sets.join(2, 3);
   sets.join(0, 3);
@@ -157,25 +152,24 @@ TEST(FeatureSets, RedundantJoin) {
   desired[Frame(0, 0)] = 0;
   desired[Frame(0, 1)] = 2;
   desired[Frame(0, 2)] = 3;
-  ASSERT_EQ(sets.find(0), desired);
-  ASSERT_EQ(sets.find(2), desired);
-  ASSERT_EQ(sets.find(3), desired);
+  ASSERT_EQ(sets.find(0).elements, desired);
+  ASSERT_EQ(sets.find(2).elements, desired);
+  ASSERT_EQ(sets.find(3).elements, desired);
 
   desired.clear();
   desired[Frame(0, 0)] = 1;
-  ASSERT_EQ(sets.find(1), desired);
+  ASSERT_EQ(sets.find(1).elements, desired);
 }
 
 TEST(FeatureSets, Compatible) {
-  MatchGraph graph;
+  std::vector<Frame> vertices(4);
+  vertices[0] = Frame(0, 0);
+  vertices[1] = Frame(0, 0);
+  vertices[2] = Frame(0, 1);
+  vertices[3] = Frame(0, 2);
 
-  // Add two features in each of two frames.
-  boost::add_vertex(FeatureIndex(0, 0, 0), graph);
-  boost::add_vertex(FeatureIndex(0, 0, 1), graph);
-  boost::add_vertex(FeatureIndex(0, 1, 2), graph);
-  boost::add_vertex(FeatureIndex(0, 2, 3), graph);
-
-  FeatureSets sets(graph);
+  FeatureSets sets;
+  sets.init(vertices);
 
   ASSERT_EQ(sets.compatible(0, 1), false);
   ASSERT_EQ(sets.compatible(0, 2), true);

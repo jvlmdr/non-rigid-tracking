@@ -35,7 +35,7 @@ typedef boost::property_map<MatchGraph, boost::edge_weight_t>::const_type
         EdgeWeightMap;
 
 typedef MatchGraph::vertex_descriptor Vertex;
-typedef std::map<FeatureIndex, Vertex> VertexLookup;
+typedef std::map<FeatureIndex, int> VertexLookup;
 typedef std::set<Vertex> VertexSet;
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -142,39 +142,6 @@ void loadAllMatches(const std::string& matches_format,
   }
 }
 
-void addTracks(const MultiviewTrackList<int>& tracks,
-               FeatureSets& sets,
-               const VertexLookup& lookup) {
-  MultiviewTrackList<int>::const_iterator track;
-  for (track = tracks.begin(); track != tracks.end(); ++track) {
-    // Merge first vertex with every other.
-    bool first = true;
-    Vertex first_vertex = 0;
-
-    MultiviewTrack<int>::FeatureIterator iter(*track);
-    for (iter.begin(); !iter.end(); iter.next()) {
-      Frame frame = iter.get().first;
-      int id = *iter.get().second;
-      FeatureIndex feature(frame.view, frame.time, id);
-
-      // Find vertex index in reverse lookup.
-      VertexLookup::const_iterator entry = lookup.find(feature);
-      // Make sure that the entry exists.
-      CHECK(entry != lookup.end());
-      Vertex vertex = entry->second;
-
-      if (first) {
-        first_vertex = vertex;
-      } else {
-        // Join the two components.
-        sets.join(first_vertex, vertex);
-      }
-
-      first = false;
-    }
-  }
-}
-
 class CompareEdges {
   public:
     CompareEdges(const MatchGraph& graph) : weights_() {
@@ -196,8 +163,10 @@ void subsetToTrack(const MatchGraph& graph,
                    int num_views) {
   track = MultiviewTrack<int>(num_views);
 
-  FeatureSets::Set::const_iterator feature;
-  for (feature = set.begin(); feature != set.end(); ++feature) {
+  const std::map<Frame, int>& members = set.elements;
+
+  std::map<Frame, int>::const_iterator feature;
+  for (feature = members.begin(); feature != members.end(); ++feature) {
     const FeatureIndex& index = graph[feature->second];
     track.view(index.view)[index.time] = index.id;
   }
@@ -281,18 +250,24 @@ int main(int argc, char** argv) {
       " features";
 
   // Use a disjoint-sets data structure for union-find operations.
-  FeatureSets sets(graph);
-
-  // Incorporate initial tracks into components.
-  addTracks(initial_tracks, sets, lookup);
-
+  FeatureSets sets;
+  
+  std::vector<Frame> frames;
   {
-    MatchGraph::vertex_iterator begin;
+    MatchGraph::vertex_iterator vertex;
     MatchGraph::vertex_iterator end;
-    boost::tie(begin, end) = boost::vertices(graph);
-    LOG(INFO) << "Initially " << num_vertices << " vertices amongst " <<
-        sets.count() << " sets";
+    boost::tie(vertex, end) = boost::vertices(graph);
+
+    for(; vertex != end; ++vertex) {
+      const FeatureIndex& feature = graph[*vertex];
+      frames.push_back(Frame(feature.view, feature.time));
+    }
   }
+
+  sets.init(frames, initial_tracks, lookup);
+
+  LOG(INFO) << "Initially " << num_vertices << " vertices amongst " <<
+      sets.count() << " sets";
 
   LOG(INFO) << "Building edge list";
   std::vector<Edge> edges;

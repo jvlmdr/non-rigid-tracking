@@ -3,18 +3,37 @@
 
 #include <map>
 #include <vector>
-#include "match_graph.hpp"
+#include "multiview_track.hpp"
+#include "multiview_track_list.hpp"
+#include "feature_index.hpp"
 
 class FeatureSets {
   public:
-    explicit FeatureSets(const MatchGraph& graph);
+    FeatureSets();
+    // Add each vertex to its own feature set.
+    void init(const std::vector<Frame>& vertices);
+    // Create a vertex set for each track.
+    // If a vertex does not appear in a track, it gets its own set.
+    //
+    // Parameters:
+    // vertices -- The frame that each vertex was observed in.
+    // tracks -- Multiview tracks, containing the index of the feature within
+    //   its image.
+    // lookup -- A lookup from feature (view, time, id) to vertex index.
+    void init(const std::vector<Frame>& vertices,
+              const MultiviewTrackList<int>& tracks,
+              const std::map<FeatureIndex, int>& lookup);
 
     int count() const;
     void join(int u, int v);
     bool together(int u, int v) const;
     bool compatible(int u, int v) const;
 
-    typedef std::map<Frame, int> Set;
+    struct Set {
+      int index;
+      std::map<Frame, int> elements;
+    };
+
     const Set& find(int v) const;
 
     typedef std::map<int, Set>::const_iterator const_iterator;
