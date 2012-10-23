@@ -42,7 +42,7 @@ TEST(FeatureSets, Count) {
   vertices[3] = Frame(0, 2);
 
   // Check that there are four sets.
-  FeatureSets sets;
+  FeatureSets<int> sets;
   sets.init(vertices);
 
   ASSERT_EQ(sets.count(), 4);
@@ -55,7 +55,7 @@ TEST(FeatureSets, Join) {
   vertices[2] = Frame(0, 1);
   vertices[3] = Frame(0, 2);
 
-  FeatureSets sets;
+  FeatureSets<int> sets;
   sets.init(vertices);
   sets.join(0, 2);
 
@@ -64,16 +64,16 @@ TEST(FeatureSets, Join) {
   std::map<Frame, int> desired;
   desired[Frame(0, 0)] = 0;
   desired[Frame(0, 1)] = 2;
-  ASSERT_EQ(sets.find(0).elements, desired);
-  ASSERT_EQ(sets.find(2).elements, desired);
+  ASSERT_EQ(sets.find(0), desired);
+  ASSERT_EQ(sets.find(2), desired);
 
   desired.clear();
   desired[Frame(0, 0)] = 1;
-  ASSERT_EQ(sets.find(1).elements, desired);
+  ASSERT_EQ(sets.find(1), desired);
 
   desired.clear();
   desired[Frame(0, 2)] = 3;
-  ASSERT_EQ(sets.find(3).elements, desired);
+  ASSERT_EQ(sets.find(3), desired);
 }
 
 TEST(FeatureSets, SeparateJoin) {
@@ -83,7 +83,7 @@ TEST(FeatureSets, SeparateJoin) {
   vertices[2] = Frame(0, 1);
   vertices[3] = Frame(0, 2);
 
-  FeatureSets sets;
+  FeatureSets<int> sets;
   sets.init(vertices);
   sets.join(0, 2);
   sets.join(1, 3);
@@ -94,14 +94,14 @@ TEST(FeatureSets, SeparateJoin) {
   std::map<Frame, int> desired;
   desired[Frame(0, 0)] = 0;
   desired[Frame(0, 1)] = 2;
-  ASSERT_EQ(sets.find(0).elements, desired);
-  ASSERT_EQ(sets.find(2).elements, desired);
+  ASSERT_EQ(sets.find(0), desired);
+  ASSERT_EQ(sets.find(2), desired);
 
   desired.clear();
   desired[Frame(0, 0)] = 1;
   desired[Frame(0, 2)] = 3;
-  ASSERT_EQ(sets.find(1).elements, desired);
-  ASSERT_EQ(sets.find(3).elements, desired);
+  ASSERT_EQ(sets.find(1), desired);
+  ASSERT_EQ(sets.find(3), desired);
 }
 
 TEST(FeatureSets, CompoundJoin) {
@@ -111,7 +111,7 @@ TEST(FeatureSets, CompoundJoin) {
   vertices[2] = Frame(0, 1);
   vertices[3] = Frame(0, 2);
 
-  FeatureSets sets;
+  FeatureSets<int> sets;
   sets.init(vertices);
   sets.join(0, 2);
   sets.join(2, 3);
@@ -123,13 +123,13 @@ TEST(FeatureSets, CompoundJoin) {
   desired[Frame(0, 0)] = 0;
   desired[Frame(0, 1)] = 2;
   desired[Frame(0, 2)] = 3;
-  ASSERT_EQ(sets.find(0).elements, desired);
-  ASSERT_EQ(sets.find(2).elements, desired);
-  ASSERT_EQ(sets.find(3).elements, desired);
+  ASSERT_EQ(sets.find(0), desired);
+  ASSERT_EQ(sets.find(2), desired);
+  ASSERT_EQ(sets.find(3), desired);
 
   desired.clear();
   desired[Frame(0, 0)] = 1;
-  ASSERT_EQ(sets.find(1).elements, desired);
+  ASSERT_EQ(sets.find(1), desired);
 }
 
 TEST(FeatureSets, RedundantJoin) {
@@ -139,7 +139,7 @@ TEST(FeatureSets, RedundantJoin) {
   vertices[2] = Frame(0, 1);
   vertices[3] = Frame(0, 2);
 
-  FeatureSets sets;
+  FeatureSets<int> sets;
   sets.init(vertices);
   sets.join(0, 2);
   sets.join(2, 3);
@@ -152,13 +152,13 @@ TEST(FeatureSets, RedundantJoin) {
   desired[Frame(0, 0)] = 0;
   desired[Frame(0, 1)] = 2;
   desired[Frame(0, 2)] = 3;
-  ASSERT_EQ(sets.find(0).elements, desired);
-  ASSERT_EQ(sets.find(2).elements, desired);
-  ASSERT_EQ(sets.find(3).elements, desired);
+  ASSERT_EQ(sets.find(0), desired);
+  ASSERT_EQ(sets.find(2), desired);
+  ASSERT_EQ(sets.find(3), desired);
 
   desired.clear();
   desired[Frame(0, 0)] = 1;
-  ASSERT_EQ(sets.find(1).elements, desired);
+  ASSERT_EQ(sets.find(1), desired);
 }
 
 TEST(FeatureSets, Compatible) {
@@ -168,7 +168,7 @@ TEST(FeatureSets, Compatible) {
   vertices[2] = Frame(0, 1);
   vertices[3] = Frame(0, 2);
 
-  FeatureSets sets;
+  FeatureSets<int> sets;
   sets.init(vertices);
 
   ASSERT_EQ(sets.compatible(0, 1), false);

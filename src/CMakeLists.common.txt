@@ -457,7 +457,6 @@ ADD_EXECUTABLE(agglomerative-cluster
   match_result.cpp
   multiview_track.cpp
   feature_index.cpp
-  feature_sets.cpp
   match_result_reader.cpp
   sift_feature_reader.cpp
   descriptor_reader.cpp
@@ -475,7 +474,6 @@ TARGET_LINK_LIBRARIES(agglomerative-cluster ${LAPACK_LIB})
 
 ADD_EXECUTABLE(feature-sets-unittest
   feature_sets_unittest.cpp
-  feature_sets.cpp
   feature_index.cpp
   multiview_track.cpp)
 TARGET_LINK_LIBRARIES(feature-sets-unittest gtest_main gtest gflags glog)

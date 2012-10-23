@@ -158,30 +158,31 @@ class CompareEdges {
 };
 
 void subsetToTrack(const MatchGraph& graph,
-                   const FeatureSets::Set& set,
+                   const std::map<Frame, int>& set,
                    MultiviewTrack<int>& track,
                    int num_views) {
   track = MultiviewTrack<int>(num_views);
 
-  const std::map<Frame, int>& members = set.elements;
-
   std::map<Frame, int>::const_iterator feature;
-  for (feature = members.begin(); feature != members.end(); ++feature) {
+  for (feature = set.begin(); feature != set.end(); ++feature) {
     const FeatureIndex& index = graph[feature->second];
     track.view(index.view)[index.time] = index.id;
   }
 }
 
+// The set property is not important.
+// TODO: Is there a way to avoid templating this code?
+template<class T>
 void subsetsToTracks(const MatchGraph& graph,
-                     const FeatureSets& sets,
+                     const FeatureSets<T>& sets,
                      MultiviewTrackList<int>& tracks,
                      int num_views) {
   tracks = MultiviewTrackList<int>(num_views);
 
-  FeatureSets::const_iterator set;
+  typename FeatureSets<T>::const_iterator set;
   for (set = sets.begin(); set != sets.end(); ++set) {
     MultiviewTrack<int> track;
-    subsetToTrack(graph, set->second, track, num_views);
+    subsetToTrack(graph, set->second.elements, track, num_views);
 
     tracks.push_back(MultiviewTrack<int>());
     tracks.back().swap(track);
@@ -250,7 +251,7 @@ int main(int argc, char** argv) {
       " features";
 
   // Use a disjoint-sets data structure for union-find operations.
-  FeatureSets sets;
+  FeatureSets<int> sets;
   
   std::vector<Frame> frames;
   {

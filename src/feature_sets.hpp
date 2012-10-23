@@ -7,6 +7,11 @@
 #include "multiview_track_list.hpp"
 #include "feature_index.hpp"
 
+// Templated because it is essentially a container.
+// The property of a set is accessed by any member in the set.
+// TODO: Provide constant time find().
+
+template<class T>
 class FeatureSets {
   public:
     FeatureSets();
@@ -29,25 +34,30 @@ class FeatureSets {
     bool together(int u, int v) const;
     bool compatible(int u, int v) const;
 
+    const std::map<Frame, int>& find(int v) const;
+
+    T& property(int v);
+    const T& property(int v) const;
+
     struct Set {
-      int index;
       std::map<Frame, int> elements;
+      T property;
     };
 
-    const Set& find(int v) const;
+    typedef const Set& ConstSetReference;
 
-    typedef std::map<int, Set>::const_iterator const_iterator;
+    typedef typename std::map<int, Set>::const_iterator const_iterator;
     const_iterator begin() const;
     const_iterator end() const;
 
   private:
-    //typedef std::list<Set> SetList;
     typedef std::map<int, Set> SetList;
-    //typedef std::vector<SetList::iterator> FeatureList;
     typedef std::vector<int> FeatureList;
 
     FeatureList features_;
     SetList sets_;
 };
+
+#include "feature_sets.inl"
 
 #endif

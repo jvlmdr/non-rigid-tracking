@@ -1,16 +1,17 @@
 #include "feature_sets.hpp"
 #include <glog/logging.h>
 
-FeatureSets::FeatureSets() : features_(), sets_() {}
+template<class T>
+FeatureSets<T>::FeatureSets() : features_(), sets_() {}
 
-void FeatureSets::init(const std::vector<Frame>& vertices) {
+template<class T>
+void FeatureSets<T>::init(const std::vector<Frame>& vertices) {
   std::vector<Frame>::const_iterator vertex;
   int i = 0;
 
   for (vertex = vertices.begin(); vertex != vertices.end(); ++vertex) {
     // Add a new set containing element i.
     Set& set = sets_[i];
-    set.index = i;
     set.elements[*vertex] = i;
 
     // Add a pointer back to the set.
@@ -20,9 +21,10 @@ void FeatureSets::init(const std::vector<Frame>& vertices) {
   }
 }
 
-void FeatureSets::init(const std::vector<Frame>& vertices,
-                       const MultiviewTrackList<int>& tracks,
-                       const std::map<FeatureIndex, int>& lookup) {
+template<class T>
+void FeatureSets<T>::init(const std::vector<Frame>& vertices,
+                          const MultiviewTrackList<int>& tracks,
+                          const std::map<FeatureIndex, int>& lookup) {
   init(vertices);
 
   MultiviewTrackList<int>::const_iterator track;
@@ -55,17 +57,19 @@ void FeatureSets::init(const std::vector<Frame>& vertices,
   }
 }
 
-int FeatureSets::count() const {
+template<class T>
+int FeatureSets<T>::count() const {
   return sets_.size();
 }
 
-void FeatureSets::join(int u, int v) {
+template<class T>
+void FeatureSets<T>::join(int u, int v) {
   if (together(u, v)) {
     return;
   }
 
-  SetList::iterator s_iter = sets_.find(features_[u]);
-  SetList::iterator t_iter = sets_.find(features_[v]);
+  typename SetList::iterator s_iter = sets_.find(features_[u]);
+  typename SetList::iterator t_iter = sets_.find(features_[v]);
   CHECK(s_iter != sets_.end());
   CHECK(t_iter != sets_.end());
 
@@ -91,13 +95,15 @@ void FeatureSets::join(int u, int v) {
   sets_.erase(t_iter);
 }
 
-const FeatureSets::Set& FeatureSets::find(int v) const {
-  SetList::const_iterator set = sets_.find(features_[v]);
+template<class T>
+const std::map<Frame, int>& FeatureSets<T>::find(int v) const {
+  typename SetList::const_iterator set = sets_.find(features_[v]);
   CHECK(set != sets_.end());
-  return set->second;
+  return set->second.elements;
 }
 
-bool FeatureSets::together(int u, int v) const {
+template<class T>
+bool FeatureSets<T>::together(int u, int v) const {
   return features_[u] == features_[v];
 }
 
@@ -131,21 +137,25 @@ bool compare(const std::map<Frame, int>::value_type& lhs,
 
 }
 
-bool FeatureSets::compatible(int u, int v) const {
+template<class T>
+bool FeatureSets<T>::compatible(int u, int v) const {
   // Assume that u and v are in different sets.
   CHECK(!together(u, v));
 
-  const Set& s = find(u);
-  const Set& t = find(v);
+  const std::map<Frame, int>& s = find(u);
+  const std::map<Frame, int>& t = find(v);
 
-  return !overlap(s.elements.begin(), s.elements.end(), t.elements.begin(),
-      t.elements.end(), compare);
+  return !overlap(s.begin(), s.end(), t.begin(), t.end(), compare);
 }
 
-FeatureSets::const_iterator FeatureSets::begin() const {
+template<class T>
+typename FeatureSets<T>::const_iterator
+FeatureSets<T>::begin() const {
   return sets_.begin();
 }
 
-FeatureSets::const_iterator FeatureSets::end() const {
+template<class T>
+typename FeatureSets<T>::const_iterator
+FeatureSets<T>::end() const {
   return sets_.end();
 }
