@@ -18,7 +18,7 @@
 
 #include "descriptor_reader.hpp"
 #include "iterator_reader.hpp"
-#include "vector_writer.hpp"
+#include "iterator_writer.hpp"
 #include "match_result_writer.hpp"
 #include "unique_match_result_writer.hpp"
 
@@ -84,12 +84,12 @@ int main(int argc, char** argv) {
 
   // Load descriptors.
   DescriptorReader descriptor_reader;
-  std::vector<Descriptor> descriptors1;
+  std::deque<Descriptor> descriptors1;
   ok = loadList(descriptors_file1, descriptors1, descriptor_reader);
   CHECK(ok) << "Could not load first descriptors file";
   LOG(INFO) << "Loaded " << descriptors1.size() << " descriptors";
 
-  std::vector<Descriptor> descriptors2;
+  std::deque<Descriptor> descriptors2;
   ok = loadList(descriptors_file2, descriptors2, descriptor_reader);
   CHECK(ok) << "Could not load second descriptors file";
   LOG(INFO) << "Loaded " << descriptors2.size() << " descriptors";
@@ -98,8 +98,8 @@ int main(int argc, char** argv) {
     // Find one match in each direction.
     std::vector<UniqueDirectedMatch> forward_matches;
     std::vector<UniqueDirectedMatch> reverse_matches;
-    matchUniqueBothDirections(descriptors1, descriptors2, forward_matches,
-        reverse_matches, FLAGS_use_flann);
+    findUniqueMatchesInBothDirectionsUsingEuclideanDistance(descriptors1,
+        descriptors2, forward_matches, reverse_matches, FLAGS_use_flann);
 
     // Merge directional matches.
     std::vector<UniqueMatchResult> matches;
@@ -126,11 +126,11 @@ int main(int argc, char** argv) {
     CHECK(ok) << "Could not save list of matches";
   } else {
     // Find several matches in each direction.
-    std::vector<DirectedMatchList> forward_matches;
-    std::vector<DirectedMatchList> reverse_matches;
-    matchBothDirections(descriptors1, descriptors2, forward_matches,
-        reverse_matches, FLAGS_max_num_matches, FLAGS_max_relative_distance,
-        FLAGS_use_flann);
+    std::deque<DirectedMatchList> forward_matches;
+    std::deque<DirectedMatchList> reverse_matches;
+    findMatchesInBothDirectionsUsingEuclideanDistance(descriptors1,
+        descriptors2, forward_matches, reverse_matches, FLAGS_max_num_matches,
+        FLAGS_max_relative_distance, FLAGS_use_flann);
 
     // Merge directional matches.
     std::vector<MatchResult> matches;

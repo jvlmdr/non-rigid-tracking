@@ -3,7 +3,7 @@
 #include <glog/logging.h>
 
 // Copies a list of descriptors into a matrix of descriptor rows.
-void listToMatrix(const std::vector<Descriptor>& list, cv::Mat& matrix) {
+void listToMatrix(const std::deque<Descriptor>& list, cv::Mat& matrix) {
   int num_descriptors = list.size();
   CHECK(!list.empty());
   int num_dimensions = list.front().data.size();

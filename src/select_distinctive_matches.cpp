@@ -8,7 +8,7 @@
 #include "unique_match_result.hpp"
 #include "iterator_reader.hpp"
 #include "unique_match_result_reader.hpp"
-#include "vector_writer.hpp"
+#include "iterator_writer.hpp"
 #include "unique_match_result_writer.hpp"
 
 typedef std::vector<UniqueMatchResult> MatchList;

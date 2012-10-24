@@ -11,7 +11,7 @@
 #include "detect_sift.hpp"
 
 #include "sift_feature_writer.hpp"
-#include "vector_writer.hpp"
+#include "iterator_writer.hpp"
 
 const int MAX_NUM_FEATURES = 0;
 const int NUM_OCTAVE_LAYERS = 3;

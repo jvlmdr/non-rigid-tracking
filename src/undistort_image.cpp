@@ -10,7 +10,7 @@
 #include "image_point_reader.hpp"
 #include "image_point_writer.hpp"
 #include "iterator_reader.hpp"
-#include "vector_writer.hpp"
+#include "iterator_writer.hpp"
 #include "camera_properties_reader.hpp"
 #include "distortion.hpp"
 #include "read_image.hpp"

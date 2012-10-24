@@ -17,7 +17,7 @@
 #include "sift_position_reader.hpp"
 #include "track_list_reader.hpp"
 #include "multiview_track_list_writer.hpp"
-#include "vector_writer.hpp"
+#include "iterator_writer.hpp"
 #include "sift_position_writer.hpp"
 
 DEFINE_bool(input_multitracks, false,

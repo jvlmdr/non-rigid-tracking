@@ -15,7 +15,7 @@
 #include "track_list_reader.hpp"
 #include "sift_position_reader.hpp"
 #include "matrix_reader.hpp"
-#include "vector_writer.hpp"
+#include "iterator_writer.hpp"
 #include "match_result_writer.hpp"
 
 DEFINE_double(max_error, 2., "Maximum deviation from track (pixels)");

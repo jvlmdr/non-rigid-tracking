@@ -19,7 +19,7 @@
 #include "iterator_reader.hpp"
 #include "match_reader.hpp"
 #include "multiview_track_list_writer.hpp"
-#include "vector_writer.hpp"
+#include "iterator_writer.hpp"
 #include "default_writer.hpp"
 
 DEFINE_bool(discard_inconsistent, false,

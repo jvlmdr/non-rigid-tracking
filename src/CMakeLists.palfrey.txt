@@ -25,6 +25,10 @@ INCLUDE_DIRECTORIES("/home/jvalmadr/src/arpack++/include")
 # ARPACK
 LINK_DIRECTORIES("/home/jvalmadr/src/ARPACK")
 
+# liblinear
+INCLUDE_DIRECTORIES("/home/jvalmadr/src/liblinear-1.92")
+LINK_DIRECTORIES("/home/jvalmadr/src/liblinear-1.92")
+
 # google-test
 INCLUDE_DIRECTORIES("/home/jvalmadr/src/gtest-1.6.0/include")
 LINK_DIRECTORIES("/home/jvalmadr/src/gtest-1.6.0/release")

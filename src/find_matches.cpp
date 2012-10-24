@@ -14,6 +14,88 @@ DirectedMatch::DirectedMatch(int index, double distance)
 
 ////////////////////////////////////////////////////////////////////////////////
 
+class CompareDirectedMatches {
+  public:
+    CompareDirectedMatches(bool ascending);
+
+    bool operator()(const DirectedMatch& lhs, const DirectedMatch& rhs) const;
+
+  private:
+    bool ascending_;
+};
+
+CompareDirectedMatches::CompareDirectedMatches(bool ascending)
+    : ascending_(ascending) {}
+
+bool CompareDirectedMatches::operator()(const DirectedMatch& lhs,
+                                        const DirectedMatch& rhs) const {
+  if (ascending_) {
+    return lhs.distance < rhs.distance;
+  } else {
+    return lhs.distance > rhs.distance;
+  }
+}
+
+void findMatchesUsingClassifier(const Classifier& classifier,
+                                const std::deque<Descriptor>& points,
+                                DirectedMatchList& matches,
+                                size_t max_num_matches) {
+  matches.clear();
+
+  // Use a heap to keep track of the worst (sort from lowest to highest score).
+  CompareDirectedMatches compare(false);
+
+  std::deque<Descriptor>::const_iterator point;
+  int index = 0;
+
+  for (point = points.begin(); point != points.end(); ++point) {
+    double score = classifier.score(*point);
+
+    // If we haven't reached the maximum number of matches or this match is
+    // better than the worst, add it to the heap.
+    if (matches.size() < max_num_matches || score > matches.front().distance) {
+      matches.push_back(DirectedMatch(index, score));
+      std::push_heap(matches.begin(), matches.end(), compare);
+    }
+
+    // If there are too many elements, remove from the heap.
+    if (matches.size() >= max_num_matches) {
+      std::pop_heap(matches.begin(), matches.end(), compare);
+      matches.pop_back();
+    }
+
+    index += 1;
+  }
+
+  // Sort from worst to best.
+  std::sort_heap(matches.begin(), matches.end(), compare);
+  // And reverse.
+  std::reverse(matches.begin(), matches.end());
+}
+
+void findMatchesUsingClassifiers(const std::deque<Classifier>& classifiers,
+                                 const std::deque<Descriptor>& points,
+                                 std::deque<DirectedMatchList>& matches,
+                                 int max_num_matches) {
+  matches.clear();
+
+  std::deque<Classifier>::const_iterator classifier;
+  for (classifier = classifiers.begin();
+       classifier != classifiers.end();
+       ++classifier) {
+    // Find matches for this classifier.
+    DirectedMatchList classifier_matches;
+    findMatchesUsingClassifier(*classifier, points, classifier_matches,
+        max_num_matches);
+
+    // Swap into the full list.
+    matches.push_back(DirectedMatchList());
+    matches.back().swap(classifier_matches);
+  }
+}
+
+////////////////////////////////////////////////////////////////////////////////
+
 namespace {
 
 // A list of single matches.
@@ -31,11 +113,11 @@ void convertMatchList(const RawMatchList& raw, DirectedMatchList& matches) {
 }
 
 void convertMatchLists(const std::vector<RawMatchList>& raw,
-                       std::vector<DirectedMatchList>& directed) {
+                       std::deque<DirectedMatchList>& directed) {
   directed.assign(raw.size(), DirectedMatchList());
 
   std::vector<RawMatchList>::const_iterator raw_matches = raw.begin();
-  std::vector<DirectedMatchList>::iterator directed_matches = directed.begin();
+  std::deque<DirectedMatchList>::iterator directed_matches = directed.begin();
 
   while (raw_matches != raw.end()) {
     convertMatchList(*raw_matches, *directed_matches);
@@ -57,7 +139,7 @@ void relativeRadiusMatchIterative(const cv::Mat& query,
                                   double nearest,
                                   double max_relative_distance) {
   CHECK(query.rows == 1);
-  // Even though we're only matching one element, vector of vectors returned.
+  // Even though we're only matching one element, deque of vectors returned.
   std::vector<RawMatchList> singleton;
 
   bool changed = true;
@@ -124,13 +206,13 @@ void filterMatches(const DirectedMatchList& matches,
   std::copy(matches.begin(), last, std::back_inserter(subset));
 }
 
-void filterMatchLists(const std::vector<DirectedMatchList>& input,
-                      std::vector<DirectedMatchList>& output,
+void filterMatchLists(const std::deque<DirectedMatchList>& input,
+                      std::deque<DirectedMatchList>& output,
                       double max_relative_distance) {
   output.assign(input.size(), DirectedMatchList());
 
-  std::vector<DirectedMatchList>::const_iterator input_matches = input.begin();
-  std::vector<DirectedMatchList>::iterator output_matches = output.begin();
+  std::deque<DirectedMatchList>::const_iterator input_matches = input.begin();
+  std::deque<DirectedMatchList>::iterator output_matches = output.begin();
 
   while (input_matches != input.begin()) {
     filterMatches(*input_matches, *output_matches, max_relative_distance);
@@ -146,12 +228,12 @@ void filterMatchLists(const std::vector<DirectedMatchList>& input,
 //
 // If both constraints are active, the fixed number will be retrieved and
 // results that are too far away will be removed.
-void match(const cv::Mat& query,
-           const cv::Mat& train,
-           std::vector<DirectedMatchList>& matches,
-           int max_num_matches,
-           double max_relative_distance,
-           bool use_flann) {
+void findMatchesUsingEuclideanDistance(const cv::Mat& query,
+                                       const cv::Mat& train,
+                                       std::deque<DirectedMatchList>& matches,
+                                       int max_num_matches,
+                                       double max_relative_distance,
+                                       bool use_flann) {
   // Construct matching object.
   cv::Ptr<cv::DescriptorMatcher> matcher;
   if (use_flann) {
@@ -167,7 +249,7 @@ void match(const cv::Mat& query,
 
   if (max_num_matches > 0) {
     // Take top few matches.
-    std::vector<std::vector<cv::DMatch> > raw;
+    std::vector<RawMatchList> raw;
     matcher->knnMatch(query, raw, max_num_matches);
 
     // Convert from cv::DMatch to our match.
@@ -175,7 +257,7 @@ void match(const cv::Mat& query,
 
     if (max_relative_distance > 0) {
       // Remove any results that are too far away.
-      std::vector<DirectedMatchList> filtered;
+      std::deque<DirectedMatchList> filtered;
       filterMatchLists(matches, filtered, max_relative_distance);
       matches.swap(filtered);
     }
@@ -184,7 +266,7 @@ void match(const cv::Mat& query,
     CHECK(max_relative_distance > 0) << "No limit on number of matches";
 
     // Retrieve based on relative distance.
-    std::vector<std::vector<cv::DMatch> > raw;
+    std::vector<RawMatchList> raw;
     relativeRadiusMatch(query, *matcher, raw, max_relative_distance);
 
     // Convert from cv::DMatch to our match.
@@ -194,13 +276,14 @@ void match(const cv::Mat& query,
 
 }
 
-void matchBothDirections(const std::vector<Descriptor>& points1,
-                         const std::vector<Descriptor>& points2,
-                         std::vector<DirectedMatchList>& forward,
-                         std::vector<DirectedMatchList>& reverse,
-                         int max_num_matches,
-                         double max_relative_distance,
-                         bool use_flann) {
+void findMatchesInBothDirectionsUsingEuclideanDistance(
+    const std::deque<Descriptor>& points1,
+    const std::deque<Descriptor>& points2,
+    std::deque<DirectedMatchList>& forward,
+    std::deque<DirectedMatchList>& reverse,
+    int max_num_matches,
+    double max_relative_distance,
+    bool use_flann) {
   // Copy descriptors into matrices for cv::DescriptorMatcher.
   cv::Mat mat1;
   cv::Mat mat2;
@@ -208,8 +291,10 @@ void matchBothDirections(const std::vector<Descriptor>& points1,
   listToMatrix(points2, mat2);
 
   // Match forwards and backwards.
-  match(mat1, mat2, forward, max_num_matches, max_relative_distance, use_flann);
-  match(mat2, mat1, reverse, max_num_matches, max_relative_distance, use_flann);
+  findMatchesUsingEuclideanDistance(mat1, mat2, forward, max_num_matches,
+      max_relative_distance, use_flann);
+  findMatchesUsingEuclideanDistance(mat2, mat1, reverse, max_num_matches,
+      max_relative_distance, use_flann);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -235,10 +320,10 @@ void addMatchesToSet(const DirectedMatchList& directed,
   }
 }
 
-void addAllMatchesToSet(const std::vector<DirectedMatchList>& directed,
+void addAllMatchesToSet(const std::deque<DirectedMatchList>& directed,
                         bool forward,
                         std::set<MatchResult>& undirected) {
-  std::vector<DirectedMatchList>::const_iterator d;
+  std::deque<DirectedMatchList>::const_iterator d;
   int index = 0;
 
   for (d = directed.begin(); d != directed.end(); ++d) {
@@ -250,8 +335,8 @@ void addAllMatchesToSet(const std::vector<DirectedMatchList>& directed,
 }
 
 void intersectionOfMatchLists(
-    const std::vector<DirectedMatchList>& forward_matches,
-    const std::vector<DirectedMatchList>& reverse_matches,
+    const std::deque<DirectedMatchList>& forward_matches,
+    const std::deque<DirectedMatchList>& reverse_matches,
     std::vector<MatchResult>& matches) {
   // Construct a set of undirected matches from both sets of directed matches.
   std::set<MatchResult> forward_set;
@@ -265,8 +350,8 @@ void intersectionOfMatchLists(
 }
 
 void unionOfMatchLists(
-    const std::vector<DirectedMatchList>& forward_matches,
-    const std::vector<DirectedMatchList>& reverse_matches,
+    const std::deque<DirectedMatchList>& forward_matches,
+    const std::deque<DirectedMatchList>& reverse_matches,
     std::vector<MatchResult>& matches) {
   // Construct a set of undirected matches from both sets of directed matches.
   std::set<MatchResult> forward_set;

@@ -10,7 +10,7 @@
 #include "iterator_reader.hpp"
 #include "matrix_reader.hpp"
 #include "optimal_triangulation.hpp"
-#include "vector_writer.hpp"
+#include "iterator_writer.hpp"
 #include "default_writer.hpp"
 
 typedef std::vector<Match> MatchList;

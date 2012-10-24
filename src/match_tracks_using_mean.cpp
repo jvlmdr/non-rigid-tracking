@@ -15,7 +15,7 @@
 #include "track_list_reader.hpp"
 #include "descriptor_reader.hpp"
 #include "reader.hpp"
-#include "vector_writer.hpp"
+#include "iterator_writer.hpp"
 #include "match_result_writer.hpp"
 
 std::string makeFilename(const std::string& format, int t) {

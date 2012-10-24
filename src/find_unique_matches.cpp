@@ -1,5 +1,8 @@
 #include "find_unique_matches.hpp"
+#include "find_matches.hpp"
 #include <map>
+#include <algorithm>
+#include <limits>
 #include <glog/logging.h>
 #include <opencv2/features2d/features2d.hpp>
 #include "find_matches_util.hpp"
@@ -34,6 +37,39 @@ UniqueDirectedMatch convertMatchPair(const RawMatchList& pair) {
 
 ////////////////////////////////////////////////////////////////////////////////
 
+UniqueDirectedMatch findUniqueMatchUsingClassifier(
+    const Classifier& classifier,
+    const std::deque<Descriptor>& points) {
+  // Find the top two matches for each classifier.
+  std::vector<DirectedMatch> directed;
+  findMatchesUsingClassifier(classifier, points, directed, 2);
+
+  int index = directed[0].index;
+  double distance = directed[0].distance;
+  double next_best = directed[1].distance;
+
+  return UniqueDirectedMatch(index, distance, next_best);
+}
+
+// Find the single best match for each point.
+// Returns also the distance to the second-best match.
+void findUniqueMatchesUsingClassifiers(
+    const std::deque<Classifier>& classifiers,
+    const std::deque<Descriptor>& points,
+    std::vector<UniqueDirectedMatch>& matches) {
+  matches.clear();
+
+  // Evaluate the class
+  std::deque<Classifier>::const_iterator classifier;
+  for (classifier = classifiers.begin();
+       classifier != classifiers.end();
+       ++classifier) {
+    matches.push_back(findUniqueMatchUsingClassifier(*classifier, points));
+  }
+}
+
+////////////////////////////////////////////////////////////////////////////////
+
 namespace {
 
 void convertMatchPairs(const std::vector<RawMatchList>& pairs,
@@ -43,10 +79,11 @@ void convertMatchPairs(const std::vector<RawMatchList>& pairs,
       convertMatchPair);
 }
 
-void matchUnique(const cv::Mat& query,
-                 const cv::Mat& train,
-                 std::vector<UniqueDirectedMatch>& matches,
-                 bool use_flann) {
+void findUniqueMatchesUsingEuclideanDistance(
+    const cv::Mat& query,
+    const cv::Mat& train,
+    std::vector<UniqueDirectedMatch>& matches,
+    bool use_flann) {
   // Construct matcher.
   cv::Ptr<cv::DescriptorMatcher> matcher;
   if (use_flann) {
@@ -65,9 +102,9 @@ void matchUnique(const cv::Mat& query,
 
 }
 
-void matchUniqueBothDirections(
-    const std::vector<Descriptor>& points1,
-    const std::vector<Descriptor>& points2,
+void findUniqueMatchesInBothDirectionsUsingEuclideanDistance(
+    const std::deque<Descriptor>& points1,
+    const std::deque<Descriptor>& points2,
     std::vector<UniqueDirectedMatch>& forward,
     std::vector<UniqueDirectedMatch>& reverse,
     bool use_flann) {
@@ -78,8 +115,8 @@ void matchUniqueBothDirections(
   listToMatrix(points2, mat2);
 
   // Match forwards and backwards.
-  matchUnique(mat1, mat2, forward, use_flann);
-  matchUnique(mat2, mat1, reverse, use_flann);
+  findUniqueMatchesUsingEuclideanDistance(mat1, mat2, forward, use_flann);
+  findUniqueMatchesUsingEuclideanDistance(mat2, mat1, reverse, use_flann);
 }
 
 ////////////////////////////////////////////////////////////////////////////////

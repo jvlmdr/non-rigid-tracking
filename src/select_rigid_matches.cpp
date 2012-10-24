@@ -12,7 +12,7 @@
 #include "image_point_reader.hpp"
 #include "iterator_reader.hpp"
 #include "matrix_reader.hpp"
-#include "vector_writer.hpp"
+#include "iterator_writer.hpp"
 #include "match_result_writer.hpp"
 
 DEFINE_double(max_residual, 2.,
