@@ -13,7 +13,7 @@ struct FeatureIndex {
 
   FeatureIndex();
   FeatureIndex(int view, int time, int id);
-  FeatureIndex(const Frame& frame, int id);
+  FeatureIndex(const ImageIndex& frame, int id);
 
   // Defines an ordering over feature indices.
   bool operator<(const FeatureIndex& other) const;

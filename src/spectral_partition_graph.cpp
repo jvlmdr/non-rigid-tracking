@@ -4,10 +4,11 @@
 #include <stack>
 #include <map>
 #include <set>
+#include <glog/logging.h>
+#include <gflags/gflags.h>
 #include <boost/lexical_cast.hpp>
 #include <boost/format.hpp>
 #include <boost/bind.hpp>
-
 #include <boost/graph/adjacency_list.hpp>
 #include <boost/graph/connected_components.hpp>
 #include <boost/graph/subgraph.hpp>
@@ -16,12 +17,10 @@
 #include <boost/property_map/property_map.hpp>
 #include <boost/typeof/typeof.hpp>
 
-#include <glog/logging.h>
-#include <gflags/gflags.h>
 #include "match.hpp"
 #include "multiview_track.hpp"
 #include "multiview_track_list.hpp"
-
+#include "feature_index.hpp"
 #include "normalized_cut.hpp"
 #include "sparse_mat.hpp"
 
@@ -36,45 +35,6 @@ const int MIN_GRAPH_SIZE = 2;
 const int MAX_GRAPH_SIZE = 10000;
 
 DEFINE_int32(max_iter, 1000, "Maximum number of iterations");
-
-// Identifies a feature in a multiview video.
-// TODO: Need a better name?
-struct FeatureIndex {
-  int view;
-  int time;
-  int id;
-
-  FeatureIndex();
-  FeatureIndex(int view, int time, int id);
-  FeatureIndex(const Frame& frame, int id);
-
-  // Defines an ordering over feature indices.
-  bool operator<(const FeatureIndex& other) const;
-};
-
-FeatureIndex::FeatureIndex() : view(-1), time(-1), id(-1) {}
-
-FeatureIndex::FeatureIndex(int view, int time, int id)
-    : view(view), time(time), id(id) {}
-
-FeatureIndex::FeatureIndex(const Frame& frame, int id)
-    : view(frame.view), time(frame.time), id(id) {}
-
-bool FeatureIndex::operator<(const FeatureIndex& other) const {
-  if (view < other.view) {
-    return true;
-  } else if (other.view < view) {
-    return false;
-  } else {
-    if (time < other.time) {
-      return true;
-    } else if (other.time < time) {
-      return false;
-    } else {
-      return id < other.id;
-    }
-  }
-}
 
 // boost::subgraph requires vertex_index_t and edge_index_t.
 typedef boost::property<boost::vertex_index_t, int,
@@ -92,11 +52,6 @@ typedef boost::subgraph<
         Graph;
 
 typedef std::map<FeatureIndex, Graph::vertex_descriptor> VertexLookup;
-
-std::ostream& operator<<(std::ostream& stream, const FeatureIndex& feature) {
-  return stream << "(" << feature.view << ", " << feature.time << ", " <<
-      feature.id << ")";
-}
 
 void init(int& argc, char**& argv) {
   std::ostringstream usage;
@@ -179,8 +134,8 @@ void loadAllMatches(const std::string& matches_format,
       num_matches += match_list.size();
 
       // Add matches to map.
-      Frame frame1(v1, t1);
-      Frame frame2(v2, t2);
+      ImageIndex frame1(v1, t1);
+      ImageIndex frame2(v2, t2);
 
       for (std::vector<Match>::const_iterator match = match_list.begin();
            match != match_list.end();
@@ -223,7 +178,7 @@ void splitIntoComponents(Graph& graph, std::vector<Graph*>& subgraphs) {
 
 // Returns false iff a feature appears twice in the same image.
 bool isConsistent(const Graph& graph) {
-  std::set<Frame> visible;
+  std::set<ImageIndex> visible;
 
   // Get (begin, end) pair of vertex iterators.
   std::pair<Graph::vertex_iterator, Graph::vertex_iterator> vertices;
@@ -233,7 +188,7 @@ bool isConsistent(const Graph& graph) {
   Graph::vertex_iterator vertex;
   for (vertex = vertices.first; vertex != vertices.second; ++vertex) {
     const FeatureIndex& feature = graph[*vertex];
-    Frame frame(feature.view, feature.time);
+    ImageIndex frame(feature.view, feature.time);
 
     // Check if the feature has already been observed in this frame.
     if (visible.find(frame) != visible.end()) {

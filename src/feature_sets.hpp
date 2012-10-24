@@ -16,7 +16,7 @@ class FeatureSets {
   public:
     FeatureSets();
     // Add each vertex to its own feature set.
-    void init(const std::vector<Frame>& vertices);
+    void init(const std::vector<ImageIndex>& vertices);
     // Create a vertex set for each track.
     // If a vertex does not appear in a track, it gets its own set.
     //
@@ -25,7 +25,7 @@ class FeatureSets {
     // tracks -- Multiview tracks, containing the index of the feature within
     //   its image.
     // lookup -- A lookup from feature (view, time, id) to vertex index.
-    void init(const std::vector<Frame>& vertices,
+    void init(const std::vector<ImageIndex>& vertices,
               const MultiviewTrackList<int>& tracks,
               const std::map<FeatureIndex, int>& lookup);
 
@@ -34,13 +34,13 @@ class FeatureSets {
     bool together(int u, int v) const;
     bool compatible(int u, int v) const;
 
-    const std::map<Frame, int>& find(int v) const;
+    const std::map<ImageIndex, int>& find(int v) const;
 
     T& property(int v);
     const T& property(int v) const;
 
     struct Set {
-      std::map<Frame, int> elements;
+      std::map<ImageIndex, int> elements;
       T property;
     };
 

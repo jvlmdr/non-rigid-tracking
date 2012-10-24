@@ -228,7 +228,7 @@ TARGET_LINK_LIBRARIES(select-long-tracks ${OpenCV_LIBS})
 ADD_EXECUTABLE(visualize-multiview-tracks
   visualize_multiview_tracks.cpp
   read_lines.cpp
-  multiview_track.cpp
+  image_index.cpp
   random_color.cpp
   hsv.cpp
   sift_position.cpp
@@ -250,7 +250,7 @@ TARGET_LINK_LIBRARIES(select-distinctive-matches ${OpenCV_LIBS})
 ADD_EXECUTABLE(track-matches-to-multiview-tracks
   track_matches_to_multiview_tracks.cpp
   sift_position.cpp
-  multiview_track.cpp
+  image_index.cpp
   match_reader.cpp
   sift_position_reader.cpp
   sift_position_writer.cpp)
@@ -262,14 +262,14 @@ ADD_EXECUTABLE(merge-multiview-tracks
   sift_position.cpp
   sift_position_reader.cpp
   sift_position_writer.cpp
-  multiview_track.cpp)
+  image_index.cpp)
 TARGET_LINK_LIBRARIES(merge-multiview-tracks glog gflags)
 TARGET_LINK_LIBRARIES(merge-multiview-tracks ${OpenCV_LIBS})
 
 ADD_EXECUTABLE(select-active-multiview-tracks
   select_active_multiview_tracks.cpp
   sift_position.cpp
-  multiview_track.cpp
+  image_index.cpp
   sift_position_reader.cpp
   sift_position_writer.cpp)
 TARGET_LINK_LIBRARIES(select-active-multiview-tracks glog gflags)
@@ -286,7 +286,7 @@ TARGET_LINK_LIBRARIES(select-active-multiview-tracks ${OpenCV_LIBS})
 
 ADD_EXECUTABLE(multiview-index-tracks-to-features
   multiview_index_tracks_to_features.cpp
-  multiview_track.cpp
+  image_index.cpp
   sift_position.cpp
   read_lines.cpp
   sift_position_reader.cpp
@@ -297,7 +297,7 @@ TARGET_LINK_LIBRARIES(multiview-index-tracks-to-features ${OpenCV_LIBS})
 ADD_EXECUTABLE(visualize-multiview-multitracks
   visualize_multiview_multitracks.cpp
   read_lines.cpp
-  multiview_track.cpp
+  image_index.cpp
   random_color.cpp
   hsv.cpp
   sift_position.cpp
@@ -313,7 +313,7 @@ ADD_EXECUTABLE(find-max-cliques
   sift_feature.cpp
   sift_position.cpp
   descriptor.cpp
-  multiview_track.cpp
+  image_index.cpp
   match_reader.cpp
   sift_feature_reader.cpp
   descriptor_reader.cpp
@@ -330,7 +330,8 @@ ADD_EXECUTABLE(partition-graph
   sift_feature.cpp
   sift_position.cpp
   descriptor.cpp
-  multiview_track.cpp
+  image_index.cpp
+  feature_index.cpp
   match_reader.cpp
   sift_feature_reader.cpp
   descriptor_reader.cpp
@@ -344,7 +345,7 @@ TARGET_LINK_LIBRARIES(partition-graph ${OpenCV_LIBS})
 ADD_EXECUTABLE(visualize-multiview-multitracks-time-slice
   visualize_multiview_multitracks_time_slice.cpp
   read_lines.cpp
-  multiview_track.cpp
+  image_index.cpp
   random_color.cpp
   hsv.cpp
   sift_position.cpp
@@ -358,7 +359,7 @@ ADD_EXECUTABLE(cluster-descriptors
   cluster_descriptors.cpp
   kmeans.cpp
   random.cpp
-  multiview_track.cpp
+  image_index.cpp
   sift_feature.cpp
   sift_position.cpp
   descriptor.cpp
@@ -377,7 +378,8 @@ ADD_EXECUTABLE(spectral-partition-graph
   sift_feature.cpp
   sift_position.cpp
   descriptor.cpp
-  multiview_track.cpp
+  image_index.cpp
+  feature_index.cpp
   match_reader.cpp
   sift_feature_reader.cpp
   descriptor_reader.cpp
@@ -398,7 +400,7 @@ TARGET_LINK_LIBRARIES(sparse-mat-unittest ${OpenCV_LIBS})
 ADD_EXECUTABLE(visualize-some-multiview-tracks
   visualize_some_multiview_tracks.cpp
   random.cpp
-  multiview_track.cpp
+  image_index.cpp
   random_color.cpp
   hsv.cpp
   sift_position.cpp
@@ -438,8 +440,9 @@ ADD_EXECUTABLE(matches-to-multiview-tracks
   sift_feature.cpp
   sift_position.cpp
   descriptor.cpp
-  multiview_track.cpp
+  image_index.cpp
   match_reader.cpp
+  feature_index.cpp
   sift_feature_reader.cpp
   descriptor_reader.cpp
   sift_position_reader.cpp
@@ -456,7 +459,7 @@ ADD_EXECUTABLE(agglomerative-cluster
   sift_position.cpp
   descriptor.cpp
   match_result.cpp
-  multiview_track.cpp
+  image_index.cpp
   feature_index.cpp
   match_result_reader.cpp
   sift_feature_reader.cpp
@@ -476,7 +479,7 @@ TARGET_LINK_LIBRARIES(agglomerative-cluster ${LAPACK_LIB})
 ADD_EXECUTABLE(feature-sets-unittest
   feature_sets_unittest.cpp
   feature_index.cpp
-  multiview_track.cpp)
+  image_index.cpp)
 TARGET_LINK_LIBRARIES(feature-sets-unittest gtest_main gtest gflags glog)
 TARGET_LINK_LIBRARIES(feature-sets-unittest ${OpenCV_LIBS})
 

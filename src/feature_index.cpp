@@ -5,7 +5,7 @@ FeatureIndex::FeatureIndex() : view(-1), time(-1), id(-1) {}
 FeatureIndex::FeatureIndex(int view, int time, int id)
     : view(view), time(time), id(id) {}
 
-FeatureIndex::FeatureIndex(const Frame& frame, int id)
+FeatureIndex::FeatureIndex(const ImageIndex& frame, int id)
     : view(frame.view), time(frame.time), id(id) {}
 
 bool FeatureIndex::operator<(const FeatureIndex& other) const {

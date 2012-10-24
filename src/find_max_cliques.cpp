@@ -38,7 +38,7 @@ struct FeatureIndex {
 
   FeatureIndex();
   FeatureIndex(int view, int time, int id);
-  FeatureIndex(const Frame& frame, int id);
+  FeatureIndex(const ImageIndex& frame, int id);
 
   // Defines an ordering over feature indices.
   bool operator<(const FeatureIndex& other) const;
@@ -49,7 +49,7 @@ FeatureIndex::FeatureIndex() : view(-1), time(-1), id(-1) {}
 FeatureIndex::FeatureIndex(int view, int time, int id)
     : view(view), time(time), id(id) {}
 
-FeatureIndex::FeatureIndex(const Frame& frame, int id)
+FeatureIndex::FeatureIndex(const ImageIndex& frame, int id)
     : view(frame.view), time(frame.time), id(id) {}
 
 bool FeatureIndex::operator<(const FeatureIndex& other) const {
@@ -156,8 +156,8 @@ void loadAllMatches(const std::string& matches_format,
       num_matches += match_list.size();
 
       // Add matches to map.
-      Frame frame1(v1, t1);
-      Frame frame2(v2, t2);
+      ImageIndex frame1(v1, t1);
+      ImageIndex frame2(v2, t2);
 
       for (std::vector<Match>::const_iterator match = match_list.begin();
            match != match_list.end();

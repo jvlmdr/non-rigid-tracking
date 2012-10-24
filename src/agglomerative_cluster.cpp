@@ -122,8 +122,8 @@ void loadAllMatches(const std::string& matches_format,
       num_matches += match_list.size();
 
       // Add matches to map.
-      Frame frame1(v1, t1);
-      Frame frame2(v2, t2);
+      ImageIndex frame1(v1, t1);
+      ImageIndex frame2(v2, t2);
 
       std::vector<MatchResult>::const_iterator match;
       for (match = match_list.begin(); match != match_list.end(); ++match) {
@@ -158,12 +158,12 @@ class CompareEdges {
 };
 
 void subsetToTrack(const MatchGraph& graph,
-                   const std::map<Frame, int>& set,
+                   const std::map<ImageIndex, int>& set,
                    MultiviewTrack<int>& track,
                    int num_views) {
   track = MultiviewTrack<int>(num_views);
 
-  std::map<Frame, int>::const_iterator feature;
+  std::map<ImageIndex, int>::const_iterator feature;
   for (feature = set.begin(); feature != set.end(); ++feature) {
     const FeatureIndex& index = graph[feature->second];
     track.view(index.view)[index.time] = index.id;
@@ -265,7 +265,7 @@ int main(int argc, char** argv) {
   // Use a disjoint-sets data structure for union-find operations.
   FeatureSets<SetProperties> sets;
   
-  std::vector<Frame> frames;
+  std::vector<ImageIndex> frames;
   {
     MatchGraph::vertex_iterator vertex;
     MatchGraph::vertex_iterator end;
@@ -273,7 +273,7 @@ int main(int argc, char** argv) {
 
     for(; vertex != end; ++vertex) {
       const FeatureIndex& feature = graph[*vertex];
-      frames.push_back(Frame(feature.view, feature.time));
+      frames.push_back(ImageIndex(feature.view, feature.time));
     }
   }
 

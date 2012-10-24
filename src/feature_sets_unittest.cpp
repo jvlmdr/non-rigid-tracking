@@ -35,11 +35,11 @@ bool operator!=(const std::map<Key, Value>& lhs,
 }
 
 TEST(FeatureSets, Count) {
-  std::vector<Frame> vertices(4);
-  vertices[0] = Frame(0, 0);
-  vertices[1] = Frame(0, 0);
-  vertices[2] = Frame(0, 1);
-  vertices[3] = Frame(0, 2);
+  std::vector<ImageIndex> vertices(4);
+  vertices[0] = ImageIndex(0, 0);
+  vertices[1] = ImageIndex(0, 0);
+  vertices[2] = ImageIndex(0, 1);
+  vertices[3] = ImageIndex(0, 2);
 
   // Check that there are four sets.
   FeatureSets<int> sets;
@@ -49,11 +49,11 @@ TEST(FeatureSets, Count) {
 }
 
 TEST(FeatureSets, Join) {
-  std::vector<Frame> vertices(4);
-  vertices[0] = Frame(0, 0);
-  vertices[1] = Frame(0, 0);
-  vertices[2] = Frame(0, 1);
-  vertices[3] = Frame(0, 2);
+  std::vector<ImageIndex> vertices(4);
+  vertices[0] = ImageIndex(0, 0);
+  vertices[1] = ImageIndex(0, 0);
+  vertices[2] = ImageIndex(0, 1);
+  vertices[3] = ImageIndex(0, 2);
 
   FeatureSets<int> sets;
   sets.init(vertices);
@@ -61,27 +61,27 @@ TEST(FeatureSets, Join) {
 
   ASSERT_EQ(sets.count(), 3);
 
-  std::map<Frame, int> desired;
-  desired[Frame(0, 0)] = 0;
-  desired[Frame(0, 1)] = 2;
+  std::map<ImageIndex, int> desired;
+  desired[ImageIndex(0, 0)] = 0;
+  desired[ImageIndex(0, 1)] = 2;
   ASSERT_EQ(sets.find(0), desired);
   ASSERT_EQ(sets.find(2), desired);
 
   desired.clear();
-  desired[Frame(0, 0)] = 1;
+  desired[ImageIndex(0, 0)] = 1;
   ASSERT_EQ(sets.find(1), desired);
 
   desired.clear();
-  desired[Frame(0, 2)] = 3;
+  desired[ImageIndex(0, 2)] = 3;
   ASSERT_EQ(sets.find(3), desired);
 }
 
 TEST(FeatureSets, SeparateJoin) {
-  std::vector<Frame> vertices(4);
-  vertices[0] = Frame(0, 0);
-  vertices[1] = Frame(0, 0);
-  vertices[2] = Frame(0, 1);
-  vertices[3] = Frame(0, 2);
+  std::vector<ImageIndex> vertices(4);
+  vertices[0] = ImageIndex(0, 0);
+  vertices[1] = ImageIndex(0, 0);
+  vertices[2] = ImageIndex(0, 1);
+  vertices[3] = ImageIndex(0, 2);
 
   FeatureSets<int> sets;
   sets.init(vertices);
@@ -91,25 +91,25 @@ TEST(FeatureSets, SeparateJoin) {
   // There should be only two sets.
   ASSERT_EQ(sets.count(), 2);
 
-  std::map<Frame, int> desired;
-  desired[Frame(0, 0)] = 0;
-  desired[Frame(0, 1)] = 2;
+  std::map<ImageIndex, int> desired;
+  desired[ImageIndex(0, 0)] = 0;
+  desired[ImageIndex(0, 1)] = 2;
   ASSERT_EQ(sets.find(0), desired);
   ASSERT_EQ(sets.find(2), desired);
 
   desired.clear();
-  desired[Frame(0, 0)] = 1;
-  desired[Frame(0, 2)] = 3;
+  desired[ImageIndex(0, 0)] = 1;
+  desired[ImageIndex(0, 2)] = 3;
   ASSERT_EQ(sets.find(1), desired);
   ASSERT_EQ(sets.find(3), desired);
 }
 
 TEST(FeatureSets, CompoundJoin) {
-  std::vector<Frame> vertices(4);
-  vertices[0] = Frame(0, 0);
-  vertices[1] = Frame(0, 0);
-  vertices[2] = Frame(0, 1);
-  vertices[3] = Frame(0, 2);
+  std::vector<ImageIndex> vertices(4);
+  vertices[0] = ImageIndex(0, 0);
+  vertices[1] = ImageIndex(0, 0);
+  vertices[2] = ImageIndex(0, 1);
+  vertices[3] = ImageIndex(0, 2);
 
   FeatureSets<int> sets;
   sets.init(vertices);
@@ -119,25 +119,25 @@ TEST(FeatureSets, CompoundJoin) {
   // There should be only two sets.
   ASSERT_EQ(sets.count(), 2);
 
-  std::map<Frame, int> desired;
-  desired[Frame(0, 0)] = 0;
-  desired[Frame(0, 1)] = 2;
-  desired[Frame(0, 2)] = 3;
+  std::map<ImageIndex, int> desired;
+  desired[ImageIndex(0, 0)] = 0;
+  desired[ImageIndex(0, 1)] = 2;
+  desired[ImageIndex(0, 2)] = 3;
   ASSERT_EQ(sets.find(0), desired);
   ASSERT_EQ(sets.find(2), desired);
   ASSERT_EQ(sets.find(3), desired);
 
   desired.clear();
-  desired[Frame(0, 0)] = 1;
+  desired[ImageIndex(0, 0)] = 1;
   ASSERT_EQ(sets.find(1), desired);
 }
 
 TEST(FeatureSets, RedundantJoin) {
-  std::vector<Frame> vertices(4);
-  vertices[0] = Frame(0, 0);
-  vertices[1] = Frame(0, 0);
-  vertices[2] = Frame(0, 1);
-  vertices[3] = Frame(0, 2);
+  std::vector<ImageIndex> vertices(4);
+  vertices[0] = ImageIndex(0, 0);
+  vertices[1] = ImageIndex(0, 0);
+  vertices[2] = ImageIndex(0, 1);
+  vertices[3] = ImageIndex(0, 2);
 
   FeatureSets<int> sets;
   sets.init(vertices);
@@ -148,25 +148,25 @@ TEST(FeatureSets, RedundantJoin) {
   // There should be only two sets.
   ASSERT_EQ(sets.count(), 2);
 
-  std::map<Frame, int> desired;
-  desired[Frame(0, 0)] = 0;
-  desired[Frame(0, 1)] = 2;
-  desired[Frame(0, 2)] = 3;
+  std::map<ImageIndex, int> desired;
+  desired[ImageIndex(0, 0)] = 0;
+  desired[ImageIndex(0, 1)] = 2;
+  desired[ImageIndex(0, 2)] = 3;
   ASSERT_EQ(sets.find(0), desired);
   ASSERT_EQ(sets.find(2), desired);
   ASSERT_EQ(sets.find(3), desired);
 
   desired.clear();
-  desired[Frame(0, 0)] = 1;
+  desired[ImageIndex(0, 0)] = 1;
   ASSERT_EQ(sets.find(1), desired);
 }
 
 TEST(FeatureSets, Compatible) {
-  std::vector<Frame> vertices(4);
-  vertices[0] = Frame(0, 0);
-  vertices[1] = Frame(0, 0);
-  vertices[2] = Frame(0, 1);
-  vertices[3] = Frame(0, 2);
+  std::vector<ImageIndex> vertices(4);
+  vertices[0] = ImageIndex(0, 0);
+  vertices[1] = ImageIndex(0, 0);
+  vertices[2] = ImageIndex(0, 1);
+  vertices[3] = ImageIndex(0, 2);
 
   FeatureSets<int> sets;
   sets.init(vertices);

@@ -2,28 +2,8 @@
 #define MULTIVIEW_TRACK_HPP_
 
 #include "track.hpp"
+#include "image_index.hpp"
 #include <vector>
-#include <ostream>
-
-// A frame is identified by a video stream and a time instant.
-struct Frame {
-  int view;
-  int time;
-
-  Frame();
-  Frame(int view, int time);
-
-  // Defines an ordering over frame indices.
-  bool operator<(const Frame& other) const;
-  bool operator>(const Frame& other) const;
-  bool operator>=(const Frame& other) const;
-  bool operator<=(const Frame& other) const;
-
-  bool operator==(const Frame& other) const;
-  bool operator!=(const Frame& other) const;
-};
-
-std::ostream& operator<<(std::ostream& stream, const Frame& frame);
 
 // Describes observations of a feature in multiple views at multiple times.
 // Assumes the number of views is known but the number of frames is unknown.
@@ -38,8 +18,8 @@ class MultiviewTrack {
 
     void swap(MultiviewTrack<T>& other);
 
-    const T* point(const Frame& frame) const;
-    T* point(const Frame& frame);
+    const T* point(const ImageIndex& frame) const;
+    T* point(const ImageIndex& frame);
 
     const Track<T>& view(int view) const;
     Track<T>& view(int view);
@@ -95,7 +75,7 @@ class MultiviewTrack {
         void begin();
         void next();
         bool end() const;
-        std::pair<Frame, const T*> get() const;
+        std::pair<ImageIndex, const T*> get() const;
 
       private:
         const MultiviewTrack<T>* track_;

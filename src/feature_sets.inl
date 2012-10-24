@@ -5,8 +5,8 @@ template<class T>
 FeatureSets<T>::FeatureSets() : features_(), sets_() {}
 
 template<class T>
-void FeatureSets<T>::init(const std::vector<Frame>& vertices) {
-  std::vector<Frame>::const_iterator vertex;
+void FeatureSets<T>::init(const std::vector<ImageIndex>& vertices) {
+  std::vector<ImageIndex>::const_iterator vertex;
   int i = 0;
 
   for (vertex = vertices.begin(); vertex != vertices.end(); ++vertex) {
@@ -22,7 +22,7 @@ void FeatureSets<T>::init(const std::vector<Frame>& vertices) {
 }
 
 template<class T>
-void FeatureSets<T>::init(const std::vector<Frame>& vertices,
+void FeatureSets<T>::init(const std::vector<ImageIndex>& vertices,
                           const MultiviewTrackList<int>& tracks,
                           const std::map<FeatureIndex, int>& lookup) {
   init(vertices);
@@ -35,7 +35,7 @@ void FeatureSets<T>::init(const std::vector<Frame>& vertices,
 
     MultiviewTrack<int>::FeatureIterator iter(*track);
     for (iter.begin(); !iter.end(); iter.next()) {
-      Frame frame = iter.get().first;
+      ImageIndex frame = iter.get().first;
       int id = *iter.get().second;
       FeatureIndex feature(frame.view, frame.time, id);
 
@@ -86,7 +86,7 @@ void FeatureSets<T>::join(int u, int v) {
   s.elements.insert(t.elements.begin(), t.elements.end());
 
   // Set the elements of t to point at s.
-  std::map<Frame, int>::const_iterator e;
+  std::map<ImageIndex, int>::const_iterator e;
   for (e = t.elements.begin(); e != t.elements.end(); ++e) {
     features_[e->second] = s_iter->first;
   }
@@ -96,7 +96,7 @@ void FeatureSets<T>::join(int u, int v) {
 }
 
 template<class T>
-const std::map<Frame, int>& FeatureSets<T>::find(int v) const {
+const std::map<ImageIndex, int>& FeatureSets<T>::find(int v) const {
   typename SetList::const_iterator set = sets_.find(features_[v]);
   CHECK(set != sets_.end());
   return set->second.elements;
@@ -130,8 +130,8 @@ bool overlap(InputIterator1 iter1,
   return false;
 }
 
-bool compare(const std::map<Frame, int>::value_type& lhs,
-             const std::map<Frame, int>::value_type& rhs) {
+bool compare(const std::map<ImageIndex, int>::value_type& lhs,
+             const std::map<ImageIndex, int>::value_type& rhs) {
   return lhs.first < rhs.first;
 }
 
@@ -142,8 +142,8 @@ bool FeatureSets<T>::compatible(int u, int v) const {
   // Assume that u and v are in different sets.
   CHECK(!together(u, v));
 
-  const std::map<Frame, int>& s = find(u);
-  const std::map<Frame, int>& t = find(v);
+  const std::map<ImageIndex, int>& s = find(u);
+  const std::map<ImageIndex, int>& t = find(v);
 
   return !overlap(s.begin(), s.end(), t.begin(), t.end(), compare);
 }

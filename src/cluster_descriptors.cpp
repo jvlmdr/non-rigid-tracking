@@ -29,16 +29,16 @@ DEFINE_int32(k, 2, "Branching factor");
 
 class Feature : public KMeansPoint {
   public:
-    Frame frame;
+    ImageIndex frame;
     int id;
     Descriptor descriptor;
 
     Feature() : frame(), id(-1), descriptor() {}
 
-    Feature(const Frame& frame, int id)
+    Feature(const ImageIndex& frame, int id)
         : frame(frame), id(id), descriptor() {}
 
-    Feature(const Frame& frame, int id, const Descriptor& descriptor)
+    Feature(const ImageIndex& frame, int id, const Descriptor& descriptor)
         : frame(frame), id(id), descriptor(descriptor) {}
 
     void swap(Feature& other) {
@@ -78,7 +78,7 @@ void init(int& argc, char**& argv) {
 }
 
 void addImageFeaturesToList(std::deque<SiftFeature>& features,
-                            const Frame& frame,
+                            const ImageIndex& frame,
                             std::deque<Feature>& global) {
   int i = 0;
   std::deque<SiftFeature>::iterator feature;
@@ -118,7 +118,7 @@ bool loadFeatures(const std::string& format,
           v << ", " << t << ")";
 
       // Copy features into big list.
-      Frame frame(v, t);
+      ImageIndex frame(v, t);
       addImageFeaturesToList(image_features, frame, features);
     }
 
@@ -129,12 +129,12 @@ bool loadFeatures(const std::string& format,
 }
 
 bool isConsistent(const FeatureSubset& features) {
-  std::set<Frame> visible;
+  std::set<ImageIndex> visible;
 
   // Iterate through all points.
   FeatureSubset::const_iterator feature;
   for (feature = features.begin(); feature != features.end(); ++feature) {
-    const Frame& frame = (*feature)->frame;
+    const ImageIndex& frame = (*feature)->frame;
 
     // Check if the feature has already been observed in this frame.
     if (visible.find(frame) != visible.end()) {
@@ -206,7 +206,7 @@ void featuresToTrack(const FeatureSubset& features,
 
   FeatureSubset::const_iterator feature;
   for (feature = features.begin(); feature != features.end(); ++feature) {
-    const Frame& frame = (*feature)->frame;
+    const ImageIndex& frame = (*feature)->frame;
     track.view(frame.view)[frame.time] = (*feature)->id;
   }
 }

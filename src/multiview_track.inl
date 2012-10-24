@@ -20,7 +20,7 @@ void swap(MultiviewTrack<T>& lhs, MultiviewTrack<T>& rhs) {
 }
 
 template<class T>
-const T* MultiviewTrack<T>::point(const Frame& frame) const {
+const T* MultiviewTrack<T>::point(const ImageIndex& frame) const {
   typename Track<T>::const_iterator result;
 
   result = view_tracks_[frame.view].find(frame.time);
@@ -35,7 +35,7 @@ const T* MultiviewTrack<T>::point(const Frame& frame) const {
 }
 
 template<class T>
-T* MultiviewTrack<T>::point(const Frame& frame) {
+T* MultiviewTrack<T>::point(const ImageIndex& frame) {
   typename Track<T>::iterator result;
 
   result = view_tracks_[frame.view].find(frame.time);
@@ -317,11 +317,12 @@ bool MultiviewTrack<T>::FeatureIterator::end() const {
 }
 
 template<class T>
-std::pair<Frame, const T*> MultiviewTrack<T>::FeatureIterator::get() const {
+std::pair<ImageIndex, const T*>
+MultiviewTrack<T>::FeatureIterator::get() const {
   // Get view index as iterator offset.
   int view = view_ - track_->begin();
   // Get time index of feature.
   int time = feature_->first;
 
-  return std::make_pair(Frame(view, time), &feature_->second);
+  return std::make_pair(ImageIndex(view, time), &feature_->second);
 }

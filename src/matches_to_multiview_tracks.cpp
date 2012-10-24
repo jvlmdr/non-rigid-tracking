@@ -12,6 +12,8 @@
 #include <gflags/gflags.h>
 
 #include "match.hpp"
+#include "feature_index.hpp"
+#include "match_graph.hpp"
 #include "multiview_track.hpp"
 #include "multiview_track_list.hpp"
 
@@ -22,67 +24,20 @@
 #include "iterator_writer.hpp"
 #include "default_writer.hpp"
 
+DEFINE_bool(consistent_matches, true,
+    "Can we assume that the matches themselves are consistent?");
 DEFINE_bool(discard_inconsistent, false,
     "Discard any feature which appears twice in one frame.");
-DEFINE_bool(temporal_chain, false,
-    "Restrict matching across time to adjacent frames.");
+
+// At most one of these may be true.
 DEFINE_bool(simultaneous_only, false,
-    "Only use matches from the same time instant.");
+    "Only match between images taken at the same time.");
+DEFINE_bool(temporal_chain, false,
+    "Match image to all views at the same time and its own view in adjacent times.");
+DEFINE_bool(one_to_all, false, "Match one image to all others.");
 
-// More than one feature may be observed in each frame.
-typedef std::vector<int> FeatureSet;
-
-// Identifies a feature in a multiview video.
-// TODO: Need a better name?
-struct FeatureIndex {
-  int view;
-  int time;
-  int id;
-
-  FeatureIndex();
-  FeatureIndex(int view, int time, int id);
-  FeatureIndex(const Frame& frame, int id);
-
-  // Defines an ordering over feature indices.
-  bool operator<(const FeatureIndex& other) const;
-};
-
-FeatureIndex::FeatureIndex() : view(-1), time(-1), id(-1) {}
-
-FeatureIndex::FeatureIndex(int view, int time, int id)
-    : view(view), time(time), id(id) {}
-
-FeatureIndex::FeatureIndex(const Frame& frame, int id)
-    : view(frame.view), time(frame.time), id(id) {}
-
-bool FeatureIndex::operator<(const FeatureIndex& other) const {
-  if (view < other.view) {
-    return true;
-  } else if (other.view < view) {
-    return false;
-  } else {
-    if (time < other.time) {
-      return true;
-    } else if (other.time < time) {
-      return false;
-    } else {
-      return id < other.id;
-    }
-  }
-}
-
-typedef boost::adjacency_list<boost::setS,
-                              boost::vecS,
-                              boost::undirectedS,
-                              FeatureIndex>
-        MatchGraph;
-typedef std::map<FeatureIndex, MatchGraph::vertex_descriptor> VertexLookup;
-typedef std::vector<FeatureIndex> FeatureList;
-
-std::ostream& operator<<(std::ostream& stream, const FeatureIndex& feature) {
-  return stream << "(" << feature.view << ", " << feature.time << ", " <<
-      feature.id << ")";
-}
+DEFINE_int32(one_to_all_view, -1, "View of image.");
+DEFINE_int32(one_to_all_time, -1, "Time of image.");
 
 void init(int& argc, char**& argv) {
   std::ostringstream usage;
@@ -100,6 +55,12 @@ void init(int& argc, char**& argv) {
     std::exit(1);
   }
 }
+
+// More than one feature may be observed in each frame.
+typedef std::vector<int> FeatureSet;
+
+typedef std::map<FeatureIndex, MatchGraph::vertex_descriptor> VertexLookup;
+typedef std::vector<FeatureIndex> FeatureList;
 
 std::string makeMatchFilename(const std::string& format,
                               const std::string& view1,
@@ -130,12 +91,12 @@ MatchGraph::vertex_descriptor findOrInsert(MatchGraph& graph,
   return vertex;
 }
 
-void allFrames(int num_views, int num_frames, std::set<Frame>& frames) {
+void allFrames(int num_views, int num_frames, std::set<ImageIndex>& frames) {
   frames.clear();
 
   for (int v = 0; v < num_views; v += 1) {
     for (int t = 0; t < num_frames; t += 1) {
-      frames.insert(Frame(v, t));
+      frames.insert(ImageIndex(v, t));
     }
   }
 }
@@ -162,8 +123,8 @@ void loadMatches(const std::string& format,
       ", " << t1 << "), (" << view2 << ", " << t2 << ")";
 
   // Add matches to map.
-  Frame frame1(v1, t1);
-  Frame frame2(v2, t2);
+  ImageIndex frame1(v1, t1);
+  ImageIndex frame2(v2, t2);
 
   std::vector<Match>::const_iterator match;
   for (match = matches.begin(); match != matches.end(); ++match) {
@@ -303,7 +264,7 @@ int main(int argc, char** argv) {
 
   for (int i = 0; i < num_vertices; i += 1) {
     const FeatureIndex& vertex = graph[i];
-    Frame frame(vertex.view, vertex.time);
+    ImageIndex frame(vertex.view, vertex.time);
 
     MultiviewTrack<FeatureSet>& multitrack = multitrack_list[labels[i]];
 
