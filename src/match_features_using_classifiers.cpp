@@ -14,6 +14,9 @@
 #include "iterator_writer.hpp"
 #include "unique_match_result_writer.hpp"
 
+DEFINE_bool(reciprocal, false,
+    "Only accept a match if the features are each other's best match?");
+
 void init(int& argc, char**& argv) {
   std::ostringstream usage;
   usage << "Computes matches between sets of descriptors." << std::endl;
@@ -84,7 +87,11 @@ int main(int argc, char** argv) {
 
   // Combine matches in either direction.
   std::vector<UniqueMatchResult> matches;
-  unionOfUniqueMatches(forward_matches, reverse_matches, matches);
+  if (FLAGS_reciprocal) {
+    intersectionOfUniqueMatches(forward_matches, reverse_matches, matches);
+  } else {
+    unionOfUniqueMatches(forward_matches, reverse_matches, matches);
+  }
   LOG(INFO) << "Found " << matches.size() << " unique matches";
 
   UniqueMatchResultWriter match_writer;
