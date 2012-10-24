@@ -82,6 +82,7 @@ int main(int argc, char** argv) {
   findUniqueMatchesUsingClassifiers(classifiers2, descriptors1,
       reverse_matches);
 
+  // Combine matches in either direction.
   std::vector<UniqueMatchResult> matches;
   unionOfUniqueMatches(forward_matches, reverse_matches, matches);
   LOG(INFO) << "Found " << matches.size() << " unique matches";

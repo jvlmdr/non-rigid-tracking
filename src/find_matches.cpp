@@ -42,19 +42,20 @@ void findMatchesUsingClassifier(const Classifier& classifier,
                                 size_t max_num_matches) {
   matches.clear();
 
-  // Use a heap to keep track of the worst (sort from lowest to highest score).
-  CompareDirectedMatches compare(false);
+  // Use a heap to keep track of the worst (sort highest to lowest by distance).
+  CompareDirectedMatches compare(true);
 
   std::deque<Descriptor>::const_iterator point;
   int index = 0;
 
   for (point = points.begin(); point != points.end(); ++point) {
-    double score = classifier.score(*point);
+    double distance = std::exp(-classifier.score(*point));
 
     // If we haven't reached the maximum number of matches or this match is
     // better than the worst, add it to the heap.
-    if (matches.size() < max_num_matches || score > matches.front().distance) {
-      matches.push_back(DirectedMatch(index, score));
+    if (matches.size() < max_num_matches ||
+        distance < matches.front().distance) {
+      matches.push_back(DirectedMatch(index, distance));
       std::push_heap(matches.begin(), matches.end(), compare);
     }
 
