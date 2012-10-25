@@ -5,16 +5,15 @@
 #include <map>
 #include <set>
 #include <algorithm>
+#include <glog/logging.h>
+#include <gflags/gflags.h>
 #include <boost/lexical_cast.hpp>
 #include <boost/format.hpp>
 #include <boost/bind.hpp>
-
 #include <boost/graph/adjacency_list.hpp>
 #include <boost/graph/graph_traits.hpp>
 #include <boost/property_map/property_map.hpp>
 
-#include <glog/logging.h>
-#include <gflags/gflags.h>
 #include "match_result.hpp"
 #include "multiview_track.hpp"
 #include "multiview_track_list.hpp"
@@ -189,6 +188,8 @@ void subsetsToTracks(const MatchGraph& graph,
   }
 }
 
+////////////////////////////////////////////////////////////////////////////////
+
 struct Edge {
   Vertex source;
   Vertex target;
@@ -218,16 +219,20 @@ Edge Edge::make(MatchGraph::edge_descriptor edge, const MatchGraph& graph) {
   return Edge(source, target, weight);
 }
 
+////////////////////////////////////////////////////////////////////////////////
+
 // The properties of joining two sets.
-struct JoinProperties {
-  double residual;
+struct MergeProperties {
+  double appearance_distance;
+  double reprojection_error;
+  double non_smoothness;
   double uncertainty;
 };
 
 // The properties associated with a set.
 struct SetProperties {
   // For each set, store a compatibility with connected sets.
-  std::map<int, JoinProperties> affinity;
+  std::map<int, MergeProperties> merge;
 };
 
 int main(int argc, char** argv) {
