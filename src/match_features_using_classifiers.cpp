@@ -16,6 +16,9 @@
 
 DEFINE_bool(reciprocal, false,
     "Only accept a match if the features are each other's best match?");
+DEFINE_bool(forward_consistent, false,
+    "Find matches which are forward-consistent (features in the second image may\n"
+    "belong to the same track but features in the first may not).");
 
 void init(int& argc, char**& argv) {
   std::ostringstream usage;
@@ -87,7 +90,9 @@ int main(int argc, char** argv) {
 
   // Combine matches in either direction.
   std::vector<UniqueMatchResult> matches;
-  if (FLAGS_reciprocal) {
+  if (FLAGS_forward_consistent) {
+    forwardConsistentUniqueMatches(forward_matches, reverse_matches, matches);
+  } else if (FLAGS_reciprocal) {
     intersectionOfUniqueMatches(forward_matches, reverse_matches, matches);
   } else {
     unionOfUniqueMatches(forward_matches, reverse_matches, matches);

@@ -1,6 +1,7 @@
 #include "find_unique_matches.hpp"
 #include "find_matches.hpp"
 #include <map>
+#include <set>
 #include <algorithm>
 #include <limits>
 #include <glog/logging.h>
@@ -263,6 +264,72 @@ void unionOfUniqueMatches(
       } else {
         ++reverse_match;
       }
+    }
+  }
+}
+
+void invert(const std::vector<UniqueDirectedMatch>& matches,
+            std::map<int, std::vector<UniqueDirectedMatch> >& map) {
+  map.clear();
+
+  std::vector<UniqueDirectedMatch>::const_iterator match;
+  int index = 0;
+
+  for (match = matches.begin(); match != matches.end(); ++match) {
+    UniqueDirectedMatch reverse(index, match->distance, match->next_best);
+    map[match->index].push_back(reverse);
+    index += 1;
+  }
+}
+
+void forwardConsistentUniqueMatches(
+    const std::vector<UniqueDirectedMatch>& forward_matches,
+    const std::vector<UniqueDirectedMatch>& reverse_matches,
+    std::vector<UniqueMatchResult>& undirected_matches) {
+  undirected_matches.clear();
+
+  // Group forward matches by their feature in the second image.
+  std::map<int, std::vector<UniqueDirectedMatch> > map;
+  invert(forward_matches, map);
+
+  // The set of features in the first image which have been matched.
+  std::set<int> forward_matched;
+
+  // Add all forward matches which do not share a feature in the second image.
+  {
+    std::map<int, std::vector<UniqueDirectedMatch> >::const_iterator iter;
+    for (iter = map.begin(); iter != map.end(); ++iter) {
+      int index = iter->first;
+      const std::vector<UniqueDirectedMatch>& matches = iter->second;
+
+      if (matches.size() == 1) {
+        const UniqueDirectedMatch& reverse = matches.front();
+        // Add match to the list.
+        UniqueMatchResult match(reverse.index, index, reverse.distance, true,
+            reverse.next_best);
+        undirected_matches.push_back(match);
+        // Mark this feature as matched.
+        forward_matched.insert(reverse.index);
+      }
+    }
+  }
+
+  // Add all reverse matches for unmatched features in the first image.
+  {
+    std::vector<UniqueDirectedMatch>::const_iterator reverse;
+    int index = 0;
+
+    for (reverse = reverse_matches.begin();
+         reverse != reverse_matches.end();
+         ++reverse) {
+      // Check that the feature in the first image has not been matched yet.
+      if (forward_matched.count(reverse->index) == 0) {
+        UniqueMatchResult match(reverse->index, index, reverse->distance, false,
+            reverse->next_best);
+        undirected_matches.push_back(match);
+      }
+
+      index += 1;
     }
   }
 }

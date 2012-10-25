@@ -39,3 +39,8 @@ void unionOfUniqueMatches(
     const std::vector<UniqueDirectedMatch>& forward_matches,
     const std::vector<UniqueDirectedMatch>& reverse_matches,
     std::vector<UniqueMatchResult>& matches);
+
+void forwardConsistentUniqueMatches(
+    const std::vector<UniqueDirectedMatch>& forward_matches,
+    const std::vector<UniqueDirectedMatch>& reverse_matches,
+    std::vector<UniqueMatchResult>& matches);
