@@ -6,6 +6,7 @@
 #include <algorithm>
 #include <boost/lexical_cast.hpp>
 #include <boost/format.hpp>
+#include <boost/bind.hpp>
 #include <opencv2/core/core.hpp>
 #include <opencv2/features2d/features2d.hpp>
 #include <gflags/gflags.h>
@@ -80,8 +81,8 @@ struct IsInconsistent {
 
   IsInconsistent(const MatchList& matches) {
     // Construct map for indexed lookup.
-    std::copy(matches.begin(), matches.end(),
-        std::inserter(lookup, lookup.begin()));
+    std::transform(matches.begin(), matches.end(),
+        std::inserter(lookup, lookup.begin()), boost::bind(&Match::pair, _1));
   }
 };
 

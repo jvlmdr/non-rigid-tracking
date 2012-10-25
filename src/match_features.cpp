@@ -72,6 +72,19 @@ void init(int& argc, char**& argv) {
   }
 }
 
+void vectorToMap(const std::vector<UniqueDirectedMatch>& matches,
+                 std::map<int, UniqueDirectedMatch>& subset) {
+  subset.clear();
+
+  std::vector<UniqueDirectedMatch>::const_iterator match;
+  int index = 0;
+
+  for (match = matches.begin(); match != matches.end(); ++match) {
+    subset[index] = *match;
+    index += 1;
+  }
+}
+
 int main(int argc, char** argv) {
   init(argc, argv);
 
@@ -101,15 +114,20 @@ int main(int argc, char** argv) {
     findUniqueMatchesInBothDirectionsUsingEuclideanDistance(descriptors1,
         descriptors2, forward_matches, reverse_matches, FLAGS_use_flann);
 
+    std::map<int, UniqueDirectedMatch> forward_subset;
+    std::map<int, UniqueDirectedMatch> reverse_subset;
+    vectorToMap(forward_matches, forward_subset);
+    vectorToMap(reverse_matches, reverse_subset);
+
     // Merge directional matches.
     std::vector<UniqueMatchResult> matches;
     if (FLAGS_reciprocal) {
       // Reduce to a consistent set.
-      intersectionOfUniqueMatches(forward_matches, reverse_matches, matches);
+      intersectionOfUniqueMatches(forward_subset, reverse_subset, matches);
       LOG(INFO) << "Found " << matches.size() << " reciprocal matches";
     } else {
       // Throw all matches together.
-      unionOfUniqueMatches(forward_matches, reverse_matches, matches);
+      unionOfUniqueMatches(forward_subset, reverse_subset, matches);
       LOG(INFO) << "Found " << matches.size() << " matches";
     }
 

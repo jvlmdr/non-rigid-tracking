@@ -2,6 +2,7 @@
 #include "descriptor.hpp"
 #include "classifier.hpp"
 #include <vector>
+#include <map>
 #include <deque>
 
 // The result of a unique match includes the distance to the second-best.
@@ -31,16 +32,16 @@ void findUniqueMatchesInBothDirectionsUsingEuclideanDistance(
     bool use_flann);
 
 void intersectionOfUniqueMatches(
-    const std::vector<UniqueDirectedMatch>& forward_matches,
-    const std::vector<UniqueDirectedMatch>& reverse_matches,
+    const std::map<int, UniqueDirectedMatch>& forward_matches,
+    const std::map<int, UniqueDirectedMatch>& reverse_matches,
     std::vector<UniqueMatchResult>& matches);
 
 void unionOfUniqueMatches(
-    const std::vector<UniqueDirectedMatch>& forward_matches,
-    const std::vector<UniqueDirectedMatch>& reverse_matches,
+    const std::map<int, UniqueDirectedMatch>& forward_matches,
+    const std::map<int, UniqueDirectedMatch>& reverse_matches,
     std::vector<UniqueMatchResult>& matches);
 
 void forwardConsistentUniqueMatches(
-    const std::vector<UniqueDirectedMatch>& forward_matches,
-    const std::vector<UniqueDirectedMatch>& reverse_matches,
+    const std::map<int, UniqueDirectedMatch>& forward_matches,
+    const std::map<int, UniqueDirectedMatch>& reverse_matches,
     std::vector<UniqueMatchResult>& matches);

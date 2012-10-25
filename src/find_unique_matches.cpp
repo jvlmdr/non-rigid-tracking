@@ -4,15 +4,19 @@
 #include <set>
 #include <algorithm>
 #include <limits>
+#include <utility>
 #include <glog/logging.h>
 #include <opencv2/features2d/features2d.hpp>
 #include "find_matches_util.hpp"
 #include "match_result.hpp"
+#include "match.hpp"
 
 namespace {
 
 // A list of single matches.
 typedef std::vector<cv::DMatch> RawMatchList;
+
+typedef std::pair<double, double> DistancePair;
 
 }
 
@@ -124,38 +128,40 @@ void findUniqueMatchesInBothDirectionsUsingEuclideanDistance(
 
 namespace {
 
-// Returns a map of (index1, index2, distance) -> second-distance because the
-// second-best distance, unlike the distance, will be different for forward and
-// reverse matches.
-void addUniqueMatchesToSet(const std::vector<UniqueDirectedMatch>& directed,
-                           bool forward,
-                           std::map<MatchResult, double>& undirected) {
-  std::vector<UniqueDirectedMatch>::const_iterator d;
-  int index = 0;
+// Returns a map of (index1, index2) -> (distance, next-best).
+void addUniqueMatchesToSet(
+    const std::map<int, UniqueDirectedMatch>& directed_matches,
+    bool forward,
+    std::map<Match, DistancePair>& undirected_matches) {
+  undirected_matches.clear();
 
-  for (d = directed.begin(); d != directed.end(); ++d) {
-    int index1 = index;
-    int index2 = d->index;
+  std::map<int, UniqueDirectedMatch>::const_iterator iter;
+  for (iter = directed_matches.begin();
+       iter != directed_matches.end();
+       ++iter) {
+    int index1 = iter->first;
+    const UniqueDirectedMatch& match = iter->second;
+    int index2 = match.index;
 
     if (!forward) {
       std::swap(index1, index2);
     }
 
-    MatchResult u(index1, index2, d->distance);
-    undirected[u] = d->next_best;
+    std::pair<int, int> distances(match.distance, match.next_best);
+    Match undirected_match(index1, index2);
 
-    index += 1;
+    undirected_matches[undirected_match] = distances;
   }
 }
 
 }
 
 void intersectionOfUniqueMatches(
-    const std::vector<UniqueDirectedMatch>& forward_matches,
-    const std::vector<UniqueDirectedMatch>& reverse_matches,
+    const std::map<int, UniqueDirectedMatch>& forward_matches,
+    const std::map<int, UniqueDirectedMatch>& reverse_matches,
     std::vector<UniqueMatchResult>& matches) {
   // Construct a set of undirected matches from both sets of directed matches.
-  typedef std::map<MatchResult, double> Map;
+  typedef std::map<Match, DistancePair> Map;
   Map forward_set;
   Map reverse_set;
   addUniqueMatchesToSet(forward_matches, true, forward_set);
@@ -174,10 +180,16 @@ void intersectionOfUniqueMatches(
       ++reverse;
     } else {
       // Found a reciprocal match.
-      const MatchResult& match = forward->first;
+      const Match& match = forward->first;
 
-      UniqueMatchResult unique_match(match.index1, match.index2, match.distance,
-          forward->second, reverse->second);
+      //LOG(INFO) << forward->first << " " << reverse->first;
+
+      double distance = forward->second.first; // == reverse->second.first
+      double forward_next_best = forward->second.second;
+      double reverse_next_best = reverse->second.second;
+
+      UniqueMatchResult unique_match(match.first, match.second, distance,
+          forward_next_best, reverse_next_best);
       matches.push_back(unique_match);
 
       ++forward;
@@ -187,11 +199,11 @@ void intersectionOfUniqueMatches(
 }
 
 void unionOfUniqueMatches(
-    const std::vector<UniqueDirectedMatch>& forward_matches,
-    const std::vector<UniqueDirectedMatch>& reverse_matches,
+    const std::map<int, UniqueDirectedMatch>& forward_matches,
+    const std::map<int, UniqueDirectedMatch>& reverse_matches,
     std::vector<UniqueMatchResult>& matches) {
   // Construct a set of undirected matches from both sets of directed matches.
-  typedef std::map<MatchResult, double> Map;
+  typedef std::map<Match, DistancePair> Map;
   Map forward_set;
   Map reverse_set;
   addUniqueMatchesToSet(forward_matches, true, forward_set);
@@ -231,7 +243,7 @@ void unionOfUniqueMatches(
     }
 
     // If match is reciprocal, it doesn't matter which we use.
-    MatchResult match;
+    Match match;
     if (forward) {
       match = forward_match->first;
     } else {
@@ -240,16 +252,30 @@ void unionOfUniqueMatches(
 
     UniqueMatchResult unique;
     if (reciprocal) {
-      unique = UniqueMatchResult(match.index1, match.index2, match.distance,
-          forward_match->second, reverse_match->second);
+      const DistancePair& forward_distances = forward_match->second;
+      const DistancePair& reverse_distances = reverse_match->second;
+
+      //LOG(INFO) << forward_match->first << " " << reverse_match->first;
+
+      unique = UniqueMatchResult(match.first, match.second,
+          forward_distances.first, forward_distances.second,
+          reverse_distances.second);
     } else {
       // Match is only one-directional.
       if (forward) {
-        unique = UniqueMatchResult(match.index1, match.index2, match.distance,
-            true, forward_match->second);
+        const DistancePair& distances = forward_match->second;
+
+        //LOG(INFO) << forward_match->first << " ()";
+
+        unique = UniqueMatchResult(match.first, match.second, distances.first,
+            true, distances.second);
       } else {
-        unique = UniqueMatchResult(match.index1, match.index2, match.distance,
-            false, reverse_match->second);
+        const DistancePair& distances = reverse_match->second;
+
+        //LOG(INFO) << "() " << reverse_match->first;
+
+        unique = UniqueMatchResult(match.first, match.second, distances.first,
+            false, distances.second);
       }
     }
     matches.push_back(unique);
@@ -268,23 +294,23 @@ void unionOfUniqueMatches(
   }
 }
 
-void invert(const std::vector<UniqueDirectedMatch>& matches,
+void invert(const std::map<int, UniqueDirectedMatch>& matches,
             std::map<int, std::vector<UniqueDirectedMatch> >& map) {
   map.clear();
 
-  std::vector<UniqueDirectedMatch>::const_iterator match;
-  int index = 0;
+  std::map<int, UniqueDirectedMatch>::const_iterator iter;
+  for (iter = matches.begin(); iter != matches.end(); ++iter) {
+    int index = iter->first;
+    const UniqueDirectedMatch& match = iter->second;
 
-  for (match = matches.begin(); match != matches.end(); ++match) {
-    UniqueDirectedMatch reverse(index, match->distance, match->next_best);
-    map[match->index].push_back(reverse);
-    index += 1;
+    UniqueDirectedMatch reverse(index, match.distance, match.next_best);
+    map[match.index].push_back(reverse);
   }
 }
 
 void forwardConsistentUniqueMatches(
-    const std::vector<UniqueDirectedMatch>& forward_matches,
-    const std::vector<UniqueDirectedMatch>& reverse_matches,
+    const std::map<int, UniqueDirectedMatch>& forward_matches,
+    const std::map<int, UniqueDirectedMatch>& reverse_matches,
     std::vector<UniqueMatchResult>& undirected_matches) {
   undirected_matches.clear();
 
@@ -316,20 +342,19 @@ void forwardConsistentUniqueMatches(
 
   // Add all reverse matches for unmatched features in the first image.
   {
-    std::vector<UniqueDirectedMatch>::const_iterator reverse;
-    int index = 0;
+    std::map<int, UniqueDirectedMatch>::const_iterator iter;
+    for (iter = reverse_matches.begin();
+         iter != reverse_matches.end();
+         ++iter) {
+      int index = iter->first;
+      const UniqueDirectedMatch& reverse = iter->second;
 
-    for (reverse = reverse_matches.begin();
-         reverse != reverse_matches.end();
-         ++reverse) {
       // Check that the feature in the first image has not been matched yet.
-      if (forward_matched.count(reverse->index) == 0) {
-        UniqueMatchResult match(reverse->index, index, reverse->distance, false,
-            reverse->next_best);
+      if (forward_matched.count(reverse.index) == 0) {
+        UniqueMatchResult match(reverse.index, index, reverse.distance, false,
+            reverse.next_best);
         undirected_matches.push_back(match);
       }
-
-      index += 1;
     }
   }
 }

@@ -18,6 +18,7 @@ ADD_EXECUTABLE(match-features
   find_matches.cpp
   find_unique_matches.cpp
   find_matches_util.cpp
+  match.cpp
   match_result.cpp
   unique_match_result.cpp
   descriptor_reader.cpp
@@ -29,6 +30,7 @@ TARGET_LINK_LIBRARIES(match-features ${OpenCV_LIBS})
 ADD_EXECUTABLE(visualize-matches
   visualize_matches.cpp
   read_image.cpp
+  match.cpp
   draw_matches.cpp
   sift_position.cpp
   random_color.cpp
@@ -42,8 +44,9 @@ TARGET_LINK_LIBRARIES(visualize-matches ${OpenCV_LIBS})
 ADD_EXECUTABLE(adjacent-matches-to-tracks
   adjacent_matches_to_tracks.cpp
   read_image.cpp
-  match_reader.cpp
   sift_position.cpp
+  match.cpp
+  match_reader.cpp
   sift_position_reader.cpp
   sift_position_writer.cpp)
 TARGET_LINK_LIBRARIES(adjacent-matches-to-tracks glog gflags)
@@ -129,8 +132,9 @@ TARGET_LINK_LIBRARIES(select-active-tracks ${OpenCV_LIBS})
 
 ADD_EXECUTABLE(effect-of-sift-threshold
   effect_of_sift_threshold.cpp
-  descriptor_reader.cpp
-  descriptor.cpp)
+  match.cpp
+  descriptor.cpp
+  descriptor_reader.cpp)
 TARGET_LINK_LIBRARIES(effect-of-sift-threshold glog gflags)
 TARGET_LINK_LIBRARIES(effect-of-sift-threshold ${OpenCV_LIBS})
 
@@ -158,6 +162,7 @@ TARGET_LINK_LIBRARIES(optimal-triangulation-test gsl ${LAPACK_LIB})
 
 ADD_EXECUTABLE(evaluate-matches
     evaluate_matches.cpp
+    match.cpp
     match_reader.cpp
     matrix_reader.cpp
     image_point_reader.cpp
@@ -249,6 +254,7 @@ TARGET_LINK_LIBRARIES(select-distinctive-matches ${OpenCV_LIBS})
 
 ADD_EXECUTABLE(track-matches-to-multiview-tracks
   track_matches_to_multiview_tracks.cpp
+  match.cpp
   sift_position.cpp
   image_index.cpp
   match_reader.cpp
@@ -310,6 +316,7 @@ TARGET_LINK_LIBRARIES(visualize-multiview-multitracks ${OpenCV_LIBS})
 ADD_EXECUTABLE(find-max-cliques
   find_max_cliques.cpp
   read_lines.cpp
+  match.cpp
   sift_feature.cpp
   sift_position.cpp
   descriptor.cpp
@@ -327,6 +334,7 @@ TARGET_LINK_LIBRARIES(find-max-cliques ${OpenCV_LIBS})
 ADD_EXECUTABLE(partition-graph
   partition_graph.cpp
   read_lines.cpp
+  match.cpp
   sift_feature.cpp
   sift_position.cpp
   descriptor.cpp
@@ -375,6 +383,7 @@ ADD_EXECUTABLE(spectral-partition-graph
   normalized_cut.cpp
   sparse_mat.cpp
   read_lines.cpp
+  match.cpp
   sift_feature.cpp
   sift_position.cpp
   descriptor.cpp
@@ -437,6 +446,7 @@ TARGET_LINK_LIBRARIES(select-tracked-matches ${OpenCV_LIBS})
 ADD_EXECUTABLE(matches-to-multiview-tracks
   matches_to_multiview_tracks.cpp
   read_lines.cpp
+  match.cpp
   sift_feature.cpp
   sift_position.cpp
   descriptor.cpp
@@ -500,6 +510,7 @@ ADD_EXECUTABLE(match-features-using-classifiers
   find_unique_matches.cpp
   find_matches.cpp
   find_matches_util.cpp
+  match.cpp
   match_result.cpp
   unique_match_result.cpp
   descriptor_reader.cpp
