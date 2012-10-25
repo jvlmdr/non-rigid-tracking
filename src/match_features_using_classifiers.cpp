@@ -25,10 +25,7 @@ void init(int& argc, char**& argv) {
   usage << "Computes matches between sets of descriptors." << std::endl;
   usage << std::endl;
   usage << argv[0] << " descriptors1 descriptors2 classifiers1 classifiers2 "
-      "matches" << std::endl;
-  usage << std::endl;
-  usage << argv[0] << " descriptors1 descriptors2 classifiers1 classifiers2 "
-      "matches1 matches2" << std::endl;
+      "matches1 [matches2]" << std::endl;
   usage << std::endl;
   usage << "descriptors1, descriptors2 -- Input. Descriptors to match." <<
     std::endl;
@@ -40,8 +37,8 @@ void init(int& argc, char**& argv) {
   google::InitGoogleLogging(argv[0]);
   google::ParseCommandLineFlags(&argc, &argv, true);
 
-  bool ok = (!FLAGS_directed_consistent && argc == 6) ||
-    (FLAGS_directed_consistent && argc == 7);
+  bool ok = (!FLAGS_directed_consistent && argc > 5) ||
+    (FLAGS_directed_consistent && argc > 6);
 
   if (!ok) {
     google::ShowUsageWithFlags(argv[0]);
