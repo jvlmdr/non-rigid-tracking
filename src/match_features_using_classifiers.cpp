@@ -16,7 +16,7 @@
 
 DEFINE_bool(reciprocal, false,
     "Only accept a match if the features are each other's best match?");
-DEFINE_bool(forward_consistent, false,
+DEFINE_bool(directed_consistent, false,
     "Find matches which are forward-consistent (features in the second image may\n"
     "belong to the same track but features in the first may not).");
 
@@ -26,6 +26,9 @@ void init(int& argc, char**& argv) {
   usage << std::endl;
   usage << argv[0] << " descriptors1 descriptors2 classifiers1 classifiers2 "
       "matches" << std::endl;
+  usage << std::endl;
+  usage << argv[0] << " descriptors1 descriptors2 classifiers1 classifiers2 "
+      "matches1 matches2" << std::endl;
   usage << std::endl;
   usage << "descriptors1, descriptors2 -- Input. Descriptors to match." <<
     std::endl;
@@ -37,7 +40,10 @@ void init(int& argc, char**& argv) {
   google::InitGoogleLogging(argv[0]);
   google::ParseCommandLineFlags(&argc, &argv, true);
 
-  if (argc != 6) {
+  bool ok = (!FLAGS_directed_consistent && argc == 6) ||
+    (FLAGS_directed_consistent && argc == 7);
+
+  if (!ok) {
     google::ShowUsageWithFlags(argv[0]);
     std::exit(1);
   }
@@ -50,7 +56,6 @@ int main(int argc, char** argv) {
   std::string descriptors_file2 = argv[2];
   std::string classifiers_file1 = argv[3];
   std::string classifiers_file2 = argv[4];
-  std::string matches_file = argv[5];
 
   bool ok;
 
@@ -89,19 +94,42 @@ int main(int argc, char** argv) {
       reverse_matches);
 
   // Combine matches in either direction.
-  std::vector<UniqueMatchResult> matches;
-  if (FLAGS_forward_consistent) {
-    forwardConsistentUniqueMatches(forward_matches, reverse_matches, matches);
-  } else if (FLAGS_reciprocal) {
-    intersectionOfUniqueMatches(forward_matches, reverse_matches, matches);
-  } else {
-    unionOfUniqueMatches(forward_matches, reverse_matches, matches);
-  }
-  LOG(INFO) << "Found " << matches.size() << " unique matches";
+  if (FLAGS_directed_consistent) {
+    std::string matches_file1 = argv[5];
+    std::string matches_file2 = argv[6];
 
-  UniqueMatchResultWriter match_writer;
-  ok = saveList(matches_file, matches, match_writer);
-  CHECK(ok) << "Could not save list of matches";
+    std::vector<UniqueMatchResult> forward_consistent;
+    forwardConsistentUniqueMatches(forward_matches, reverse_matches,
+        forward_consistent);
+    LOG(INFO) << "Found " << forward_consistent.size() <<
+        " forward-consistent matches";
+
+    std::vector<UniqueMatchResult> reverse_consistent;
+    forwardConsistentUniqueMatches(reverse_matches, forward_matches,
+        reverse_consistent);
+    LOG(INFO) << "Found " << reverse_consistent.size() <<
+        " reverse-consistent matches";
+
+    UniqueMatchResultWriter match_writer;
+    ok = saveList(matches_file1, forward_consistent, match_writer);
+    CHECK(ok) << "Could not save list of matches";
+    ok = saveList(matches_file2, reverse_consistent, match_writer);
+    CHECK(ok) << "Could not save list of matches";
+  } else {
+    std::string matches_file = argv[5];
+
+    std::vector<UniqueMatchResult> matches;
+    if (FLAGS_reciprocal) {
+      intersectionOfUniqueMatches(forward_matches, reverse_matches, matches);
+    } else {
+      unionOfUniqueMatches(forward_matches, reverse_matches, matches);
+    }
+    LOG(INFO) << "Found " << matches.size() << " matches";
+
+    UniqueMatchResultWriter match_writer;
+    ok = saveList(matches_file, matches, match_writer);
+    CHECK(ok) << "Could not save list of matches";
+  }
 
   return 0;
 }

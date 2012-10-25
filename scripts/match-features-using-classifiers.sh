@@ -19,7 +19,8 @@ descriptors1=`printf $descriptors_format $view1 $time1`
 descriptors2=`printf $descriptors_format $view2 $time2`
 classifiers1=`printf $classifiers_format $view1 $time1`
 classifiers2=`printf $classifiers_format $view2 $time2`
-matches=`printf $matches_format $view1 $view2 $time1 $time2`
+matches1=`printf $matches_format $view1 $view2 $time1 $time2`
+matches2=`printf $matches_format $view2 $view1 $time2 $time1`
 
 echo "($view1, $time1), ($view2, $time2)"
-./match-features-using-classifiers $descriptors1 $descriptors2 $classifiers1 $classifiers2 $matches $options
+./match-features-using-classifiers $descriptors1 $descriptors2 $classifiers1 $classifiers2 $matches1 $matches2 $options
