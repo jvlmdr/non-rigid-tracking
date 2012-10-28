@@ -471,6 +471,14 @@ ADD_EXECUTABLE(agglomerative-cluster
   match_result.cpp
   image_index.cpp
   feature_index.cpp
+  camera.cpp
+  camera_pose.cpp
+  camera_properties.cpp
+  camera_reader.cpp
+  camera_properties_reader.cpp
+  camera_pose_reader.cpp
+  matrix_reader.cpp
+  world_point_reader.cpp
   match_result_reader.cpp
   sift_feature_reader.cpp
   descriptor_reader.cpp
@@ -518,3 +526,20 @@ ADD_EXECUTABLE(match-features-using-classifiers
   unique_match_result_writer.cpp)
 TARGET_LINK_LIBRARIES(match-features-using-classifiers glog gflags)
 TARGET_LINK_LIBRARIES(match-features-using-classifiers ${OpenCV_LIBS})
+
+ADD_EXECUTABLE(static-camera-to-moving
+  static_cameras_to_moving.cpp
+  camera.cpp
+  camera_properties.cpp
+  camera_pose.cpp
+  camera_writer.cpp
+  camera_properties_writer.cpp
+  camera_pose_writer.cpp
+  world_point_writer.cpp
+  world_point_reader.cpp
+  matrix_reader.cpp
+  matrix_writer.cpp
+  camera_properties_reader.cpp
+  camera_pose_reader.cpp)
+TARGET_LINK_LIBRARIES(static-camera-to-moving glog gflags)
+TARGET_LINK_LIBRARIES(static-camera-to-moving ${OpenCV_LIBS})

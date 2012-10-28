@@ -13,8 +13,11 @@ cv::Point2d project(const cv::Mat& P, const cv::Point3d& x) {
   return cv::Point2d(u / z, v / z);
 }
 
-cv::Mat computeFundMatFromCameras(const cv::Mat& P1, const cv::Mat& P2) {
-  cv::Mat F = cv::Mat_<double>(3, 3);
+cv::Matx33d computeFundMatFromCameras(const cv::Matx34d& P1,
+                                      const cv::Matx34d& P2) {
+  cv::Matx33d F;
+  cv::Mat P1_mat(P1, false);
+  cv::Mat P2_mat(P2, false);
 
   for (int i = 0; i < 3; i += 1) {
     for (int j = 0; j < 3; j += 1) {
@@ -25,14 +28,14 @@ cv::Mat computeFundMatFromCameras(const cv::Mat& P1, const cv::Mat& P2) {
       for (int k = 0; k < 3; k += 1) {
         if (k != i) {
           cv::Mat dst = A.row(r);
-          P1.row(k).copyTo(dst);
+          P1_mat.row(k).copyTo(dst);
           r += 1;
         }
       }
       for (int k = 0; k < 3; k += 1) {
         if (k != j) {
           cv::Mat dst = A.row(r);
-          P2.row(k).copyTo(dst);
+          P2_mat.row(k).copyTo(dst);
           r += 1;
         }
       }
@@ -45,7 +48,7 @@ cv::Mat computeFundMatFromCameras(const cv::Mat& P1, const cv::Mat& P2) {
         f = -f;
       }
 
-      F.at<double>(j, i) = f;
+      F(j, i) = f;
     }
   }
 

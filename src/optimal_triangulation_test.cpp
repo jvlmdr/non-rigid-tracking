@@ -7,13 +7,14 @@
 #include "geometry.hpp"
 #include "util.hpp"
 
-double fundamentalMatrixResidual(const cv::Mat& F,
+double fundamentalMatrixResidual(const cv::Matx33d& F,
                                  const cv::Point2d& x1,
                                  const cv::Point2d& x2) {
-  cv::Mat X1 = (cv::Mat_<double>(3, 1) << x1.x, x1.y, 1);
-  cv::Mat X2 = (cv::Mat_<double>(3, 1) << x2.x, x2.y, 1);
+  cv::Mat F_mat(F, false);
+  cv::Mat x1_mat = (cv::Mat_<double>(3, 1) << x1.x, x1.y, 1);
+  cv::Mat x2_mat = (cv::Mat_<double>(3, 1) << x2.x, x2.y, 1);
 
-  return sqr(X2.dot(F * X1));
+  return sqr(x2_mat.dot(F_mat * x1_mat));
 }
 
 int main(int argc, char** argv) {
@@ -35,7 +36,7 @@ int main(int argc, char** argv) {
       dist(rng), dist(rng), dist(rng), dist(rng),
       dist(rng), dist(rng), dist(rng), dist(rng));
 
-  cv::Mat F = computeFundMatFromCameras(P1, P2);
+  cv::Matx33d F = computeFundMatFromCameras(P1, P2);
 
   cv::Point2d w1 = project(P1, x) + 1e-1 * cv::Point2d(dist(rng), dist(rng));
   cv::Point2d w2 = project(P2, x) + 1e-1 * cv::Point2d(dist(rng), dist(rng));

@@ -7,8 +7,8 @@
 struct CameraPose {
   cv::Matx33d rotation; // using constant-size matrix puts memory on stack
   cv::Point3d center;
-};
 
-cv::Mat projectionMatrixFromCameraPose(const CameraPose& pose);
+  cv::Matx34d matrix() const;
+};
 
 #endif

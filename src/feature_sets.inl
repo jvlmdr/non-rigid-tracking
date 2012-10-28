@@ -96,10 +96,17 @@ void FeatureSets<T>::join(int u, int v) {
 }
 
 template<class T>
-const std::map<ImageIndex, int>& FeatureSets<T>::find(int v) const {
+typename FeatureSets<T>::Set& FeatureSets<T>::get(int v) {
+  typename SetList::iterator set = sets_.find(features_[v]);
+  CHECK(set != sets_.end());
+  return set->second;
+}
+
+template<class T>
+const typename FeatureSets<T>::Set& FeatureSets<T>::find(int v) const {
   typename SetList::const_iterator set = sets_.find(features_[v]);
   CHECK(set != sets_.end());
-  return set->second.elements;
+  return set->second;
 }
 
 template<class T>
@@ -142,10 +149,21 @@ bool FeatureSets<T>::compatible(int u, int v) const {
   // Assume that u and v are in different sets.
   CHECK(!together(u, v));
 
-  const std::map<ImageIndex, int>& s = find(u);
-  const std::map<ImageIndex, int>& t = find(v);
+  const Set& s = find(u);
+  const Set& t = find(v);
 
-  return !overlap(s.begin(), s.end(), t.begin(), t.end(), compare);
+  return !overlap(s.elements.begin(), s.elements.end(), t.elements.begin(),
+      t.elements.end(), compare);
+}
+
+template<class T>
+T& FeatureSets<T>::property(int v) {
+  return get(v).property;
+}
+
+template<class T>
+const T& FeatureSets<T>::property(int v) const {
+  return find(v).property;
 }
 
 template<class T>

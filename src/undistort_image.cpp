@@ -41,9 +41,9 @@ struct Distort {
     return imagePointFromHomogeneous(X);
   }
 
-  Distort(const cv::Mat& K, double w) : K(), K_inv(), w(w) {
-    this->K = K.clone();
-    this->K_inv = K.inv();
+  Distort(const cv::Matx33d& K, double w) : K(), K_inv(), w(w) {
+    this->K = cv::Mat(K, true);
+    this->K_inv = this->K.inv();
   }
 };
 
@@ -84,7 +84,7 @@ int main(int argc, char** argv) {
   CHECK(ok) << "Could not load camera properties";
 
   // Build intrinsic matrix from camera.
-  cv::Mat K = intrinsicMatrixFromCameraProperties(camera);
+  cv::Matx33d K = camera.matrix();
 
   int width = camera.image_size.width;
   int height = camera.image_size.height;

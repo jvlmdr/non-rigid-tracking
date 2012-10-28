@@ -59,20 +59,20 @@ int main(int argc, char** argv) {
   CHECK(ok) << "Could not load extrinsic calibration";
 
   // Get calibrated projection matrices.
-  cv::Mat P1 = projectionMatrixFromCameraPose(pose1);
-  cv::Mat P2 = projectionMatrixFromCameraPose(pose2);
+  cv::Matx34d P1 = pose1.matrix();
+  cv::Matx34d P2 = pose2.matrix();
 
   // Get uncalibrated projection matrices.
-  cv::Mat K1 = intrinsicMatrixFromCameraProperties(properties1);
-  cv::Mat K2 = intrinsicMatrixFromCameraProperties(properties2);
+  cv::Matx33d K1 = properties1.matrix();
+  cv::Matx33d K2 = properties2.matrix();
 
   P1 = K1 * P1;
   P2 = K2 * P2;
 
-  cv::Mat F = computeFundMatFromCameras(P1, P2);
+  cv::Matx33d F = computeFundMatFromCameras(P1, P2);
 
   MatrixWriter matrix_writer;
-  ok = save(fund_mat_file, F, matrix_writer);
+  ok = save(fund_mat_file, cv::Mat(F), matrix_writer);
   CHECK(ok) << "Could not save fundamental matrix";
 
   return 0;

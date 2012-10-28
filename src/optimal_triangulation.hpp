@@ -8,4 +8,4 @@
 // "First" image co-ordinates multiplied on the right.
 double optimalTriangulation(cv::Point2d& x1,
                             cv::Point2d& x2,
-                            const cv::Mat& F);
+                            const cv::Matx33d& F);

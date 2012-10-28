@@ -11,9 +11,8 @@ struct CameraProperties {
   double focal_y;
   cv::Point2d principal_point;
   double distort_w;
-};
 
-// Construct intrinsic matrix.
-cv::Mat intrinsicMatrixFromCameraProperties(const CameraProperties& camera);
+  cv::Matx33d matrix() const;
+};
 
 #endif

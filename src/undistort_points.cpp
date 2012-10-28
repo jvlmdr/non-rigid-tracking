@@ -33,9 +33,9 @@ struct Undistort {
     return imagePointFromHomogeneous(X);
   }
 
-  Undistort(const cv::Mat& K, double w) : K(), K_inv(), w(w) {
-    this->K = K.clone();
-    this->K_inv = K.inv();
+  Undistort(const cv::Matx33d& K, double w) : K(), K_inv(), w(w) {
+    this->K = cv::Mat(K, true);
+    this->K_inv = this->K.inv();
   }
 };
 
@@ -78,7 +78,7 @@ int main(int argc, char** argv) {
   CHECK(ok) << "Could not load camera";
 
   // Build intrinsic matrix from camera.
-  cv::Mat K = intrinsicMatrixFromCameraProperties(camera);
+  cv::Matx33d K = camera.matrix();
 
   // Undistort.
   std::transform(points.begin(), points.end(), points.begin(),

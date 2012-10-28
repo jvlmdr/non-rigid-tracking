@@ -190,9 +190,9 @@ double findMinimumRealSolution(
 // "First" image co-ordinates multiplied on the right.
 double optimalTriangulation(cv::Point2d& x1,
                             cv::Point2d& x2,
-                            const cv::Mat& F) {
+                            const cv::Matx33d& F) {
   // Transform fundamental matrix to canonical form.
-  cv::Mat G = F.clone();
+  cv::Mat G(F, true);
   FundMatParams fund_params;
   cv::Mat A1;
   cv::Mat A2;

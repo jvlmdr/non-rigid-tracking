@@ -14,6 +14,11 @@
 template<class T>
 class FeatureSets {
   public:
+    struct Set {
+      std::map<ImageIndex, int> elements;
+      T property;
+    };
+
     FeatureSets();
     // Add each vertex to its own feature set.
     void init(const std::vector<ImageIndex>& vertices);
@@ -34,21 +39,17 @@ class FeatureSets {
     bool together(int u, int v) const;
     bool compatible(int u, int v) const;
 
-    const std::map<ImageIndex, int>& find(int v) const;
-
+    const Set& find(int v) const;
     T& property(int v);
     const T& property(int v) const;
-
-    struct Set {
-      std::map<ImageIndex, int> elements;
-      T property;
-    };
 
     typedef typename std::map<int, Set>::const_iterator const_iterator;
     const_iterator begin() const;
     const_iterator end() const;
 
   private:
+    Set& get(int v);
+
     typedef std::map<int, Set> SetList;
     typedef std::vector<int> FeatureList;
 

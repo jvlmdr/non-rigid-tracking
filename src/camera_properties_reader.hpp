@@ -7,7 +7,7 @@
 class CameraPropertiesReader : public Reader<CameraProperties> {
   public:
     ~CameraPropertiesReader();
-    bool read(const cv::FileNode& node, CameraProperties& x);
+    bool read(const cv::FileNode& node, CameraProperties& camera);
 };
 
 #endif

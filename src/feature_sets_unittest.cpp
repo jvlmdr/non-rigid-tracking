@@ -64,16 +64,16 @@ TEST(FeatureSets, Join) {
   std::map<ImageIndex, int> desired;
   desired[ImageIndex(0, 0)] = 0;
   desired[ImageIndex(0, 1)] = 2;
-  ASSERT_EQ(sets.find(0), desired);
-  ASSERT_EQ(sets.find(2), desired);
+  ASSERT_EQ(sets.find(0).elements, desired);
+  ASSERT_EQ(sets.find(2).elements, desired);
 
   desired.clear();
   desired[ImageIndex(0, 0)] = 1;
-  ASSERT_EQ(sets.find(1), desired);
+  ASSERT_EQ(sets.find(1).elements, desired);
 
   desired.clear();
   desired[ImageIndex(0, 2)] = 3;
-  ASSERT_EQ(sets.find(3), desired);
+  ASSERT_EQ(sets.find(3).elements, desired);
 }
 
 TEST(FeatureSets, SeparateJoin) {
@@ -94,14 +94,14 @@ TEST(FeatureSets, SeparateJoin) {
   std::map<ImageIndex, int> desired;
   desired[ImageIndex(0, 0)] = 0;
   desired[ImageIndex(0, 1)] = 2;
-  ASSERT_EQ(sets.find(0), desired);
-  ASSERT_EQ(sets.find(2), desired);
+  ASSERT_EQ(sets.find(0).elements, desired);
+  ASSERT_EQ(sets.find(2).elements, desired);
 
   desired.clear();
   desired[ImageIndex(0, 0)] = 1;
   desired[ImageIndex(0, 2)] = 3;
-  ASSERT_EQ(sets.find(1), desired);
-  ASSERT_EQ(sets.find(3), desired);
+  ASSERT_EQ(sets.find(1).elements, desired);
+  ASSERT_EQ(sets.find(3).elements, desired);
 }
 
 TEST(FeatureSets, CompoundJoin) {
@@ -123,13 +123,13 @@ TEST(FeatureSets, CompoundJoin) {
   desired[ImageIndex(0, 0)] = 0;
   desired[ImageIndex(0, 1)] = 2;
   desired[ImageIndex(0, 2)] = 3;
-  ASSERT_EQ(sets.find(0), desired);
-  ASSERT_EQ(sets.find(2), desired);
-  ASSERT_EQ(sets.find(3), desired);
+  ASSERT_EQ(sets.find(0).elements, desired);
+  ASSERT_EQ(sets.find(2).elements, desired);
+  ASSERT_EQ(sets.find(3).elements, desired);
 
   desired.clear();
   desired[ImageIndex(0, 0)] = 1;
-  ASSERT_EQ(sets.find(1), desired);
+  ASSERT_EQ(sets.find(1).elements, desired);
 }
 
 TEST(FeatureSets, RedundantJoin) {
@@ -152,13 +152,13 @@ TEST(FeatureSets, RedundantJoin) {
   desired[ImageIndex(0, 0)] = 0;
   desired[ImageIndex(0, 1)] = 2;
   desired[ImageIndex(0, 2)] = 3;
-  ASSERT_EQ(sets.find(0), desired);
-  ASSERT_EQ(sets.find(2), desired);
-  ASSERT_EQ(sets.find(3), desired);
+  ASSERT_EQ(sets.find(0).elements, desired);
+  ASSERT_EQ(sets.find(2).elements, desired);
+  ASSERT_EQ(sets.find(3).elements, desired);
 
   desired.clear();
   desired[ImageIndex(0, 0)] = 1;
-  ASSERT_EQ(sets.find(1), desired);
+  ASSERT_EQ(sets.find(1).elements, desired);
 }
 
 TEST(FeatureSets, Compatible) {
