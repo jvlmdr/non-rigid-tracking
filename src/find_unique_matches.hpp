@@ -6,42 +6,39 @@
 #include <deque>
 
 // The result of a unique match includes the distance to the second-best.
-struct UniqueDirectedMatch {
+struct UniqueQueryResult {
   int index;
   double distance;
   double next_best;
 
-  UniqueDirectedMatch();
-  UniqueDirectedMatch(int index, double distance, double next_best);
+  UniqueQueryResult();
+  UniqueQueryResult(int index, double distance, double next_best);
 };
+
+void convertUniqueQueryResultsToMatches(
+    const std::vector<UniqueQueryResult>& directed,
+    std::vector<UniqueMatchResult>& undirected,
+    bool forward);
 
 // Find the single best match for each point.
 // Returns also the distance to the second-best match.
 void findUniqueMatchesUsingClassifiers(
     const std::deque<Classifier>& classifiers,
     const std::deque<Descriptor>& points,
-    std::vector<UniqueDirectedMatch>& matches);
+    std::vector<UniqueQueryResult>& matches);
 
 // Find the single best match for each point.
 // Returns also the distance to the second-best match.
+void findUniqueMatchesUsingEuclideanDistance(
+    const std::deque<Descriptor>& points1,
+    const std::deque<Descriptor>& points2,
+    std::vector<UniqueQueryResult>& matches,
+    bool use_flann);
+
+// If we're matching in both directions, avoid copying.
 void findUniqueMatchesInBothDirectionsUsingEuclideanDistance(
     const std::deque<Descriptor>& points1,
     const std::deque<Descriptor>& points2,
-    std::vector<UniqueDirectedMatch>& forward_matches,
-    std::vector<UniqueDirectedMatch>& reverse_matches,
+    std::vector<UniqueQueryResult>& forward_matches,
+    std::vector<UniqueQueryResult>& reverse_matches,
     bool use_flann);
-
-void intersectionOfUniqueMatches(
-    const std::map<int, UniqueDirectedMatch>& forward_matches,
-    const std::map<int, UniqueDirectedMatch>& reverse_matches,
-    std::vector<UniqueMatchResult>& matches);
-
-void unionOfUniqueMatches(
-    const std::map<int, UniqueDirectedMatch>& forward_matches,
-    const std::map<int, UniqueDirectedMatch>& reverse_matches,
-    std::vector<UniqueMatchResult>& matches);
-
-void forwardConsistentUniqueMatches(
-    const std::map<int, UniqueDirectedMatch>& forward_matches,
-    const std::map<int, UniqueDirectedMatch>& reverse_matches,
-    std::vector<UniqueMatchResult>& matches);

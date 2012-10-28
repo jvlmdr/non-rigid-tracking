@@ -22,38 +22,61 @@ typedef std::pair<double, double> DistancePair;
 
 ////////////////////////////////////////////////////////////////////////////////
 
-UniqueDirectedMatch::UniqueDirectedMatch()
+UniqueQueryResult::UniqueQueryResult()
     : index(-1), distance(0), next_best(0) {}
 
-UniqueDirectedMatch::UniqueDirectedMatch(int index,
+UniqueQueryResult::UniqueQueryResult(int index,
                                          double distance,
                                          double next_best)
     : index(index), distance(distance), next_best(next_best) {}
 
-UniqueDirectedMatch convertMatchPair(const RawMatchList& pair) {
+UniqueQueryResult convertMatchPair(const RawMatchList& pair) {
   CHECK(pair.size() == 2);
 
   int index = pair[0].trainIdx;
   double distance = pair[0].distance;
   double next_best = pair[1].distance;
 
-  return UniqueDirectedMatch(index, distance, next_best);
+  return UniqueQueryResult(index, distance, next_best);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 
-UniqueDirectedMatch findUniqueMatchUsingClassifier(
+void convertUniqueQueryResultsToMatches(
+    const std::vector<UniqueQueryResult>& queries,
+    std::vector<UniqueMatchResult>& matches,
+    bool forward) {
+  std::vector<UniqueQueryResult>::const_iterator query;
+  int index = 0;
+
+  for (query = queries.begin(); query != queries.end(); ++query) {
+    int index1 = index;
+    int index2 = query->index;
+
+    if (!forward) {
+      std::swap(index1, index2);
+    }
+
+    matches.push_back(
+        UniqueMatchResult(index1, index2, query->distance, forward,
+          query->next_best));
+
+    index += 1;
+  }
+}
+
+UniqueQueryResult findUniqueMatchUsingClassifier(
     const Classifier& classifier,
     const std::deque<Descriptor>& points) {
   // Find the top two matches for each classifier.
-  std::vector<DirectedMatch> directed;
+  std::vector<QueryResult> directed;
   findMatchesUsingClassifier(classifier, points, directed, 2);
 
   int index = directed[0].index;
   double distance = directed[0].distance;
   double next_best = directed[1].distance;
 
-  return UniqueDirectedMatch(index, distance, next_best);
+  return UniqueQueryResult(index, distance, next_best);
 }
 
 // Find the single best match for each point.
@@ -61,7 +84,7 @@ UniqueDirectedMatch findUniqueMatchUsingClassifier(
 void findUniqueMatchesUsingClassifiers(
     const std::deque<Classifier>& classifiers,
     const std::deque<Descriptor>& points,
-    std::vector<UniqueDirectedMatch>& matches) {
+    std::vector<UniqueQueryResult>& matches) {
   matches.clear();
 
   // Evaluate the class
@@ -78,16 +101,16 @@ void findUniqueMatchesUsingClassifiers(
 namespace {
 
 void convertMatchPairs(const std::vector<RawMatchList>& pairs,
-                       std::vector<UniqueDirectedMatch>& matches) {
+                       std::vector<UniqueQueryResult>& matches) {
   matches.clear();
   std::transform(pairs.begin(), pairs.end(), std::back_inserter(matches),
       convertMatchPair);
 }
 
-void findUniqueMatchesUsingEuclideanDistance(
+void matchMatrixRows(
     const cv::Mat& query,
     const cv::Mat& train,
-    std::vector<UniqueDirectedMatch>& matches,
+    std::vector<UniqueQueryResult>& matches,
     bool use_flann) {
   // Construct matcher.
   cv::Ptr<cv::DescriptorMatcher> matcher;
@@ -107,11 +130,24 @@ void findUniqueMatchesUsingEuclideanDistance(
 
 }
 
+void findUniqueMatchesUsingEuclideanDistance(
+    const std::deque<Descriptor>& points1,
+    const std::deque<Descriptor>& points2,
+    std::vector<UniqueQueryResult>& matches,
+    bool use_flann) {
+  cv::Mat mat1;
+  cv::Mat mat2;
+  listToMatrix(points1, mat1);
+  listToMatrix(points2, mat2);
+
+  matchMatrixRows(mat1, mat2, matches, use_flann);
+}
+
 void findUniqueMatchesInBothDirectionsUsingEuclideanDistance(
     const std::deque<Descriptor>& points1,
     const std::deque<Descriptor>& points2,
-    std::vector<UniqueDirectedMatch>& forward,
-    std::vector<UniqueDirectedMatch>& reverse,
+    std::vector<UniqueQueryResult>& forward,
+    std::vector<UniqueQueryResult>& reverse,
     bool use_flann) {
   // Copy descriptors into matrices for cv::DescriptorMatcher.
   cv::Mat mat1;
@@ -120,8 +156,8 @@ void findUniqueMatchesInBothDirectionsUsingEuclideanDistance(
   listToMatrix(points2, mat2);
 
   // Match forwards and backwards.
-  findUniqueMatchesUsingEuclideanDistance(mat1, mat2, forward, use_flann);
-  findUniqueMatchesUsingEuclideanDistance(mat2, mat1, reverse, use_flann);
+  matchMatrixRows(mat1, mat2, forward, use_flann);
+  matchMatrixRows(mat2, mat1, reverse, use_flann);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -130,17 +166,17 @@ namespace {
 
 // Returns a map of (index1, index2) -> (distance, next-best).
 void addUniqueMatchesToSet(
-    const std::map<int, UniqueDirectedMatch>& directed_matches,
+    const std::map<int, UniqueQueryResult>& directed_matches,
     bool forward,
     std::map<Match, DistancePair>& undirected_matches) {
   undirected_matches.clear();
 
-  std::map<int, UniqueDirectedMatch>::const_iterator iter;
+  std::map<int, UniqueQueryResult>::const_iterator iter;
   for (iter = directed_matches.begin();
        iter != directed_matches.end();
        ++iter) {
     int index1 = iter->first;
-    const UniqueDirectedMatch& match = iter->second;
+    const UniqueQueryResult& match = iter->second;
     int index2 = match.index;
 
     if (!forward) {
@@ -157,8 +193,8 @@ void addUniqueMatchesToSet(
 }
 
 void intersectionOfUniqueMatches(
-    const std::map<int, UniqueDirectedMatch>& forward_matches,
-    const std::map<int, UniqueDirectedMatch>& reverse_matches,
+    const std::map<int, UniqueQueryResult>& forward_matches,
+    const std::map<int, UniqueQueryResult>& reverse_matches,
     std::vector<UniqueMatchResult>& matches) {
   // Construct a set of undirected matches from both sets of directed matches.
   typedef std::map<Match, DistancePair> Map;
@@ -199,8 +235,8 @@ void intersectionOfUniqueMatches(
 }
 
 void unionOfUniqueMatches(
-    const std::map<int, UniqueDirectedMatch>& forward_matches,
-    const std::map<int, UniqueDirectedMatch>& reverse_matches,
+    const std::map<int, UniqueQueryResult>& forward_matches,
+    const std::map<int, UniqueQueryResult>& reverse_matches,
     std::vector<UniqueMatchResult>& matches) {
   // Construct a set of undirected matches from both sets of directed matches.
   typedef std::map<Match, DistancePair> Map;
@@ -294,28 +330,28 @@ void unionOfUniqueMatches(
   }
 }
 
-void invert(const std::map<int, UniqueDirectedMatch>& matches,
-            std::map<int, std::vector<UniqueDirectedMatch> >& map) {
+void invert(const std::map<int, UniqueQueryResult>& matches,
+            std::map<int, std::vector<UniqueQueryResult> >& map) {
   map.clear();
 
-  std::map<int, UniqueDirectedMatch>::const_iterator iter;
+  std::map<int, UniqueQueryResult>::const_iterator iter;
   for (iter = matches.begin(); iter != matches.end(); ++iter) {
     int index = iter->first;
-    const UniqueDirectedMatch& match = iter->second;
+    const UniqueQueryResult& match = iter->second;
 
-    UniqueDirectedMatch reverse(index, match.distance, match.next_best);
+    UniqueQueryResult reverse(index, match.distance, match.next_best);
     map[match.index].push_back(reverse);
   }
 }
 
 void forwardConsistentUniqueMatches(
-    const std::map<int, UniqueDirectedMatch>& forward_matches,
-    const std::map<int, UniqueDirectedMatch>& reverse_matches,
+    const std::map<int, UniqueQueryResult>& forward_matches,
+    const std::map<int, UniqueQueryResult>& reverse_matches,
     std::vector<UniqueMatchResult>& undirected_matches) {
   undirected_matches.clear();
 
   // Group forward matches by their feature in the second image.
-  std::map<int, std::vector<UniqueDirectedMatch> > map;
+  std::map<int, std::vector<UniqueQueryResult> > map;
   invert(forward_matches, map);
 
   // The set of features in the first image which have been matched.
@@ -323,13 +359,13 @@ void forwardConsistentUniqueMatches(
 
   // Add all forward matches which do not share a feature in the second image.
   {
-    std::map<int, std::vector<UniqueDirectedMatch> >::const_iterator iter;
+    std::map<int, std::vector<UniqueQueryResult> >::const_iterator iter;
     for (iter = map.begin(); iter != map.end(); ++iter) {
       int index = iter->first;
-      const std::vector<UniqueDirectedMatch>& matches = iter->second;
+      const std::vector<UniqueQueryResult>& matches = iter->second;
 
       if (matches.size() == 1) {
-        const UniqueDirectedMatch& reverse = matches.front();
+        const UniqueQueryResult& reverse = matches.front();
         // Add match to the list.
         UniqueMatchResult match(reverse.index, index, reverse.distance, true,
             reverse.next_best);
@@ -342,12 +378,12 @@ void forwardConsistentUniqueMatches(
 
   // Add all reverse matches for unmatched features in the first image.
   {
-    std::map<int, UniqueDirectedMatch>::const_iterator iter;
+    std::map<int, UniqueQueryResult>::const_iterator iter;
     for (iter = reverse_matches.begin();
          iter != reverse_matches.end();
          ++iter) {
       int index = iter->first;
-      const UniqueDirectedMatch& reverse = iter->second;
+      const UniqueQueryResult& reverse = iter->second;
 
       // Check that the feature in the first image has not been matched yet.
       if (forward_matched.count(reverse.index) == 0) {
