@@ -20,6 +20,8 @@
 #include "match_result_writer.hpp"
 
 DEFINE_bool(reciprocal, false, "Require matches to be reciprocal?");
+DEFINE_bool(directed_consistent, false,
+    "Find matches which are consistent in the first image only");
 DEFINE_bool(keep_distance, false,
     "Keep distance labels? (Fails if distance is not symmetric)");
 
@@ -52,10 +54,69 @@ void unionOfMatches(const std::vector<Match>& forward,
       reverse_set.end(), std::back_inserter(matches));
 }
 
-//void forwardConsistentUniqueMatches(
-//    const std::vector<Match>& forward_matches,
-//    const std::vector<Match>& reverse_matches,
-//    std::vector<Match>& matches);
+std::pair<int, int> matchToPair(const Match& match) {
+  return std::make_pair(match.first, match.second);
+}
+
+std::pair<int, int> matchToReversePair(const Match& match) {
+  return std::make_pair(match.second, match.first);
+}
+
+Match pairToMatch(const std::pair<int, int>& pair) {
+  return Match(pair.first, pair.second);
+}
+
+template<class Key, class Value>
+bool compareKey(const std::pair<Key, Value>& x,
+                const std::pair<Key, Value>& y) {
+  return x.first < y.first;
+}
+
+void forwardConsistentMatches(const std::vector<Match>& forward,
+                              const std::vector<Match>& reverse,
+                              std::vector<Match>& matches) {
+  // Add all matches which do not share a feature in the second image.
+  std::map<int, int> matches_set;
+
+  // Build inverted index of forward matches.
+  std::multimap<int, int> inverted;
+  std::transform(forward.begin(), forward.end(),
+      std::inserter(inverted, inverted.begin()), matchToReversePair);
+
+  std::multimap<int, int>::const_iterator pair = inverted.begin();
+  while (pair != inverted.end()) {
+    // Seek to end of elements with same key.
+    int n = 0;
+    std::multimap<int, int>::const_iterator next = pair;
+    while (next != inverted.end() && next->first == pair->first) {
+      n += 1;
+      ++next;
+    }
+    // Exactly one match?
+    if (n == 1) {
+      matches_set[pair->second] = pair->first;
+    }
+    // Advance to next feature.
+    pair = next;
+  }
+
+  // Remove reverse matches for features which are already matched.
+  std::map<int, int> reverse_set;
+  std::transform(reverse.begin(), reverse.end(),
+      std::inserter(reverse_set, reverse_set.begin()), matchToPair);
+  std::map<int, int> difference;
+  std::set_difference(reverse_set.begin(), reverse_set.end(),
+      matches_set.begin(), matches_set.end(),
+      std::inserter(difference, difference.begin()), compareKey<int, int>);
+
+  // Add remaining features.
+  std::copy(difference.begin(), difference.end(),
+      std::inserter(matches_set, matches_set.begin()));
+
+  // Convert to matches.
+  std::transform(matches_set.begin(), matches_set.end(),
+      std::inserter(matches, matches.begin()), pairToMatch);
+}
 
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -250,6 +311,9 @@ int main(int argc, char** argv) {
       // Reduce to a consistent set.
       intersectionOfMatches(forward, reverse, matches);
       LOG(INFO) << "Found " << matches.size() << " reciprocal matches";
+    } else if (FLAGS_directed_consistent) {
+      forwardConsistentMatches(forward, reverse, matches);
+      LOG(INFO) << "Found " << matches.size() << " forward-consistent matches";
     } else {
       // Throw all matches together.
       unionOfMatches(forward, reverse, matches);
