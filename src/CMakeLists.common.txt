@@ -561,3 +561,14 @@ ADD_EXECUTABLE(combine-matches
   match_writer.cpp)
 TARGET_LINK_LIBRARIES(combine-matches glog gflags)
 TARGET_LINK_LIBRARIES(combine-matches ${OpenCV_LIBS})
+
+ADD_EXECUTABLE(filter-matches
+  filter_matches.cpp
+  match.cpp
+  match_result.cpp
+  unique_match_result.cpp
+  match_result_reader.cpp
+  unique_match_result_reader.cpp
+  match_result_writer.cpp)
+TARGET_LINK_LIBRARIES(filter-matches glog gflags)
+TARGET_LINK_LIBRARIES(filter-matches ${OpenCV_LIBS})
