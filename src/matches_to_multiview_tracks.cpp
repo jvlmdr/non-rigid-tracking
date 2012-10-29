@@ -26,18 +26,21 @@
 #include "iterator_writer.hpp"
 #include "default_writer.hpp"
 
-DEFINE_bool(discard_inconsistent, false,
-    "Discard any feature which appears twice in one frame.");
+DEFINE_bool(consistent, false,
+    "Discard any feature which appears twice in one frame");
 
-DEFINE_bool(exhaustive, false, "Match all pairs of images.");
+DEFINE_bool(exhaustive, false, "Match all pairs of images");
 DEFINE_bool(simultaneous, false,
-    "Only match between images taken at the same time.");
+    "Only match between images taken at the same time");
 DEFINE_bool(adjacent, false,
-    "Match image to all views at the same time and its own view in adjacent times.");
-DEFINE_bool(one_to_all, false, "Match one image to all others.");
-
-DEFINE_int32(one_to_all_view, -1, "View of image.");
-DEFINE_int32(one_to_all_time, -1, "Time of image.");
+    "Match image to all views in the same frame and its own view in adjacent "
+    "frames");
+DEFINE_bool(one_to_all, false, "Match one image to all others");
+DEFINE_int32(view, -1, "View of image");
+DEFINE_int32(time, -1, "Time of image");
+DEFINE_bool(directed, false, "Matches are directed");
+DEFINE_bool(duplicate, false,
+    "Duplicate features that would otherwise be inconsistent");
 
 void init(int& argc, char**& argv) {
   std::ostringstream usage;
@@ -136,27 +139,43 @@ void appendAllImagePairs(int num_views,
 void appendImagePairsContaining(const ImageIndex& image,
                                 int num_views,
                                 int num_frames,
-                                std::set<ImagePair>& pairs) {
+                                std::set<ImagePair>& pairs,
+                                bool directed) {
   for (int t = 0; t < num_frames; t += 1) {
     for (int v = 0; v < num_views; v += 1) {
       ImageIndex other(v, t);
 
-      // Make sure the least goes first.
-      if (other < image) {
-        pairs.insert(ImagePair(other, image));
-      } else if (image < other) {
-        pairs.insert(ImagePair(image, other));
+      if (image != other) {
+        ImageIndex first = image;
+        ImageIndex second = other;
+
+        if (!directed) {
+          // Make sure the least goes first.
+          if (second < first) {
+            std::swap(first, second);
+          }
+        }
+
+        pairs.insert(ImagePair(first, second));
       }
     }
   }
 }
 
-void loadMatches(const std::string& format,
-                 const std::vector<std::string>& views,
-                 const ImageIndex& image1,
-                 const ImageIndex& image2,
-                 MatchGraph& graph,
-                 VertexLookup& vertices) {
+// If the matches are undirected and the image indices are out of order, then
+// the order will be flipped before and after loading from the file.
+void loadImagePairMatches(ImageIndex image1,
+                          ImageIndex image2,
+                          std::vector<Match>& matches,
+                          bool directed,
+                          const std::string& format,
+                          const std::vector<std::string>& views) {
+  bool flip = false;
+  if (!directed && image2 < image1) {
+    flip = true;
+    std::swap(image1, image2);
+  }
+
   // Construct filename.
   const std::string& view1 = views[image1.view];
   const std::string& view2 = views[image2.view];
@@ -165,39 +184,15 @@ void loadMatches(const std::string& format,
   std::string file = makeMatchFilename(format, view1, view2, time1, time2);
 
   // Load matches from file.
-  std::vector<Match> matches;
   MatchReader reader;
   bool ok = loadList(file, matches, reader);
   CHECK(ok) << "Could not load matches";
   DLOG(INFO) << "Loaded " << matches.size() << " matches for (" << image1 <<
       ", " << image2 << ")";
 
-  std::vector<Match>::const_iterator match;
-  for (match = matches.begin(); match != matches.end(); ++match) {
-    FeatureIndex feature1(image1, match->first);
-    FeatureIndex feature2(image2, match->second);
-
-    // Find existing vertex for feature, or insert one.
-    MatchGraph::vertex_descriptor vertex1;
-    MatchGraph::vertex_descriptor vertex2;
-    vertex1 = findOrInsert(graph, vertices, feature1);
-    vertex2 = findOrInsert(graph, vertices, feature2);
-
-    // Add vertex to graph.
-    boost::add_edge(vertex1, vertex2, graph);
-  }
-}
-
-void loadAllMatches(const std::string& format,
-                    const std::vector<std::string>& views,
-                    const std::set<ImagePair>& image_pairs,
-                    MatchGraph& graph,
-                    VertexLookup& vertices) {
-  vertices.clear();
-
-  std::set<ImagePair>::const_iterator pair;
-  for (pair = image_pairs.begin(); pair != image_pairs.end(); ++pair) {
-    loadMatches(format, views, pair->first, pair->second, graph, vertices);
+  if (flip) {
+    std::transform(matches.begin(), matches.end(), matches.begin(),
+        boost::bind(&Match::flip, _1));
   }
 }
 
@@ -237,6 +232,170 @@ bool multitrackToTrack(const MultiviewTrack<FeatureSet>& multiview_multitrack,
   return true;
 }
 
+int numFeaturesInMultitrack(const MultiviewTrack<FeatureSet>& track) {
+  MultiviewTrack<FeatureSet>::FeatureIterator iter(track);
+  int n = 0;
+
+  for (iter.begin(); !iter.end(); iter.next()) {
+    n += iter.get().second->size();
+  }
+
+  return n;
+}
+
+int addNumFeaturesInMultitrack(int n, const MultiviewTrack<FeatureSet>& track) {
+  return n + numFeaturesInMultitrack(track);
+}
+
+int numFeaturesInMultitrackList(const MultiviewTrackList<FeatureSet>& tracks) {
+  return std::accumulate(tracks.begin(), tracks.end(), 0,
+      addNumFeaturesInMultitrack);
+}
+
+void loadOneToAllImagePair(const ImageIndex& image,
+                           const ImageIndex& other,
+                           MatchGraph& graph,
+                           VertexLookup& vertices,
+                           bool directed,
+                           const std::string& format,
+                           const std::vector<std::string>& views) {
+  // Load matches.
+  std::vector<Match> matches;
+  loadImagePairMatches(image, other, matches, directed, format, views);
+
+  // Now create a new vertex for every feature in the other image.
+  std::vector<Match>::const_iterator match;
+  for (match = matches.begin(); match != matches.end(); ++match) {
+    FeatureIndex feature1(image, match->first);
+    FeatureIndex feature2(other, match->second);
+
+    // Find the first feature in the graph.
+    MatchGraph::vertex_descriptor vertex1 =
+        findOrInsert(graph, vertices, feature1);
+    // Create a new vertex for the second feature.
+    MatchGraph::vertex_descriptor vertex2 = boost::add_vertex(feature2, graph);
+
+    // Connect these vertices.
+    boost::add_edge(vertex1, vertex2, graph);
+  }
+}
+
+void loadOneToAllMatches(const ImageIndex& image,
+                         MatchGraph& graph,
+                         bool directed,
+                         const std::string& format,
+                         const std::vector<std::string>& views,
+                         int num_frames) {
+  VertexLookup vertices;
+  int num_views = views.size();
+
+  // Iterate through all images.
+  for (int t = 0; t < num_frames; t += 1) {
+    for (int v = 0; v < num_views; v += 1) {
+      ImageIndex other(v, t);
+      if (image != other) {
+        loadOneToAllImagePair(image, other, graph, vertices, directed, format,
+            views);
+      }
+    }
+  }
+}
+
+void loadImagePair(const ImageIndex& image1,
+                   const ImageIndex& image2,
+                   MatchGraph& graph,
+                   VertexLookup& vertices,
+                   bool directed,
+                   const std::string& format,
+                   const std::vector<std::string>& views) {
+  std::vector<Match> matches;
+  loadImagePairMatches(image1, image2, matches, directed, format, views);
+
+  std::vector<Match>::const_iterator match;
+  for (match = matches.begin(); match != matches.end(); ++match) {
+    FeatureIndex feature1(image1, match->first);
+    FeatureIndex feature2(image2, match->second);
+
+    // Find existing vertex for feature, or insert one.
+    MatchGraph::vertex_descriptor vertex1;
+    MatchGraph::vertex_descriptor vertex2;
+    vertex1 = findOrInsert(graph, vertices, feature1);
+    vertex2 = findOrInsert(graph, vertices, feature2);
+
+    // Add vertex to graph.
+    boost::add_edge(vertex1, vertex2, graph);
+  }
+}
+
+void loadImagePairs(const std::set<ImagePair>& pairs,
+                    MatchGraph& graph,
+                    bool directed,
+                    const std::string& format,
+                    const std::vector<std::string>& views) {
+  VertexLookup vertices;
+
+  std::set<ImagePair>::const_iterator pair;
+  for (pair = pairs.begin(); pair != pairs.end(); ++pair) {
+    loadImagePair(pair->first, pair->second, graph, vertices, directed, format,
+        views);
+  }
+}
+
+void loadMatches(MatchGraph& graph,
+                 const std::string& format,
+                 const std::vector<std::string>& views,
+                 int num_frames,
+                 bool exhaustive,
+                 bool simultaneous,
+                 bool adjacent,
+                 bool one_to_all,
+                 int view,
+                 int time,
+                 bool directed,
+                 bool duplicate) {
+  int num_views = views.size();
+
+  if (one_to_all && duplicate) {
+    // This is a special case, because features will not be unique.
+    // Check that view and time parameters were supplied.
+    CHECK(0 <= view && view < num_views);
+    CHECK(0 <= time && time < num_frames);
+    // Append pairs containing this image.
+    ImageIndex image(view, time);
+    loadOneToAllMatches(image, graph, directed, format, views, num_frames);
+  } else {
+    // Generate a list of image pairs.
+    std::set<ImagePair> pairs;
+
+    if (exhaustive) {
+      // Append all pairs!
+      appendAllImagePairs(num_views, num_frames, pairs);
+      directed = false;
+    } else if (simultaneous || adjacent) {
+      // These flags can be combined.
+      if (simultaneous) {
+        appendSimultaneousImagePairs(num_views, num_frames, pairs);
+      }
+      if (adjacent) {
+        appendAllImagePairs(num_views, num_frames, pairs);
+      }
+      directed = false;
+    } else if (one_to_all) {
+      // Check that view and time parameters were supplied.
+      CHECK(0 <= view && view < num_views);
+      CHECK(0 <= time && time < num_frames);
+      // Append pairs containing this image.
+      ImageIndex image(view, time);
+      appendImagePairsContaining(image, num_views, num_frames, pairs, directed);
+    } else {
+      LOG(WARNING) << "No image pairs specified";
+      directed = false;
+    }
+
+    loadImagePairs(pairs, graph, directed, format, views);
+  }
+}
+
 int main(int argc, char** argv) {
   init(argc, argv);
 
@@ -252,36 +411,11 @@ int main(int argc, char** argv) {
   CHECK(ok) << "Could not load view names";
   int num_views = views.size();
 
-  // Which image pairs to use?
-  std::set<ImagePair> pairs;
-  if (FLAGS_exhaustive) {
-    // Append all pairs!
-    appendAllImagePairs(num_views, num_frames, pairs);
-  } else if (FLAGS_simultaneous || FLAGS_adjacent) {
-    // These flags can be combined.
-    if (FLAGS_simultaneous) {
-      appendSimultaneousImagePairs(num_views, num_frames, pairs);
-    }
-    if (FLAGS_adjacent) {
-      appendAllImagePairs(num_views, num_frames, pairs);
-    }
-  } else if (FLAGS_one_to_all) {
-    // Check that view and time parameters were supplied.
-    int view = FLAGS_one_to_all_view;
-    int time = FLAGS_one_to_all_time;
-    CHECK(0 <= view && view < num_views);
-    CHECK(0 <= time && time < num_frames);
-    // Append pairs containing this image.
-    ImageIndex image(view, time);
-    appendImagePairsContaining(image, num_views, num_frames, pairs);
-  } else {
-    LOG(WARNING) << "No image pairs specified";
-  }
-
-  // Load matches.
   MatchGraph graph;
-  VertexLookup vertices;
-  loadAllMatches(matches_format, views, pairs, graph, vertices);
+  loadMatches(graph, matches_format, views, num_frames, FLAGS_exhaustive,
+      FLAGS_simultaneous, FLAGS_adjacent, FLAGS_one_to_all, FLAGS_view,
+      FLAGS_time, FLAGS_directed, FLAGS_duplicate);
+
   int num_vertices = boost::num_vertices(graph);
   int num_edges = boost::num_edges(graph);
   LOG(INFO) << "Loaded " << num_edges << " matches between " << num_vertices <<
@@ -324,7 +458,7 @@ int main(int argc, char** argv) {
     multitracks.back().swap(multitrack_list[i]);
   }
 
-  if (FLAGS_discard_inconsistent) {
+  if (FLAGS_consistent) {
     // Build actual tracks from "multitracks", which have a set per frame.
     MultiviewTrackList<int> tracks(num_views);
 
@@ -346,11 +480,10 @@ int main(int argc, char** argv) {
         multitracks.numTracks() << " remain)";
 
     // More interested in the number of features we threw out!
-    int num_features_discarded = multitracks.numImageFeatures() -
-      tracks.numImageFeatures();
-    LOG(INFO) << "Discarded " << num_features_discarded <<
-        " features (" << tracks.numImageFeatures() << "/" <<
-        multitracks.numImageFeatures() << " remain)";
+    int num_features = numFeaturesInMultitrackList(multitracks);
+    int num_features_discarded = num_features - tracks.numImageFeatures();
+    LOG(INFO) << "Discarded " << num_features_discarded << " features (" <<
+      tracks.numImageFeatures() << "/" << num_features << " remain)";
 
     // Save track list.
     DefaultWriter<int> feature_writer;

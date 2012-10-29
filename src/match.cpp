@@ -26,6 +26,10 @@ bool Match::operator<(const Match& other) const {
   }
 }
 
+Match Match::flip() const {
+  return Match(second, first);
+}
+
 std::pair<int, int> Match::pair() const {
   return std::pair<int, int>(first, second);
 }

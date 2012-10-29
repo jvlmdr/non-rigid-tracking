@@ -13,6 +13,7 @@ struct Match {
   explicit Match(const std::pair<int, int>& pair);
 
   bool operator<(const Match& other) const;
+  Match flip() const;
 
   std::pair<int, int> pair() const;
 };
