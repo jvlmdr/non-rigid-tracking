@@ -34,3 +34,25 @@ INCLUDE_DIRECTORIES("/home/jvalmadr/src/gtest-1.6.0/include")
 LINK_DIRECTORIES("/home/jvalmadr/src/gtest-1.6.0/release")
 
 INCLUDE("CMakeLists.common.txt")
+
+ADD_EXECUTABLE(spectral-partition-graph
+  spectral_partition_graph.cpp
+  normalized_cut.cpp
+  sparse_mat.cpp
+  read_lines.cpp
+  match.cpp
+  sift_feature.cpp
+  sift_position.cpp
+  descriptor.cpp
+  image_index.cpp
+  feature_index.cpp
+  match_reader.cpp
+  sift_feature_reader.cpp
+  descriptor_reader.cpp
+  sift_position_reader.cpp
+  sift_feature_writer.cpp
+  descriptor_writer.cpp
+  sift_position_writer.cpp)
+TARGET_LINK_LIBRARIES(spectral-partition-graph glog gflags)
+TARGET_LINK_LIBRARIES(spectral-partition-graph ${OpenCV_LIBS})
+TARGET_LINK_LIBRARIES(spectral-partition-graph arpack gfortran)

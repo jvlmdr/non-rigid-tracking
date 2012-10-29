@@ -15,4 +15,8 @@ FIND_LIBRARY(LAPACK_LIB NAMES vecLib)
 INCLUDE_DIRECTORIES("/Users/jack/src/gtest-1.6.0/include")
 LINK_DIRECTORIES("/Users/jack/src/gtest-1.6.0/release")
 
+# liblinear
+INCLUDE_DIRECTORIES("/Users/jack/src/liblinear-1.92")
+LINK_DIRECTORIES("/Users/jack/src/liblinear-1.92")
+
 INCLUDE("CMakeLists.common.txt")
