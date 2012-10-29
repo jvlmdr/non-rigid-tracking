@@ -70,7 +70,7 @@ UniqueQueryResult findUniqueMatchUsingClassifier(
     const std::deque<Descriptor>& points) {
   // Find the top two matches for each classifier.
   std::vector<QueryResult> directed;
-  findMatchesUsingClassifier(classifier, points, directed, 2);
+  findMatchesUsingClassifier(classifier, points, directed, true, 2, false, 0);
 
   int index = directed[0].index;
   double distance = directed[0].distance;

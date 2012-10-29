@@ -66,7 +66,14 @@ bool CompareQueryResults::operator()(const QueryResult& lhs,
 void findMatchesUsingClassifier(const Classifier& classifier,
                                 const std::deque<Descriptor>& points,
                                 QueryResultList& matches,
-                                size_t max_num_matches) {
+                                bool use_max_num,
+                                int max_num,
+                                bool use_threshold,
+                                double threshold) {
+  if (use_max_num) {
+    CHECK(max_num > 0);
+  }
+
   matches.clear();
 
   // Use a heap to keep track of the worst (sort highest to lowest by distance).
@@ -78,18 +85,47 @@ void findMatchesUsingClassifier(const Classifier& classifier,
   for (point = points.begin(); point != points.end(); ++point) {
     double distance = std::exp(-classifier.score(*point));
 
-    // If we haven't reached the maximum number of matches or this match is
-    // better than the worst, add it to the heap.
-    if (matches.size() < max_num_matches ||
-        distance < matches.front().distance) {
-      matches.push_back(QueryResult(index, distance));
-      std::push_heap(matches.begin(), matches.end(), compare);
+    bool close_enough;
+    if (!use_threshold) {
+      close_enough = true;
+    } else {
+      close_enough = (distance <= threshold);
     }
 
-    // If there are too many elements, remove from the heap.
-    if (matches.size() >= max_num_matches) {
-      std::pop_heap(matches.begin(), matches.end(), compare);
-      matches.pop_back();
+    if (close_enough) {
+      // If we haven't reached the maximum number of matches or this match is
+      // better than the worst, add it to the heap.
+      bool reached_limit;
+      if (!use_max_num) {
+        reached_limit = false;
+      } else {
+        reached_limit = (int(matches.size()) >= max_num);
+      }
+
+      bool add;
+      if (!reached_limit) {
+        add = true;
+      } else {
+        add = (distance < matches.front().distance);
+      }
+
+      if (add) {
+        matches.push_back(QueryResult(index, distance));
+        std::push_heap(matches.begin(), matches.end(), compare);
+
+        // If there are now too many elements, remove from the heap.
+        bool too_many;
+        if (!use_max_num) {
+          too_many = false;
+        } else {
+          too_many = (int(matches.size()) > max_num);
+        }
+
+        if (too_many) {
+          std::pop_heap(matches.begin(), matches.end(), compare);
+          matches.pop_back();
+        }
+      }
     }
 
     index += 1;
@@ -104,7 +140,10 @@ void findMatchesUsingClassifier(const Classifier& classifier,
 void findMatchesUsingClassifiers(const std::deque<Classifier>& classifiers,
                                  const std::deque<Descriptor>& points,
                                  std::deque<QueryResultList>& matches,
-                                 int max_num_matches) {
+                                 bool use_max_num,
+                                 int max_num,
+                                 bool use_threshold,
+                                 double threshold) {
   matches.clear();
 
   std::deque<Classifier>::const_iterator classifier;
@@ -114,7 +153,7 @@ void findMatchesUsingClassifiers(const std::deque<Classifier>& classifiers,
     // Find matches for this classifier.
     QueryResultList classifier_matches;
     findMatchesUsingClassifier(*classifier, points, classifier_matches,
-        max_num_matches);
+        use_max_num, max_num, use_threshold, threshold);
 
     // Swap into the full list.
     matches.push_back(QueryResultList());

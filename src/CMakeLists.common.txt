@@ -523,6 +523,7 @@ ADD_EXECUTABLE(match-features-using-classifiers
   unique_match_result.cpp
   descriptor_reader.cpp
   classifier_reader.cpp
+  match_result_writer.cpp
   unique_match_result_writer.cpp)
 TARGET_LINK_LIBRARIES(match-features-using-classifiers glog gflags)
 TARGET_LINK_LIBRARIES(match-features-using-classifiers ${OpenCV_LIBS})

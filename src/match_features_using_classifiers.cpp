@@ -6,6 +6,7 @@
 
 #include "descriptor.hpp"
 #include "classifier.hpp"
+#include "find_matches.hpp"
 #include "find_unique_matches.hpp"
 
 #include "iterator_reader.hpp"
@@ -13,7 +14,17 @@
 #include "classifier_reader.hpp"
 
 #include "iterator_writer.hpp"
+#include "match_result_writer.hpp"
 #include "unique_match_result_writer.hpp"
+
+DEFINE_bool(unique, false, "Only take best match");
+
+DEFINE_bool(use_max_num, false, "Limit number of matches");
+DEFINE_int32(max_num, 1, "Maximum number of matches");
+
+DEFINE_bool(use_absolute_threshold, false, "Use absolute distance threshold");
+DEFINE_double(absolute_threshold, 1,
+    "Maximum appearance distance between features");
 
 void init(int& argc, char**& argv) {
   std::ostringstream usage;
@@ -58,16 +69,36 @@ int main(int argc, char** argv) {
   CHECK(ok) << "Could not load first descriptors file";
   LOG(INFO) << "Loaded " << descriptors.size() << " descriptors";
 
-  // Find best match for every feature in the other image.
-  std::vector<UniqueQueryResult> forward_matches;
-  findUniqueMatchesUsingClassifiers(classifiers, descriptors, forward_matches);
+  if (FLAGS_unique) {
+    // Find best match for every feature in the other image.
+    std::vector<UniqueQueryResult> results;
+    findUniqueMatchesUsingClassifiers(classifiers, descriptors, results);
 
-  std::vector<UniqueMatchResult> matches;
-  convertUniqueQueryResultsToMatches(forward_matches, matches, true);
+    std::vector<UniqueMatchResult> matches;
+    convertUniqueQueryResultsToMatches(results, matches, true);
+    LOG(INFO) << "Found " << matches.size() << " matches";
 
-  UniqueMatchResultWriter match_writer;
-  ok = saveList(matches_file, matches, match_writer);
-  CHECK(ok) << "Could not save list of matches";
+    UniqueMatchResultWriter match_writer;
+    ok = saveList(matches_file, matches, match_writer);
+    CHECK(ok) << "Could not save list of matches";
+  } else {
+    if (!FLAGS_use_max_num && !FLAGS_use_absolute_threshold) {
+      LOG(WARNING) << "No options to limit number of matches";
+    }
+
+    std::deque<QueryResultList> results;
+    findMatchesUsingClassifiers(classifiers, descriptors, results,
+        FLAGS_use_max_num, FLAGS_max_num, FLAGS_use_absolute_threshold,
+        FLAGS_absolute_threshold);
+
+    std::vector<MatchResult> matches;
+    convertQueryResultListsToMatches(results, matches, true);
+    LOG(INFO) << "Found " << matches.size() << " matches";
+
+    MatchResultWriter match_writer;
+    ok = saveList(matches_file, matches, match_writer);
+    CHECK(ok) << "Could not save list of matches";
+  }
 
   return 0;
 }

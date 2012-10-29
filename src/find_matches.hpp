@@ -28,12 +28,18 @@ void convertQueryResultListsToMatches(
 void findMatchesUsingClassifiers(const std::deque<Classifier>& classifiers,
                                  const std::deque<Descriptor>& points,
                                  std::deque<QueryResultList>& matches,
-                                 int max_num_matches);
+                                 bool use_max_num,
+                                 int max_num,
+                                 bool use_threshold,
+                                 double threshold);
 
 void findMatchesUsingClassifier(const Classifier& classifier,
                                 const std::deque<Descriptor>& points,
                                 std::vector<QueryResult>& matches,
-                                size_t max_num_matches);
+                                bool use_max_num,
+                                int max_num,
+                                bool use_threshold,
+                                double threshold);
 
 // Finds all matches for each point in the other set.
 // Limited by max_num_matches and max_relative_distance.
