@@ -31,8 +31,13 @@ struct UniqueMatchResult {
                     double distance,
                     bool forward,
                     double next_best);
+  UniqueMatchResult(int index1,
+                    int index2,
+                    double distance);
 
   double minNextBest() const;
+
+  UniqueMatchResult flip() const;
 };
 
 #endif

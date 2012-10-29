@@ -543,3 +543,21 @@ ADD_EXECUTABLE(static-camera-to-moving
   camera_pose_reader.cpp)
 TARGET_LINK_LIBRARIES(static-camera-to-moving glog gflags)
 TARGET_LINK_LIBRARIES(static-camera-to-moving ${OpenCV_LIBS})
+
+ADD_EXECUTABLE(combine-matches
+  combine_matches.cpp
+  descriptor.cpp
+  classifier.cpp
+  find_unique_matches.cpp
+  find_matches.cpp
+  find_matches_util.cpp
+  match.cpp
+  match_result.cpp
+  unique_match_result.cpp
+  descriptor_reader.cpp
+  classifier_reader.cpp
+  match_result_reader.cpp
+  unique_match_result_reader.cpp
+  match_writer.cpp)
+TARGET_LINK_LIBRARIES(combine-matches glog gflags)
+TARGET_LINK_LIBRARIES(combine-matches ${OpenCV_LIBS})

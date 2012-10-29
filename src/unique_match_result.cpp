@@ -43,6 +43,15 @@ UniqueMatchResult::UniqueMatchResult(int index1,
   }
 }
 
+UniqueMatchResult::UniqueMatchResult(int index1, int index2, double distance)
+    : index1(index1),
+      index2(index2),
+      distance(distance),
+      forward(false),
+      reverse(false),
+      next_best_forward(std::numeric_limits<double>::max()),
+      next_best_reverse(std::numeric_limits<double>::max()) {}
+
 double UniqueMatchResult::minNextBest() const {
   double result = std::numeric_limits<double>::max();
 
@@ -55,4 +64,17 @@ double UniqueMatchResult::minNextBest() const {
   }
 
   return result;
+}
+
+UniqueMatchResult UniqueMatchResult::flip() const {
+  if (forward && reverse) {
+    return UniqueMatchResult(index2, index1, distance, next_best_reverse,
+        next_best_forward);
+  } else if (forward) {
+    return UniqueMatchResult(index2, index1, distance, false, next_best_forward);
+  } else if (reverse) {
+    return UniqueMatchResult(index2, index1, distance, true, next_best_reverse);
+  } else {
+    return UniqueMatchResult(index2, index1, distance);
+  }
 }

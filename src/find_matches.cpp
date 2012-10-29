@@ -381,31 +381,30 @@ void addAllMatchesToSet(const std::deque<QueryResultList>& directed,
 
 }
 
-void intersectionOfMatchLists(
-    const std::deque<QueryResultList>& forward_matches,
-    const std::deque<QueryResultList>& reverse_matches,
-    std::vector<MatchResult>& matches) {
-  // Construct a set of undirected matches from both sets of directed matches.
-  std::set<MatchResult> forward_set;
-  std::set<MatchResult> reverse_set;
-  addAllMatchesToSet(forward_matches, true, forward_set);
-  addAllMatchesToSet(reverse_matches, false, reverse_set);
+void intersectionOfMatches(const std::vector<Match>& forward,
+                           const std::vector<Match>& reverse,
+                           std::vector<Match>& matches) {
+  std::vector<Match> forward_set = forward;
+  std::vector<Match> reverse_set = reverse;
+
+  // Sort and merge.
+  std::sort(forward_set.begin(), forward_set.end());
+  std::sort(reverse_set.begin(), reverse_set.end());
 
   matches.clear();
   std::set_intersection(forward_set.begin(), forward_set.end(),
       reverse_set.begin(), reverse_set.end(), std::back_inserter(matches));
 }
 
-void unionOfMatchLists(
-    const std::deque<QueryResultList>& forward_matches,
-    const std::deque<QueryResultList>& reverse_matches,
-    std::vector<MatchResult>& matches) {
-  // Construct a set of undirected matches from both sets of directed matches.
-  std::set<MatchResult> forward_set;
-  std::set<MatchResult> reverse_set;
-  addAllMatchesToSet(forward_matches, true, forward_set);
-  addAllMatchesToSet(reverse_matches, false, reverse_set);
+void unionOfMatches(const std::vector<Match>& forward,
+                    const std::vector<Match>& reverse,
+                    std::vector<Match>& matches) {
+  std::vector<Match> forward_set = forward;
+  std::vector<Match> reverse_set = reverse;
 
+  // Sort and merge.
+  std::sort(forward_set.begin(), forward_set.end());
+  std::sort(reverse_set.begin(), reverse_set.end());
   matches.clear();
   std::set_union(forward_set.begin(), forward_set.end(), reverse_set.begin(),
       reverse_set.end(), std::back_inserter(matches));
