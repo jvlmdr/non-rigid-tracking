@@ -56,20 +56,3 @@ void findMatchesInBothDirectionsUsingEuclideanDistance(
     int max_num_matches,
     double max_relative_distance,
     bool use_flann);
-
-// Finds the reciprocal matches.
-void intersectionOfMatches(
-    const std::vector<Match>& forward_matches,
-    const std::vector<Match>& reverse_matches,
-    std::vector<Match>& matches);
-
-// Combines all matches.
-void unionOfMatches(
-    const std::vector<Match>& forward_matches,
-    const std::vector<Match>& reverse_matches,
-    std::vector<Match>& matches);
-
-void forwardConsistentUniqueMatches(
-    const std::vector<Match>& forward_matches,
-    const std::vector<Match>& reverse_matches,
-    std::vector<Match>& matches);

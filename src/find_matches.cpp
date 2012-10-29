@@ -1,7 +1,5 @@
 #include "find_matches.hpp"
-#include <set>
 #include <glog/logging.h>
-#include <algorithm>
 #include <boost/bind.hpp>
 #include <opencv2/core/core.hpp>
 #include <opencv2/features2d/features2d.hpp>
@@ -342,70 +340,4 @@ void findMatchesInBothDirectionsUsingEuclideanDistance(
       use_flann);
   matchMatrixRows(mat2, mat1, reverse, max_num_matches, max_relative_distance,
       use_flann);
-}
-
-////////////////////////////////////////////////////////////////////////////////
-
-namespace {
-
-void addMatchesToSet(const QueryResultList& directed,
-                     int index,
-                     bool forward,
-                     std::set<MatchResult>& undirected) {
-  QueryResultList::const_iterator d;
-
-  for (d = directed.begin(); d != directed.end(); ++d) {
-    int index1 = index;
-    int index2 = d->index;
-
-    if (!forward) {
-      std::swap(index1, index2);
-    }
-
-    MatchResult u(index1, index2, d->distance);
-    undirected.insert(u);
-  }
-}
-
-void addAllMatchesToSet(const std::deque<QueryResultList>& directed,
-                        bool forward,
-                        std::set<MatchResult>& undirected) {
-  std::deque<QueryResultList>::const_iterator d;
-  int index = 0;
-
-  for (d = directed.begin(); d != directed.end(); ++d) {
-    addMatchesToSet(*d, index, forward, undirected);
-    index += 1;
-  }
-}
-
-}
-
-void intersectionOfMatches(const std::vector<Match>& forward,
-                           const std::vector<Match>& reverse,
-                           std::vector<Match>& matches) {
-  std::vector<Match> forward_set = forward;
-  std::vector<Match> reverse_set = reverse;
-
-  // Sort and merge.
-  std::sort(forward_set.begin(), forward_set.end());
-  std::sort(reverse_set.begin(), reverse_set.end());
-
-  matches.clear();
-  std::set_intersection(forward_set.begin(), forward_set.end(),
-      reverse_set.begin(), reverse_set.end(), std::back_inserter(matches));
-}
-
-void unionOfMatches(const std::vector<Match>& forward,
-                    const std::vector<Match>& reverse,
-                    std::vector<Match>& matches) {
-  std::vector<Match> forward_set = forward;
-  std::vector<Match> reverse_set = reverse;
-
-  // Sort and merge.
-  std::sort(forward_set.begin(), forward_set.end());
-  std::sort(reverse_set.begin(), reverse_set.end());
-  matches.clear();
-  std::set_union(forward_set.begin(), forward_set.end(), reverse_set.begin(),
-      reverse_set.end(), std::back_inserter(matches));
 }
