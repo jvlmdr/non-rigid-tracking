@@ -31,8 +31,11 @@ class Track {
     template<class InputIterator>
     void insert(InputIterator first, InputIterator last);
 
-    const_iterator find(int x) const;
     iterator find(int x);
+    const_iterator find(int x) const;
+
+    iterator lower_bound(int x);
+    const_iterator lower_bound(int x) const;
 
     int size() const;
     bool empty() const;
@@ -67,6 +70,7 @@ class TrackIterator {
   public:
     TrackIterator();
     explicit TrackIterator(const Track<T>& track);
+    TrackIterator(const Track<T>& track, int time);
     TrackIterator(const TrackIterator<T>& other);
 
     void next();

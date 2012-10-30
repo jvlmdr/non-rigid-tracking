@@ -186,8 +186,7 @@ MultiviewTrack<T>::TimeIterator::TimeIterator()
 
 template<class T>
 MultiviewTrack<T>::TimeIterator::TimeIterator(
-    const MultiviewTrack<T>& track)
-    : cursors_(), time_(0) {
+    const MultiviewTrack<T>& track) : cursors_(), time_(0) {
   bool valid = false;
 
   // Populate cursor list for each view.
@@ -205,6 +204,20 @@ MultiviewTrack<T>::TimeIterator::TimeIterator(
         valid = true;
       }
     }
+  }
+}
+
+template<class T>
+MultiviewTrack<T>::TimeIterator::TimeIterator(
+    const MultiviewTrack<T>& track,
+    int time)
+    : cursors_(), time_(time) {
+  // Populate cursor list for each view.
+  typename MultiviewTrack<T>::const_iterator view;
+
+  for (view = track.begin(); view != track.end(); ++view) {
+    // Add cursor at the start of the track for this view.
+    cursors_.push_back(TrackIterator<T>(*view, time_));
   }
 }
 

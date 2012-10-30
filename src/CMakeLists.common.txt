@@ -544,3 +544,16 @@ ADD_EXECUTABLE(filter-matches
   match_result_writer.cpp)
 TARGET_LINK_LIBRARIES(filter-matches glog gflags)
 TARGET_LINK_LIBRARIES(filter-matches ${OpenCV_LIBS})
+
+ADD_EXECUTABLE(display-multiview-multitracks
+  display_multiview_multitracks.cpp
+  image_index.cpp
+  random_color.cpp
+  hsv.cpp
+  sift_position.cpp
+  draw_sift_position.cpp
+  read_lines.cpp
+  sift_position_reader.cpp
+  read_image.cpp)
+TARGET_LINK_LIBRARIES(display-multiview-multitracks glog gflags)
+TARGET_LINK_LIBRARIES(display-multiview-multitracks ${OpenCV_LIBS})

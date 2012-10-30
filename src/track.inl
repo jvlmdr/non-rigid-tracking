@@ -37,13 +37,23 @@ void Track<T>::insert(InputIterator first, InputIterator last) {
 }
 
 template<class T>
+typename Track<T>::iterator Track<T>::find(int x) {
+  return map_.find(x);
+}
+
+template<class T>
 typename Track<T>::const_iterator Track<T>::find(int x) const {
   return map_.find(x);
 }
 
 template<class T>
-typename Track<T>::iterator Track<T>::find(int x) {
-  return map_.find(x);
+typename Track<T>::iterator Track<T>::lower_bound(int x) {
+  return map_.lower_bound(x);
+}
+
+template<class T>
+typename Track<T>::const_iterator Track<T>::lower_bound(int x) const {
+  return map_.lower_bound(x);
 }
 
 template<class T>
@@ -125,6 +135,13 @@ TrackIterator<T>::TrackIterator() : track_(NULL), position_() {}
 template<class T>
 TrackIterator<T>::TrackIterator(const Track<T>& track)
     : track_(&track), position_(track.begin()) {}
+
+template<class T>
+TrackIterator<T>::TrackIterator(const Track<T>& track, int time)
+    : track_(&track), position_() {
+  // Find the last component whose key is less than or equal to time.
+  position_ = track_->lower_bound(time);
+}
 
 template<class T>
 TrackIterator<T>::TrackIterator(const TrackIterator<T>& other)

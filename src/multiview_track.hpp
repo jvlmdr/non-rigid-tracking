@@ -48,6 +48,7 @@ class MultiviewTrack {
       public:
         TimeIterator();
         TimeIterator(const MultiviewTrack<T>& track);
+        TimeIterator(const MultiviewTrack<T>& track, int time);
 
         // Advance to next time instant.
         void next();
