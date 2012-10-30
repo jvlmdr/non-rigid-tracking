@@ -68,10 +68,10 @@ class MultiviewTrack {
     };
 
     // Iterates over all image features. No guarantees about order.
-    class FeatureIterator {
+    class ConstFeatureIterator {
       public:
-        FeatureIterator();
-        FeatureIterator(const MultiviewTrack<T>& tracks);
+        ConstFeatureIterator();
+        ConstFeatureIterator(const MultiviewTrack<T>& tracks);
 
         void begin();
         void next();

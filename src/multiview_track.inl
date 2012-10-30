@@ -277,16 +277,16 @@ void MultiviewTrack<T>::TimeIterator::get(std::map<int, T>& points) const {
 ////////////////////////////////////////////////////////////////////////////////
 
 template<class T>
-MultiviewTrack<T>::FeatureIterator::FeatureIterator()
+MultiviewTrack<T>::ConstFeatureIterator::ConstFeatureIterator()
     : track_(), view_(), feature_() {}
 
 template<class T>
-MultiviewTrack<T>::FeatureIterator::FeatureIterator(
+MultiviewTrack<T>::ConstFeatureIterator::ConstFeatureIterator(
     const MultiviewTrack<T>& track)
     : track_(&track), view_(), feature_() {}
 
 template<class T>
-void MultiviewTrack<T>::FeatureIterator::begin() {
+void MultiviewTrack<T>::ConstFeatureIterator::begin() {
   view_ = track_->begin();
 
   while (view_ != track_->end()) {
@@ -301,7 +301,7 @@ void MultiviewTrack<T>::FeatureIterator::begin() {
 }
 
 template<class T>
-void MultiviewTrack<T>::FeatureIterator::next() {
+void MultiviewTrack<T>::ConstFeatureIterator::next() {
   // If we've reached the end, do nothing.
   if (view_ == track_->end()) {
     return;
@@ -325,13 +325,13 @@ void MultiviewTrack<T>::FeatureIterator::next() {
 }
 
 template<class T>
-bool MultiviewTrack<T>::FeatureIterator::end() const {
+bool MultiviewTrack<T>::ConstFeatureIterator::end() const {
   return (view_ == track_->end());
 }
 
 template<class T>
 std::pair<ImageIndex, const T*>
-MultiviewTrack<T>::FeatureIterator::get() const {
+MultiviewTrack<T>::ConstFeatureIterator::get() const {
   // Get view index as iterator offset.
   int view = view_ - track_->begin();
   // Get time index of feature.

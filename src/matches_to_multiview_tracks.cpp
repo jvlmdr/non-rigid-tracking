@@ -233,7 +233,7 @@ bool multitrackToTrack(const MultiviewTrack<FeatureSet>& multiview_multitrack,
 }
 
 int numFeaturesInMultitrack(const MultiviewTrack<FeatureSet>& track) {
-  MultiviewTrack<FeatureSet>::FeatureIterator iter(track);
+  MultiviewTrack<FeatureSet>::ConstFeatureIterator iter(track);
   int n = 0;
 
   for (iter.begin(); !iter.end(); iter.next()) {

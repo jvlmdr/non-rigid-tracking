@@ -33,7 +33,7 @@ void FeatureSets<T>::init(const std::vector<ImageIndex>& vertices,
     bool first = true;
     int first_vertex = 0;
 
-    MultiviewTrack<int>::FeatureIterator iter(*track);
+    MultiviewTrack<int>::ConstFeatureIterator iter(*track);
     for (iter.begin(); !iter.end(); iter.next()) {
       ImageIndex frame = iter.get().first;
       int id = *iter.get().second;

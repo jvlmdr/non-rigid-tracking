@@ -5,6 +5,8 @@
 #include <glog/logging.h>
 #include <boost/lexical_cast.hpp>
 #include <boost/format.hpp>
+#include <boost/bind.hpp>
+#include <opencv2/imgproc/imgproc.hpp>
 #include <opencv2/highgui/highgui.hpp>
 
 #include "multiview_track.hpp"
@@ -61,7 +63,13 @@ void init(int& argc, char**& argv) {
   }
 }
 
+bool tooBig(const cv::Size& image, const cv::Size& screen, int m) {
+  return image.width / m > screen.width || image.height / m > screen.height;
+}
+
 bool initializeCollage(Collage& collage,
+                       int& downsample,
+                       const cv::Size& screen,
                        int num_views,
                        const std::string& format,
                        const std::string& view,
@@ -69,19 +77,32 @@ bool initializeCollage(Collage& collage,
   // Load image for the given frame.
   std::string file = makeImageFilename(format, view, time);
 
-  cv::Mat image;
-  bool ok = readColorImage(file, image);
+  cv::Mat color_image;
+  bool ok = readColorImage(file, color_image);
   if (!ok) {
     return false;
   }
 
-  collage.size = image.size();
-  collage.image.create(collage.size.height, collage.size.width * num_views,
-      cv::DataType<cv::Vec3b>::type);
+  cv::Size image = color_image.size();
+  cv::Size canvas(image.width * num_views, image.height);
+
+  downsample = 0;
+  int factor = 1;
+  while (tooBig(canvas, screen, factor)) {
+    downsample += 1;
+    factor <<= 1;
+  }
+
+  image.width /= factor;
+  image.height /= factor;
+  canvas = cv::Size(image.width * num_views, image.height);
+
+  collage.size = image;
+  collage.image.create(canvas, cv::DataType<cv::Vec3b>::type);
 
   collage.offsets.clear();
   for (int i = 0; i < num_views; i += 1) {
-    collage.offsets.push_back(cv::Point(collage.size.width * i, 0));
+    collage.offsets.push_back(cv::Point(image.width * i, 0));
   }
 
   return true;
@@ -90,7 +111,8 @@ bool initializeCollage(Collage& collage,
 bool loadFrameImages(Collage& collage,
                      const std::string& format,
                      const std::vector<std::string>& views,
-                     int time) {
+                     int time,
+                     int downsample) {
   int num_views = views.size();
 
   for (int i = 0; i < num_views; i += 1) {
@@ -102,8 +124,14 @@ bool loadFrameImages(Collage& collage,
       return false;
     }
 
+    for (int i = 0; i < downsample; i += 1) {
+      cv::pyrDown(buffer, buffer);
+    }
+
     cv::Mat viewport = collage.viewport(i);
-    CHECK(buffer.size() == viewport.size());
+    CHECK(buffer.size() == viewport.size()) << buffer.size().width << "x" <<
+        buffer.size().height << " vs " << viewport.size().width << "x" <<
+        viewport.size().height;
     CHECK(buffer.type() == viewport.type());
 
     buffer.copyTo(viewport);
@@ -135,7 +163,7 @@ void drawMultiviewFeatures(const std::map<int, FeatureSet>& views,
 }
 
 int numFeaturesInMultitrack(const MultiviewTrack<FeatureSet>& track) {
-  MultiviewTrack<FeatureSet>::FeatureIterator iter(track);
+  MultiviewTrack<FeatureSet>::ConstFeatureIterator iter(track);
   int n = 0;
 
   for (iter.begin(); !iter.end(); iter.next()) {
@@ -150,6 +178,65 @@ bool hasMoreFeatures(const MultiviewTrack<FeatureSet>& lhs,
   return numFeaturesInMultitrack(lhs) > numFeaturesInMultitrack(rhs);
 }
 
+SiftPosition scaleFeature(const SiftPosition& feature, double scale) {
+  return SiftPosition(scale * feature.x, scale * feature.y,
+      scale * feature.size, feature.theta);
+}
+
+void scaleFeatures(const FeatureSet& unscaled,
+                   FeatureSet& scaled,
+                   double scale) {
+  scaled.clear();
+  std::transform(unscaled.begin(), unscaled.end(), std::back_inserter(scaled),
+      boost::bind(scaleFeature, _1, scale));
+}
+
+void scaleFeatures(const Track<FeatureSet>& unscaled,
+                   Track<FeatureSet>& scaled,
+                   double scale) {
+  scaled.clear();
+  Track<FeatureSet>::const_iterator x;
+  for (x = unscaled.begin(); x != unscaled.end(); ++x) {
+    FeatureSet y;
+    scaleFeatures(x->second, y, scale);
+
+    FeatureSet& empty = scaled[x->first];
+    empty.swap(y);
+  }
+}
+
+void scaleFeatures(const MultiviewTrack<FeatureSet>& unscaled,
+                   MultiviewTrack<FeatureSet>& scaled,
+                   double scale) {
+  scaled = MultiviewTrack<FeatureSet>(unscaled.numViews());
+
+  MultiviewTrack<FeatureSet>::const_iterator x;
+  MultiviewTrack<FeatureSet>::iterator view = scaled.begin();
+
+  for (x = unscaled.begin(); x != unscaled.end(); ++x) {
+    Track<FeatureSet> y;
+    scaleFeatures(*x, y, scale);
+
+    view->swap(y);
+    ++view;
+  }
+}
+
+void scaleFeatures(const MultiviewTrackList<FeatureSet>& unscaled,
+                   MultiviewTrackList<FeatureSet>& scaled,
+                   double scale) {
+  scaled = MultiviewTrackList<FeatureSet>(unscaled.numViews());
+
+  MultiviewTrackList<FeatureSet>::const_iterator x;
+  for (x = unscaled.begin(); x != unscaled.end(); ++x) {
+    MultiviewTrack<FeatureSet> y;
+    scaleFeatures(*x, y, scale);
+
+    scaled.push_back(MultiviewTrack<FeatureSet>());
+    scaled.back().swap(y);
+  }
+}
+
 int main(int argc, char** argv) {
   init(argc, argv);
 
@@ -157,6 +244,7 @@ int main(int argc, char** argv) {
   std::string image_format = argv[2];
   std::string views_file = argv[3];
   int num_frames = boost::lexical_cast<int>(argv[4]);
+  cv::Size screen_size(FLAGS_width, FLAGS_height);
 
   bool ok;
 
@@ -189,17 +277,28 @@ int main(int argc, char** argv) {
     colors.push_back(randomColor(BRIGHTNESS, SATURATION));
   }
 
+  // Initialize canvas.
+  int downsample = 0;
+  Collage collage;
+  ok = initializeCollage(collage, downsample, screen_size, views.size(),
+      image_format, views.front(), 0);
+  CHECK(ok) << "Could not initialize collage";
+  double scale = 1. / std::pow(2., downsample);
+
+  // Scale down features.
+  {
+    MultiviewTrackList<FeatureSet> scaled;
+    scaleFeatures(tracks, scaled, scale);
+    tracks.swap(scaled);
+  }
+
   // Start at the first track.
   MultiviewTrackList<FeatureSet>::const_iterator track = tracks.begin();
   std::vector<cv::Scalar>::const_iterator color = colors.begin();
   MultiviewTrack<FeatureSet>::TimeIterator frame(*track, 0);
-  Collage collage;
   bool exit = false;
-  bool pause = false;
+  bool pause = true;
   bool step = false;
-
-  ok = initializeCollage(collage, views.size(), image_format, views.front(), 0);
-  CHECK(ok) << "Could not initialize collage";
 
   while (!exit) {
     // Get points at this time instant, indexed by feature number.
@@ -207,7 +306,8 @@ int main(int argc, char** argv) {
     frame.get(features);
 
     // Load image for each view.
-    ok = loadFrameImages(collage, image_format, views, frame.time());
+    ok = loadFrameImages(collage, image_format, views, frame.time(),
+        downsample);
     CHECK(ok) << "Could not load images";
 
     // Visualize all features.
@@ -229,6 +329,26 @@ int main(int argc, char** argv) {
         --track;
         --color;
         frame = MultiviewTrack<FeatureSet>::TimeIterator(*track, frame.time());
+      }
+    } else if (c == '0') {
+      // Reset to first frame and pause.
+      frame = MultiviewTrack<FeatureSet>::TimeIterator(*track, 0);
+      pause = true;
+    } else if (c == 'n') {
+      // Move to next track, reset to first frame and pause.
+      if (track != tracks.end()) {
+        ++track;
+        ++color;
+        frame = MultiviewTrack<FeatureSet>::TimeIterator(*track, 0);
+        pause = true;
+      }
+    } else if (c == 'N') {
+      // Move to previous track, reset to first frame and pause.
+      if (track != tracks.begin()) {
+        --track;
+        --color;
+        frame = MultiviewTrack<FeatureSet>::TimeIterator(*track, 0);
+        pause = true;
       }
     } else if (c == ' ') {
       pause = !pause;
