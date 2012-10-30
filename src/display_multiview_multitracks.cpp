@@ -32,12 +32,12 @@ const double BRIGHTNESS = 0.99;
 const double LINE_THICKNESS = 2;
 
 struct Collage {
-  cv::Mat image;
-  cv::Size size;
+  cv::Size canvas_size;
+  cv::Size viewport_size;
   std::vector<cv::Point> offsets;
 
-  cv::Mat viewport(int view) {
-    return image(cv::Rect(offsets[view], size));
+  cv::Mat viewport(cv::Mat& image, int view) const {
+    return image(cv::Rect(offsets[view], viewport_size));
   }
 };
 
@@ -97,8 +97,8 @@ bool initializeCollage(Collage& collage,
   image.height /= factor;
   canvas = cv::Size(image.width * num_views, image.height);
 
-  collage.size = image;
-  collage.image.create(canvas, cv::DataType<cv::Vec3b>::type);
+  collage.viewport_size = image;
+  collage.canvas_size = canvas;
 
   collage.offsets.clear();
   for (int i = 0; i < num_views; i += 1) {
@@ -108,12 +108,54 @@ bool initializeCollage(Collage& collage,
   return true;
 }
 
-bool loadFrameImages(Collage& collage,
+bool preloadImages(const Collage& collage,
+                   std::vector<cv::Mat>& canvases,
+                   const std::string& format,
+                   const std::vector<std::string>& views,
+                   int num_frames,
+                   int downsample) {
+  canvases.clear();
+  int num_views = views.size();
+
+  for (int t = 0; t < num_frames; t += 1) {
+    cv::Mat canvas(collage.canvas_size, cv::DataType<cv::Vec3b>::type);
+
+    for (int i = 0; i < num_views; i += 1) {
+      // Load image for this frame.
+      std::string file = makeImageFilename(format, views[i], t);
+      cv::Mat buffer;
+      bool ok = readColorImage(file, buffer);
+      if (!ok) {
+        return false;
+      }
+
+      for (int i = 0; i < downsample; i += 1) {
+        cv::pyrDown(buffer, buffer);
+      }
+
+      cv::Mat viewport = collage.viewport(canvas, i);
+      CHECK(buffer.size() == viewport.size()) << buffer.size().width << "x" <<
+          buffer.size().height << " vs " << viewport.size().width << "x" <<
+          viewport.size().height;
+      CHECK(buffer.type() == viewport.type());
+
+      buffer.copyTo(viewport);
+    }
+
+    canvases.push_back(canvas);
+  }
+
+  return true;
+}
+
+bool loadFrameImages(const Collage& collage,
+                     cv::Mat& canvas,
                      const std::string& format,
                      const std::vector<std::string>& views,
                      int time,
                      int downsample) {
   int num_views = views.size();
+  canvas.create(collage.canvas_size, cv::DataType<cv::Vec3b>::type);
 
   for (int i = 0; i < num_views; i += 1) {
     // Load image for this frame.
@@ -128,7 +170,7 @@ bool loadFrameImages(Collage& collage,
       cv::pyrDown(buffer, buffer);
     }
 
-    cv::Mat viewport = collage.viewport(i);
+    cv::Mat viewport = collage.viewport(canvas, i);
     CHECK(buffer.size() == viewport.size()) << buffer.size().width << "x" <<
         buffer.size().height << " vs " << viewport.size().width << "x" <<
         viewport.size().height;
@@ -150,14 +192,15 @@ void drawFeatures(cv::Mat& image,
 }
 
 void drawMultiviewFeatures(const std::map<int, FeatureSet>& views,
-                           Collage& collage,
+                           const Collage& collage,
+                           cv::Mat& canvas,
                            const cv::Scalar& color) {
   // Render features in each view.
   std::map<int, FeatureSet>::const_iterator view;
   for (view = views.begin(); view != views.end(); ++view) {
     int index = view->first;
     const FeatureSet& features = view->second;
-    cv::Mat viewport = collage.viewport(index);
+    cv::Mat viewport = collage.viewport(canvas, index);
     drawFeatures(viewport, features, color);
   }
 }
@@ -292,10 +335,17 @@ int main(int argc, char** argv) {
     tracks.swap(scaled);
   }
 
+  // Load all images.
+  LOG(INFO) << "Pre-loading all images...";
+  std::vector<cv::Mat> images;
+  preloadImages(collage, images, image_format, views, num_frames, downsample);
+  LOG(INFO) << "Loaded images";
+
   // Start at the first track.
   MultiviewTrackList<FeatureSet>::const_iterator track = tracks.begin();
   std::vector<cv::Scalar>::const_iterator color = colors.begin();
   MultiviewTrack<FeatureSet>::TimeIterator frame(*track, 0);
+  std::vector<cv::Mat>::const_iterator image = images.begin();
   bool exit = false;
   bool pause = true;
   bool step = false;
@@ -305,15 +355,12 @@ int main(int argc, char** argv) {
     std::map<int, FeatureSet> features;
     frame.get(features);
 
-    // Load image for each view.
-    ok = loadFrameImages(collage, image_format, views, frame.time(),
-        downsample);
-    CHECK(ok) << "Could not load images";
+    cv::Mat canvas = image->clone();
 
     // Visualize all features.
-    drawMultiviewFeatures(features, collage, *color);
+    drawMultiviewFeatures(features, collage, canvas, *color);
 
-    cv::imshow("tracks", collage.image);
+    cv::imshow("tracks", canvas);
     char c = cv::waitKey(10);
 
     if (c == 27) {
@@ -333,6 +380,7 @@ int main(int argc, char** argv) {
     } else if (c == '0') {
       // Reset to first frame and pause.
       frame = MultiviewTrack<FeatureSet>::TimeIterator(*track, 0);
+      image = images.begin();
       pause = true;
     } else if (c == 'n') {
       // Move to next track, reset to first frame and pause.
@@ -340,6 +388,7 @@ int main(int argc, char** argv) {
         ++track;
         ++color;
         frame = MultiviewTrack<FeatureSet>::TimeIterator(*track, 0);
+        image = images.begin();
         pause = true;
       }
     } else if (c == 'N') {
@@ -348,6 +397,7 @@ int main(int argc, char** argv) {
         --track;
         --color;
         frame = MultiviewTrack<FeatureSet>::TimeIterator(*track, 0);
+        image = images.begin();
         pause = true;
       }
     } else if (c == ' ') {
@@ -361,9 +411,11 @@ int main(int argc, char** argv) {
     if (!exit) {
       if (!pause || step) {
         frame.next();
+        ++image;
         if (frame.time() >= num_frames) {
           // Reset to the beginning.
           frame = MultiviewTrack<FeatureSet>::TimeIterator(*track, 0);
+          image = images.begin();
         }
         step = false;
       }
