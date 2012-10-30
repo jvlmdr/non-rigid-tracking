@@ -303,7 +303,7 @@ int main(int argc, char** argv) {
   VectorReader<SiftPosition> feature_set_reader(feature_reader);
   ok = loadMultiviewTrackList(tracks_file, tracks, feature_set_reader);
   CHECK(ok) << "Could not load tracks";
-  LOG(INFO) << "Loaded " << tracks.numTracks() << " multi-view tracks";
+  LOG(INFO) << "Loaded " << tracks.numTracks() << " tracks";
 
   // Sort tracks by number of features.
   std::sort(tracks.begin(), tracks.end(), hasMoreFeatures);
@@ -349,6 +349,7 @@ int main(int argc, char** argv) {
   bool exit = false;
   bool pause = true;
   bool step = false;
+  int index = 0;
 
   while (!exit) {
     // Get points at this time instant, indexed by feature number.
@@ -361,7 +362,7 @@ int main(int argc, char** argv) {
     drawMultiviewFeatures(features, collage, canvas, *color);
 
     cv::imshow("tracks", canvas);
-    char c = cv::waitKey(10);
+    char c = cv::waitKey(30);
 
     if (c == 27) {
       exit = true;
@@ -369,13 +370,17 @@ int main(int argc, char** argv) {
       if (track != tracks.end()) {
         ++track;
         ++color;
+        ++index;
         frame = MultiviewTrack<FeatureSet>::TimeIterator(*track, frame.time());
+        LOG(INFO) << "Track " << (index + 1) << " / " << tracks.numTracks();
       }
     } else if (c == 'k') {
       if (track != tracks.begin()) {
         --track;
         --color;
+        --index;
         frame = MultiviewTrack<FeatureSet>::TimeIterator(*track, frame.time());
+        LOG(INFO) << "Track " << (index + 1) << " / " << tracks.numTracks();
       }
     } else if (c == '0') {
       // Reset to first frame and pause.
@@ -387,18 +392,22 @@ int main(int argc, char** argv) {
       if (track != tracks.end()) {
         ++track;
         ++color;
+        ++index;
         frame = MultiviewTrack<FeatureSet>::TimeIterator(*track, 0);
         image = images.begin();
         pause = true;
+        LOG(INFO) << "Track " << (index + 1) << " / " << tracks.numTracks();
       }
     } else if (c == 'N') {
       // Move to previous track, reset to first frame and pause.
       if (track != tracks.begin()) {
         --track;
         --color;
+        --index;
         frame = MultiviewTrack<FeatureSet>::TimeIterator(*track, 0);
         image = images.begin();
         pause = true;
+        LOG(INFO) << "Track " << (index + 1) << " / " << tracks.numTracks();
       }
     } else if (c == ' ') {
       pause = !pause;
