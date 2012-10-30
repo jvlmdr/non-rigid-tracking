@@ -196,6 +196,7 @@ int main(int argc, char** argv) {
   Collage collage;
   bool exit = false;
   bool pause = false;
+  bool step = false;
 
   ok = initializeCollage(collage, views.size(), image_format, views.front(), 0);
   CHECK(ok) << "Could not initialize collage";
@@ -232,16 +233,19 @@ int main(int argc, char** argv) {
     } else if (c == ' ') {
       pause = !pause;
     } else if (c == 'l') {
+      // Pause but still step one.
       pause = true;
+      step = true;
     }
 
     if (!exit) {
-      if (!pause) {
+      if (!pause || step) {
         frame.next();
         if (frame.time() >= num_frames) {
           // Reset to the beginning.
           frame = MultiviewTrack<FeatureSet>::TimeIterator(*track, 0);
         }
+        step = false;
       }
     }
   }
