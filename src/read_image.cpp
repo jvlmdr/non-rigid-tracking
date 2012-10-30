@@ -3,11 +3,19 @@
 #include <opencv2/imgproc/imgproc.hpp>
 #include <glog/logging.h>
 
-bool readImage(const std::string& filename, cv::Mat& color, cv::Mat& gray) {
+bool readColorImage(const std::string& filename, cv::Mat& image) {
   // Attempt to read next image.
-  color = cv::imread(filename, 1);
-  if (color.empty()) {
+  image = cv::imread(filename, 1);
+  if (image.empty()) {
     LOG(WARNING) << "Could not open \"" << filename << "\"";
+    return false;
+  }
+
+  return true;
+}
+
+bool readImage(const std::string& filename, cv::Mat& color, cv::Mat& gray) {
+  if (!readColorImage(filename, color)) {
     return false;
   }
 

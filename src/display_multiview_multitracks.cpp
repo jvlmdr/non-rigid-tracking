@@ -58,35 +58,52 @@ void init(int& argc, char**& argv) {
   }
 }
 
-bool loadFrameImages(const std::string& format,
-                     int time,
-                     const std::vector<std::string>& views,
-                     Collage& collage) {
-  int num_views = views.size();
-  collage.offsets.assign(num_views, cv::Point());
+bool initializeCollage(Collage& collage,
+                       int num_views,
+                       const std::string& format,
+                       const std::string& view,
+                       int time) {
+  // Load image for the given frame.
+  std::string file = makeImageFilename(format, view, time);
 
-  for (int view = 0; view < num_views; view += 1) {
+  cv::Mat image;
+  bool ok = readColorImage(file, image);
+  if (!ok) {
+    return false;
+  }
+
+  collage.size = image.size();
+  collage.image.create(collage.size.height, collage.size.width * num_views,
+      cv::DataType<cv::Vec3b>::type);
+
+  collage.offsets.clear();
+  for (int i = 0; i < num_views; i += 1) {
+    collage.offsets.push_back(cv::Point(collage.size.width * i, 0));
+  }
+
+  return true;
+}
+
+bool loadFrameImages(Collage& collage,
+                     const std::string& format,
+                     const std::vector<std::string>& views,
+                     int time) {
+  int num_views = views.size();
+
+  for (int i = 0; i < num_views; i += 1) {
     // Load image for this frame.
-    cv::Mat image;
-    cv::Mat gray_image;
-    std::string file = makeImageFilename(format, views[view], time);
-    bool ok = readImage(file, image, gray_image);
+    std::string file = makeImageFilename(format, views[i], time);
+    cv::Mat buffer;
+    bool ok = readColorImage(file, buffer);
     if (!ok) {
       return false;
     }
 
-    // Initialize image if uninitialized.
-    if (view == 0) {
-      collage.size = image.size();
-      collage.image.create(collage.size.height, collage.size.width * num_views,
-          cv::DataType<cv::Vec3b>::type);
-    }
+    cv::Mat viewport = collage.viewport(i);
+    CHECK(buffer.size() == viewport.size());
+    CHECK(buffer.type() == viewport.type());
 
-    collage.offsets[view] = cv::Point(collage.size.width * view, 0);
-
-    // Copy into collage.
-    cv::Mat viewport = collage.viewport(view);
-    image.copyTo(viewport);
+    buffer.copyTo(viewport);
   }
 
   return true;
@@ -176,13 +193,16 @@ int main(int argc, char** argv) {
   Collage collage;
   bool exit = false;
 
+  ok = initializeCollage(collage, views.size(), image_format, views.front(), 0);
+  CHECK(ok) << "Could not initialize collage";
+
   while (!exit) {
     // Get points at this time instant, indexed by feature number.
     std::map<int, FeatureSet> features;
     frame.get(features);
 
     // Load image for each view.
-    ok = loadFrameImages(image_format, frame.time(), views, collage);
+    ok = loadFrameImages(collage, image_format, views, frame.time());
     CHECK(ok) << "Could not load images";
 
     // Visualize all features.
