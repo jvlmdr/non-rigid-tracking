@@ -20,6 +20,9 @@
 #include "sift_position_reader.hpp"
 #include "read_image.hpp"
 
+DEFINE_int32(width, 1280, "Screen width");
+DEFINE_int32(height, 800, "Screen width");
+
 typedef std::vector<SiftPosition> FeatureSet;
 
 const double SATURATION = 0.99;
@@ -192,6 +195,7 @@ int main(int argc, char** argv) {
   MultiviewTrack<FeatureSet>::TimeIterator frame(*track, 0);
   Collage collage;
   bool exit = false;
+  bool pause = false;
 
   ok = initializeCollage(collage, views.size(), image_format, views.front(), 0);
   CHECK(ok) << "Could not initialize collage";
@@ -225,13 +229,19 @@ int main(int argc, char** argv) {
         --color;
         frame = MultiviewTrack<FeatureSet>::TimeIterator(*track, frame.time());
       }
+    } else if (c == ' ') {
+      pause = !pause;
+    } else if (c == 'l') {
+      pause = true;
     }
 
     if (!exit) {
-      frame.next();
-      if (frame.time() >= num_frames) {
-        // Reset to the beginning.
-        frame = MultiviewTrack<FeatureSet>::TimeIterator(*track, 0);
+      if (!pause) {
+        frame.next();
+        if (frame.time() >= num_frames) {
+          // Reset to the beginning.
+          frame = MultiviewTrack<FeatureSet>::TimeIterator(*track, 0);
+        }
       }
     }
   }
