@@ -298,8 +298,10 @@ void filterMatchLists(const std::deque<QueryResultList>& input,
 void matchMatrixRows(const cv::Mat& query,
                      const cv::Mat& train,
                      std::deque<QueryResultList>& matches,
-                     int max_num_matches,
-                     double max_relative_distance,
+                     bool use_max_num,
+                     int max_num,
+                     bool use_threshold,
+                     double threshold,
                      bool use_flann) {
   // Construct matching object.
   cv::Ptr<cv::DescriptorMatcher> matcher;
@@ -314,27 +316,28 @@ void matchMatrixRows(const cv::Mat& query,
   singleton.push_back(train);
   matcher->add(singleton);
 
-  if (max_num_matches > 0) {
+  if (use_max_num) {
     // Take top few matches.
     std::vector<RawMatchList> raw;
-    matcher->knnMatch(query, raw, max_num_matches);
+    matcher->knnMatch(query, raw, max_num);
 
     // Convert from cv::DMatch to our match.
     convertMatchLists(raw, matches);
 
-    if (max_relative_distance > 0) {
+    if (use_threshold) {
       // Remove any results that are too far away.
       std::deque<QueryResultList> filtered;
-      filterMatchLists(matches, filtered, max_relative_distance);
+      filterMatchLists(matches, filtered, threshold);
       matches.swap(filtered);
     }
   } else {
     // No maximum number of matches specified.
-    CHECK(max_relative_distance > 0) << "No limit on number of matches";
+    CHECK(use_threshold) << "No limit on number of matches";
 
     // Retrieve based on relative distance.
     std::vector<RawMatchList> raw;
-    relativeRadiusMatch(query, *matcher, raw, max_relative_distance);
+    //relativeRadiusMatch(query, *matcher, raw, max_relative_distance);
+    matcher->radiusMatch(query, raw, threshold);
 
     // Convert from cv::DMatch to our match.
     convertMatchLists(raw, matches);
@@ -346,8 +349,10 @@ void matchMatrixRows(const cv::Mat& query,
 void findMatchesUsingEuclideanDistance(const std::deque<Descriptor>& points1,
                                        const std::deque<Descriptor>& points2,
                                        std::deque<QueryResultList>& matches,
-                                       int max_num_matches,
-                                       double max_relative_distance,
+                                       bool use_max_num,
+                                       int max_num,
+                                       bool use_threshold,
+                                       double threshold,
                                        bool use_flann) {
   // Copy descriptors into matrices for cv::DescriptorMatcher.
   cv::Mat mat1;
@@ -356,8 +361,8 @@ void findMatchesUsingEuclideanDistance(const std::deque<Descriptor>& points1,
   listToMatrix(points2, mat2);
 
   // Match forwards.
-  matchMatrixRows(mat1, mat2, matches, max_num_matches, max_relative_distance,
-      use_flann);
+  matchMatrixRows(mat1, mat2, matches, use_max_num, max_num, use_threshold,
+      threshold, use_flann);
 }
 
 void findMatchesInBothDirectionsUsingEuclideanDistance(
@@ -365,8 +370,10 @@ void findMatchesInBothDirectionsUsingEuclideanDistance(
     const std::deque<Descriptor>& points2,
     std::deque<QueryResultList>& forward,
     std::deque<QueryResultList>& reverse,
-    int max_num_matches,
-    double max_relative_distance,
+    bool use_max_num,
+    int max_num,
+    bool use_threshold,
+    double threshold,
     bool use_flann) {
   // Copy descriptors into matrices for cv::DescriptorMatcher.
   cv::Mat mat1;
@@ -375,8 +382,8 @@ void findMatchesInBothDirectionsUsingEuclideanDistance(
   listToMatrix(points2, mat2);
 
   // Match forwards and backwards.
-  matchMatrixRows(mat1, mat2, forward, max_num_matches, max_relative_distance,
-      use_flann);
-  matchMatrixRows(mat2, mat1, reverse, max_num_matches, max_relative_distance,
-      use_flann);
+  matchMatrixRows(mat1, mat2, forward, use_max_num, max_num, use_threshold,
+      threshold, use_flann);
+  matchMatrixRows(mat2, mat1, reverse, use_max_num, max_num, use_threshold,
+      threshold, use_flann);
 }

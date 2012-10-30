@@ -19,17 +19,14 @@
 #include "match_result_writer.hpp"
 #include "unique_match_result_writer.hpp"
 
-DEFINE_bool(unique, true,
-    "Each feature is associated to at most one other feature");
+DEFINE_bool(unique, false, "Only take best match");
 
-// Settings for when unique == false.
-DEFINE_int32(max_num_matches, 0,
-    "Non-unique matching. Maximum number of matches. "
-    "Unused if non-positive.");
-DEFINE_double(max_relative_distance, 0.,
-    "Non-unique matching. "
-    "Return all matches within this fraction of the nearest match. "
-    "0.9 is typical, 0 means all matches, 1 means only the nearest.");
+DEFINE_bool(use_max_num, false, "Limit number of matches");
+DEFINE_int32(max_num, 1, "Maximum number of matches");
+
+DEFINE_bool(use_absolute_threshold, false, "Use absolute distance threshold");
+DEFINE_double(absolute_threshold, 1,
+    "Maximum appearance distance between features");
 
 DEFINE_bool(use_flann, true,
     "Use FLANN (fast but approximate) to find nearest neighbours.");
@@ -85,6 +82,7 @@ int main(int argc, char** argv) {
     // Convert from query to match representation.
     std::vector<UniqueMatchResult> matches;
     convertUniqueQueryResultsToMatches(forward_matches, matches, true);
+    LOG(INFO) << "Found " << matches.size() << " matches";
 
     UniqueMatchResultWriter writer;
     ok = saveList(matches_file, matches, writer);
@@ -93,12 +91,14 @@ int main(int argc, char** argv) {
     // Find several matches in each direction.
     std::deque<QueryResultList> forward_matches;
     findMatchesUsingEuclideanDistance(descriptors1, descriptors2,
-        forward_matches, FLAGS_max_num_matches, FLAGS_max_relative_distance,
+        forward_matches, FLAGS_use_max_num, FLAGS_max_num,
+        FLAGS_use_absolute_threshold, FLAGS_absolute_threshold,
         FLAGS_use_flann);
 
     // Flatten out lists of query results to match results.
     std::vector<MatchResult> matches;
     convertQueryResultListsToMatches(forward_matches, matches, true);
+    LOG(INFO) << "Found " << matches.size() << " matches";
 
     MatchResultWriter writer;
     ok = saveList(matches_file, matches, writer);

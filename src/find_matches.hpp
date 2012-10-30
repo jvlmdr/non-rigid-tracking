@@ -23,7 +23,7 @@ void convertQueryResultListsToMatches(
     bool forward);
 
 // Finds all matches for each point in the other set.
-// Limited by max_num_matches and max_relative_distance.
+// Limited by max_num and threshold.
 // Outputs a list of matched points for each point.
 void findMatchesUsingClassifiers(const std::deque<Classifier>& classifiers,
                                  const std::deque<Descriptor>& points,
@@ -42,14 +42,16 @@ void findMatchesUsingClassifier(const Classifier& classifier,
                                 double threshold);
 
 // Finds all matches for each point in the other set.
-// Limited by max_num_matches and max_relative_distance.
+// Limited by max_num and threshold.
 // Outputs a list of matched points for each point.
 void findMatchesUsingEuclideanDistance(
     const std::deque<Descriptor>& points1,
     const std::deque<Descriptor>& points2,
     std::deque<QueryResultList>& matches,
-    int max_num_matches,
-    double max_relative_distance,
+    bool use_max_num,
+    int max_num,
+    bool use_threshold,
+    double threshold,
     bool use_flann);
 
 // Bundle forward and reverse matching together when using Euclidean distance.
@@ -59,6 +61,8 @@ void findMatchesInBothDirectionsUsingEuclideanDistance(
     const std::deque<Descriptor>& points2,
     std::deque<QueryResultList>& forward_matches,
     std::deque<QueryResultList>& reverse_matches,
-    int max_num_matches,
-    double max_relative_distance,
+    bool use_max_num,
+    int max_num,
+    bool use_threshold,
+    double threshold,
     bool use_flann);
