@@ -13,6 +13,11 @@ inline cv::Point2d imagePointFromHomogeneous(const cv::Mat& X);
 inline cv::Mat worldPointToHomogeneous(const cv::Point3d& x);
 inline cv::Point3d worldPointFromHomogeneous(const cv::Mat& X);
 
+inline void imagePointsToHomogeneous(const std::vector<cv::Point2d>& points,
+                                     cv::Mat& matrix);
+inline void imagePointsFromHomogeneous(const cv::Mat& matrix,
+                                       std::vector<cv::Point2d>& points);
+
 double cond(const cv::Mat& A);
 
 template<class T>
