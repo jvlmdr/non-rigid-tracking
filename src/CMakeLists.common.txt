@@ -561,6 +561,7 @@ TARGET_LINK_LIBRARIES(display-multiview-multitracks ${OpenCV_LIBS})
 ADD_EXECUTABLE(display-distorted-epipolar-line
   display_distorted_epipolar_line.cpp
   distortion.cpp
+  distorted_epipolar_lines.cpp
   sift_position.cpp
   camera_properties.cpp
   sift_position_reader.cpp
