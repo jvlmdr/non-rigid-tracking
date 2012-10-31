@@ -9,12 +9,14 @@
 #include <glog/logging.h>
 #include <opencv2/core/core.hpp>
 #include <opencv2/highgui/highgui.hpp>
+#include <opencv2/imgproc/imgproc.hpp>
 
 #include "camera_properties.hpp"
 #include "sift_position.hpp"
 #include "distortion.hpp"
 #include "util.hpp"
 
+#include "read_image.hpp"
 #include "iterator_reader.hpp"
 #include "sift_position_reader.hpp"
 #include "camera_properties_reader.hpp"
@@ -225,6 +227,18 @@ void DistortedEpipolarLineFinder::compute(const cv::Point2d& x1,
       }
     }
   }
+
+  // Remove pixels which are not inside the image.
+  cv::Rect bounds(cv::Point(0, 0), camera_->image_size);
+
+  PixelSet::iterator pixel = line.begin();
+  while (pixel != line.end()) {
+    if (!bounds.contains(*pixel)) {
+      line.erase(pixel++);
+    } else {
+      ++pixel;
+    }
+  }
 }
 
 int main(int argc, char** argv) {
@@ -234,40 +248,55 @@ int main(int argc, char** argv) {
   std::string camera_file1 = argv[2];
   std::string camera_file2 = argv[3];
   std::string fund_mat_file = argv[4];
+  std::string image_file1 = argv[5];
+  std::string image_file2 = argv[6];
 
   bool ok;
 
   // Load camera properties.
   CameraProperties camera1;
   CameraProperties camera2;
-
   CameraPropertiesReader camera_reader;
   ok = load(camera_file1, camera1, camera_reader);
   CHECK(ok) << "Could not load intrinsics for first camera";
   ok = load(camera_file2, camera2, camera_reader);
   CHECK(ok) << "Could not load intrinsics for second camera";
 
+  // Load fundamental matrix.
   cv::Mat F;
   MatrixReader matrix_reader;
   ok = load(fund_mat_file, F, matrix_reader);
   CHECK(ok) << "Could not load fundamental matrix";
 
-  std::vector<SiftPosition> keypoints;
   // Load keypoints.
+  std::vector<SiftPosition> keypoints;
   SiftPositionReader keypoint_reader;
   ok = loadList(keypoints_file, keypoints, keypoint_reader);
   CHECK(ok) << "Could not load keypoints";
+
+  // Shuffle keypoints.
+  std::random_shuffle(keypoints.begin(), keypoints.end());
+
+  // Load images.
+  cv::Mat image1;
+  cv::Mat image2;
+  ok = readColorImage(image_file1, image1);
+  CHECK(ok) << "Could not load first image";
+  ok = readColorImage(image_file2, image2);
+  CHECK(ok) << "Could not load second image";
 
   DistortedEpipolarLineFinder line_finder(camera2, F);
   line_finder.init();
 
   cv::Mat K1(camera1.matrix());
+  cv::Mat K1_inv = K1.inv();
 
   std::vector<SiftPosition>::const_iterator keypoint;
   for (keypoint = keypoints.begin(); keypoint != keypoints.end(); ++keypoint) {
-    cv::Point2d x1(keypoint->x, keypoint->y);
+    cv::Point2d y1(keypoint->x, keypoint->y);
     // Undo intrinsics, undistort, and re-apply intrinsics.
-    x1 = imagePointFromHomogeneous(K1.inv() * imagePointToHomogeneous(x1));
+    cv::Point2d x1 = imagePointFromHomogeneous(
+        K1_inv * imagePointToHomogeneous(y1));
     x1 = undistort(x1, camera1.distort_w);
     x1 = imagePointFromHomogeneous(K1 * imagePointToHomogeneous(x1));
 
@@ -275,20 +304,25 @@ int main(int argc, char** argv) {
     PixelSet line;
     line_finder.compute(x1, line);
 
-    // Draw line.
-    cv::Mat image = cv::Mat_<uint8_t>(camera2.image_size, 0);
+    cv::Mat display1 = image1.clone();
+    cv::Mat display2 = image2.clone();
+
+    // Show the point in the first image.
+    cv::circle(display1, y1, 4, cv::Scalar(0, 0, 255), 2);
+    cv::circle(display1, y1, 16, cv::Scalar(0, 0, 255), 2);
+    cv::circle(display1, y1, 64, cv::Scalar(0, 0, 255), 2);
+
+    // Show the line in the second image.
     PixelSet::const_iterator pixel;
-
-    cv::Rect bounds(cv::Point(0, 0), camera2.image_size);
-
     for (pixel = line.begin(); pixel != line.end(); ++pixel) {
-      if (bounds.contains(*pixel)) {
-        image.at<uint8_t>(pixel->y, pixel->x) = 255;
-      }
+      cv::circle(display2, *pixel, 2, cv::Scalar(0, 0, 255), -1);
     }
 
-    cv::imshow("line", image);
-    cv::waitKey(10);
+    cv::pyrDown(display1, display1);
+    cv::pyrDown(display2, display2);
+    cv::imshow("Image 1", display1);
+    cv::imshow("Image 2", display2);
+    cv::waitKey();
   }
 
   return 0;
