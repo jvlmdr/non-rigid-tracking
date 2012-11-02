@@ -14,6 +14,7 @@
 #include "util.hpp"
 #include "distorted_epipolar_lines.hpp"
 #include "distortion.hpp"
+#include "extract_sift.hpp"
 
 #include "read_lines.hpp"
 #include "read_image.hpp"
@@ -26,10 +27,13 @@
 #include "iterator_writer.hpp"
 #include "classifier_writer.hpp"
 
+const int NUM_OCTAVE_LAYERS = 3;
+const double SIGMA = 1.6;
+
 std::string makeImageFilename(const std::string& format,
                               const std::string& view,
                               int time) {
-  return boost::str(boost::format(format) % view % time);
+  return boost::str(boost::format(format) % view % (time + 1));
 }
 
 std::string makeViewFilename(const std::string& format,
@@ -60,8 +64,42 @@ void init(int& argc, char**& argv) {
   }
 }
 
-void extractFeaturesAlongLine(const std::vector<cv::Point>& line,
-                              const cv::Mat& image) {
+void extractFeaturesAlongLine(
+    const std::vector<cv::Point>& line,
+    const cv::Mat& image,
+    const std::vector<double> scales,
+    const std::vector<double> angles,
+    std::deque<std::deque<SiftFeature> >& line_features) {
+  line_features.clear();
+
+  SiftExtractor sift(image, NUM_OCTAVE_LAYERS, SIGMA);
+
+  // Extract features along the line at different scales and orientations.
+  std::vector<cv::Point>::const_iterator point;
+  for (point = line.begin(); point != line.end(); ++point) {
+    std::deque<SiftFeature> point_features;
+
+    std::vector<double>::const_iterator scale;
+    for (scale = scales.begin(); scale != scales.end(); ++scale) {
+      std::vector<double>::const_iterator angle;
+      for (angle = angles.begin(); angle != angles.end(); ++angle) {
+        // Extract descriptor.
+        SiftPosition position(point->x, point->y, *scale, *angle);
+        Descriptor descriptor;
+        sift.extractDescriptor(position, descriptor);
+
+        SiftFeature feature;
+        feature.position = position;
+        feature.descriptor.swap(descriptor);
+
+        point_features.push_back(SiftFeature());
+        point_features.back().swap(feature);
+      }
+    }
+
+    line_features.push_back(std::deque<SiftFeature>());
+    line_features.back().swap(point_features);
+  }
 }
 
 void extractExamplesForView(const TrackList<SiftFeature>& tracks,
@@ -70,7 +108,9 @@ void extractExamplesForView(const TrackList<SiftFeature>& tracks,
                             const CameraProperties& camera2,
                             const std::string& image_format,
                             const std::string& view,
-                            int time) {
+                            int time,
+                            const std::vector<double>& scales,
+                            const std::vector<double>& angles) {
   // March along epipolar line.
   DistortedEpipolarRasterizer rasterizer(camera2, F);
   rasterizer.init();
@@ -101,7 +141,8 @@ void extractExamplesForView(const TrackList<SiftFeature>& tracks,
     bool ok = readGrayImage(image_file, image);
     CHECK(ok) << "Could not load image";
 
-    extractFeaturesAlongLine(line, image);
+    std::deque<std::deque<SiftFeature> > features;
+    extractFeaturesAlongLine(line, image, scales, angles, features);
   }
 }
 
@@ -166,11 +207,27 @@ int main(int argc, char** argv) {
       ok = load(camera_file2, camera2, camera_reader);
       CHECK(ok) << "Could not load intrinsics for second camera";
 
+      std::vector<double> scales;
+      scales.push_back(4);
+      scales.push_back(8);
+      scales.push_back(16);
+      scales.push_back(32);
+      scales.push_back(64);
+
+      std::vector<double> angles;
+      angles.push_back(0 * M_PI / 4.);
+      angles.push_back(1 * M_PI / 4.);
+      angles.push_back(2 * M_PI / 4.);
+      angles.push_back(3 * M_PI / 4.);
+      angles.push_back(4 * M_PI / 4.);
+      angles.push_back(5 * M_PI / 4.);
+      angles.push_back(6 * M_PI / 4.);
+      angles.push_back(7 * M_PI / 4.);
+
       extractExamplesForView(features, F, camera1, camera2, image_format,
-          view_names[view2], time);
+          view_names[view2], time, scales, angles);
     }
   }
-
 
   return 0;
 }
