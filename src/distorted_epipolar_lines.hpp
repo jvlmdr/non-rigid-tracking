@@ -2,7 +2,7 @@
 #include <opencv2/core/core.hpp>
 #include "camera_properties.hpp"
 
-class DistortedEpipolarLineFinder {
+class DistortedEpipolarRasterizer {
   public:
     struct ComparePoints {
       bool operator()(const cv::Point& p, const cv::Point& q);
@@ -10,7 +10,7 @@ class DistortedEpipolarLineFinder {
 
     typedef std::set<cv::Point, ComparePoints> PixelSet;
 
-    DistortedEpipolarLineFinder(const CameraProperties& camera2,
+    DistortedEpipolarRasterizer(const CameraProperties& camera2,
                                 const cv::Matx33d& F);
 
     void init();

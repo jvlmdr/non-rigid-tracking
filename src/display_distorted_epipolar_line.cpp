@@ -82,7 +82,7 @@ int main(int argc, char** argv) {
   ok = readColorImage(image_file2, image2);
   CHECK(ok) << "Could not load second image";
 
-  DistortedEpipolarLineFinder line_finder(camera2, F);
+  DistortedEpipolarRasterizer line_finder(camera2, F);
   line_finder.init();
 
   cv::Mat K1(camera1.matrix());
@@ -98,7 +98,7 @@ int main(int argc, char** argv) {
     x1 = imagePointFromHomogeneous(K1 * imagePointToHomogeneous(x1));
 
     // Find line.
-    DistortedEpipolarLineFinder::PixelSet line;
+    DistortedEpipolarRasterizer::PixelSet line;
     line_finder.compute(x1, line);
 
     cv::Mat display1 = image1.clone();
@@ -110,7 +110,7 @@ int main(int argc, char** argv) {
     cv::circle(display1, y1, 64, cv::Scalar(0, 0, 255), 2);
 
     // Show the line in the second image.
-    DistortedEpipolarLineFinder::PixelSet::const_iterator pixel;
+    DistortedEpipolarRasterizer::PixelSet::const_iterator pixel;
     for (pixel = line.begin(); pixel != line.end(); ++pixel) {
       cv::circle(display2, *pixel, 2, cv::Scalar(0, 0, 255), -1);
     }

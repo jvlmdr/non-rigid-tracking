@@ -64,7 +64,7 @@ bool fourConnected(const cv::Point2d& p, const cv::Point2d& q) {
 
 ////////////////////////////////////////////////////////////////////////////////
 
-bool DistortedEpipolarLineFinder::ComparePoints::operator()(
+bool DistortedEpipolarRasterizer::ComparePoints::operator()(
     const cv::Point& p,
     const cv::Point& q) {
   if (p.x != p.y) {
@@ -74,11 +74,11 @@ bool DistortedEpipolarLineFinder::ComparePoints::operator()(
   }
 }
 
-DistortedEpipolarLineFinder::DistortedEpipolarLineFinder(
+DistortedEpipolarRasterizer::DistortedEpipolarRasterizer(
     const CameraProperties& camera,
     const cv::Matx33d& F) : camera_(&camera), F_(F) {}
 
-void DistortedEpipolarLineFinder::init() {
+void DistortedEpipolarRasterizer::init() {
   // Get the four points at the bounds of image 2.
   std::vector<cv::Point2d> corners;
   int w = camera_->image_size.width;
@@ -118,7 +118,7 @@ void DistortedEpipolarLineFinder::init() {
 }
 
 // x1 must be undistorted.
-void DistortedEpipolarLineFinder::compute(const cv::Point2d& x1,
+void DistortedEpipolarRasterizer::compute(const cv::Point2d& x1,
                                           PixelSet& line) const {
   typedef std::pair<double, double> Interval;
 
