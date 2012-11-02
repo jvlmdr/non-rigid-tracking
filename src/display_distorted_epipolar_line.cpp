@@ -82,8 +82,8 @@ int main(int argc, char** argv) {
   ok = readColorImage(image_file2, image2);
   CHECK(ok) << "Could not load second image";
 
-  DistortedEpipolarRasterizer line_finder(camera2, F);
-  line_finder.init();
+  DistortedEpipolarRasterizer rasterizer(camera2, F);
+  rasterizer.init();
 
   cv::Mat K1(camera1.matrix());
   cv::Mat K1_inv = K1.inv();
@@ -92,14 +92,13 @@ int main(int argc, char** argv) {
   for (keypoint = keypoints.begin(); keypoint != keypoints.end(); ++keypoint) {
     cv::Point2d y1(keypoint->x, keypoint->y);
     // Undo intrinsics, undistort, and re-apply intrinsics.
-    cv::Point2d x1 = imagePointFromHomogeneous(
-        K1_inv * imagePointToHomogeneous(y1));
+    cv::Point2d x1 = affineTransformImagePoint(y1, K1_inv);
     x1 = undistort(x1, camera1.distort_w);
-    x1 = imagePointFromHomogeneous(K1 * imagePointToHomogeneous(x1));
+    x1 = affineTransformImagePoint(x1, K1);
 
     // Find line.
     DistortedEpipolarRasterizer::PixelSet line;
-    line_finder.compute(x1, line);
+    rasterizer.compute(x1, line);
 
     cv::Mat display1 = image1.clone();
     cv::Mat display2 = image2.clone();

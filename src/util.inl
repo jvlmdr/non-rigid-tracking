@@ -64,6 +64,11 @@ inline void imagePointsFromHomogeneous(const cv::Mat& matrix,
   }
 }
 
+inline cv::Point2d affineTransformImagePoint(const cv::Point2d& x,
+                                             const cv::Mat& A) {
+  return imagePointFromHomogeneous(A * imagePointToHomogeneous(x));
+}
+
 template<class T>
 T* takeAddress(T& x) {
   return &x;

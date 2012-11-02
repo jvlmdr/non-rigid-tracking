@@ -18,6 +18,9 @@ inline void imagePointsToHomogeneous(const std::vector<cv::Point2d>& points,
 inline void imagePointsFromHomogeneous(const cv::Mat& matrix,
                                        std::vector<cv::Point2d>& points);
 
+inline cv::Point2d affineTransformImagePoint(const cv::Point2d& x,
+                                             const cv::Mat& A);
+
 double cond(const cv::Mat& A);
 
 template<class T>
