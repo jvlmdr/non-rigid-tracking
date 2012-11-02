@@ -1,22 +1,16 @@
-#include <set>
+#include <vector>
 #include <opencv2/core/core.hpp>
 #include "camera_properties.hpp"
 
 class DistortedEpipolarRasterizer {
   public:
-    struct ComparePoints {
-      bool operator()(const cv::Point& p, const cv::Point& q);
-    };
-
-    typedef std::set<cv::Point, ComparePoints> PixelSet;
-
     DistortedEpipolarRasterizer(const CameraProperties& camera2,
                                 const cv::Matx33d& F);
 
     void init();
 
     // Computes an epipolar line given 
-    void compute(const cv::Point2d& x, PixelSet& line) const;
+    void compute(const cv::Point2d& x, std::vector<cv::Point>& line) const;
 
   private:
     const CameraProperties* camera_;

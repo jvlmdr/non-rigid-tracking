@@ -1,10 +1,27 @@
 #include "distorted_epipolar_lines.hpp"
-#include <vector>
+#include <set>
 #include <stack>
 #include <numeric>
 #include <utility>
-#include "util.hpp"
+#include <boost/bind.hpp>
 #include "distortion.hpp"
+#include "util.hpp"
+
+struct ComparePoints {
+  bool operator()(const cv::Point& p, const cv::Point& q);
+};
+
+bool ComparePoints::operator()(
+    const cv::Point& p,
+    const cv::Point& q) {
+  if (p.x != p.y) {
+    return p.x < q.x;
+  } else {
+    return p.y < q.y;
+  }
+}
+
+typedef std::set<cv::Point, ComparePoints> PixelSet;
 
 // Solves:
 // x1^2 + x2^2 = r^2          (1)
@@ -64,16 +81,6 @@ bool fourConnected(const cv::Point2d& p, const cv::Point2d& q) {
 
 ////////////////////////////////////////////////////////////////////////////////
 
-bool DistortedEpipolarRasterizer::ComparePoints::operator()(
-    const cv::Point& p,
-    const cv::Point& q) {
-  if (p.x != p.y) {
-    return p.x < q.x;
-  } else {
-    return p.y < q.y;
-  }
-}
-
 DistortedEpipolarRasterizer::DistortedEpipolarRasterizer(
     const CameraProperties& camera,
     const cv::Matx33d& F) : camera_(&camera), F_(F) {}
@@ -117,11 +124,17 @@ void DistortedEpipolarRasterizer::init() {
   radius_ = undistortRadius(distorted_radius, camera_->distort_w);
 }
 
+bool notInside(const cv::Point& pixel, const cv::Rect& bounds) {
+  return !bounds.contains(pixel);
+}
+
 // x1 must be undistorted.
 void DistortedEpipolarRasterizer::compute(const cv::Point2d& x1,
-                                          PixelSet& line) const {
+                                          std::vector<cv::Point>& line) const {
   typedef std::pair<double, double> Interval;
 
+  // Maintain vector to preserve ordering of epipolar line.
+  PixelSet pixels;
   line.clear();
 
   // Find co-ordinates of epipolar line. Given an uncalibrated point in image 1,
@@ -162,9 +175,16 @@ void DistortedEpipolarRasterizer::compute(const cv::Point2d& x1,
       // Quantize to pixels.
       cv::Point p = u;
       cv::Point q = v;
+
       // Add to line.
-      line.insert(p);
-      line.insert(q);
+      if (pixels.find(p) == pixels.end()) {
+        pixels.insert(p);
+        line.push_back(p);
+      }
+      if (pixels.find(q) == pixels.end()) {
+        pixels.insert(q);
+        line.push_back(q);
+      }
 
       // Recurse if points are not connected.
       if (!fourConnected(p, q)) {
@@ -178,13 +198,9 @@ void DistortedEpipolarRasterizer::compute(const cv::Point2d& x1,
   // Remove pixels which are not inside the image.
   cv::Rect bounds(cv::Point(0, 0), camera_->image_size);
 
-  PixelSet::iterator pixel = line.begin();
-  while (pixel != line.end()) {
-    if (!bounds.contains(*pixel)) {
-      line.erase(pixel++);
-    } else {
-      ++pixel;
-    }
-  }
+  std::vector<cv::Point> internal;
+  std::remove_copy_if(line.begin(), line.end(), std::back_inserter(internal),
+      boost::bind(notInside, _1, bounds));
+  line.swap(internal);
 }
 

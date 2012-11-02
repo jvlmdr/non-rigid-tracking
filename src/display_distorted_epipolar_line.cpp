@@ -97,7 +97,7 @@ int main(int argc, char** argv) {
     x1 = affineTransformImagePoint(x1, K1);
 
     // Find line.
-    DistortedEpipolarRasterizer::PixelSet line;
+    std::vector<cv::Point> line;
     rasterizer.compute(x1, line);
 
     cv::Mat display1 = image1.clone();
@@ -109,7 +109,7 @@ int main(int argc, char** argv) {
     cv::circle(display1, y1, 64, cv::Scalar(0, 0, 255), 2);
 
     // Show the line in the second image.
-    DistortedEpipolarRasterizer::PixelSet::const_iterator pixel;
+    std::vector<cv::Point>::const_iterator pixel;
     for (pixel = line.begin(); pixel != line.end(); ++pixel) {
       cv::circle(display2, *pixel, 2, cv::Scalar(0, 0, 255), -1);
     }

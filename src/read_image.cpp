@@ -24,3 +24,8 @@ bool readImage(const std::string& filename, cv::Mat& color, cv::Mat& gray) {
 
   return true;
 }
+
+bool readGrayImage(const std::string& filename, cv::Mat& image) {
+  cv::Mat color;
+  return readImage(filename, color, image);
+}

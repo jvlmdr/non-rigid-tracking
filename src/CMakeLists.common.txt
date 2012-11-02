@@ -570,3 +570,21 @@ ADD_EXECUTABLE(display-distorted-epipolar-line
   read_image.cpp)
 TARGET_LINK_LIBRARIES(display-distorted-epipolar-line glog gflags)
 TARGET_LINK_LIBRARIES(display-distorted-epipolar-line ${OpenCV_LIBS})
+
+ADD_EXECUTABLE(extract-multiview-examples
+  extract_multiview_examples.cpp
+  distortion.cpp
+  distorted_epipolar_lines.cpp
+  sift_feature.cpp
+  sift_position.cpp
+  descriptor.cpp
+  camera_properties.cpp
+  sift_feature_reader.cpp
+  sift_position_reader.cpp
+  descriptor_reader.cpp
+  camera_properties_reader.cpp
+  matrix_reader.cpp
+  read_lines.cpp
+  read_image.cpp)
+TARGET_LINK_LIBRARIES(extract-multiview-examples glog gflags)
+TARGET_LINK_LIBRARIES(extract-multiview-examples ${OpenCV_LIBS})
