@@ -579,6 +579,7 @@ ADD_EXECUTABLE(extract-multiview-examples
   sift_position.cpp
   descriptor.cpp
   camera_properties.cpp
+  extract_sift.cpp
   sift_feature_reader.cpp
   sift_position_reader.cpp
   descriptor_reader.cpp

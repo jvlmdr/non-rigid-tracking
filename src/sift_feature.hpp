@@ -10,6 +10,8 @@ struct SiftFeature {
 
   SiftFeature();
   SiftFeature(const SiftPosition& position, const Descriptor& descriptor);
+
+  void swap(SiftFeature& other);
 };
 
 #endif
