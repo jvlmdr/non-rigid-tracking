@@ -588,3 +588,9 @@ ADD_EXECUTABLE(extract-multiview-examples
   read_image.cpp)
 TARGET_LINK_LIBRARIES(extract-multiview-examples glog gflags)
 TARGET_LINK_LIBRARIES(extract-multiview-examples ${OpenCV_LIBS})
+
+ADD_EXECUTABLE(linear-time-offline-tracking
+  linear_time_offline_tracking.cpp
+  read_image.cpp)
+TARGET_LINK_LIBRARIES(linear-time-offline-tracking glog gflags)
+TARGET_LINK_LIBRARIES(linear-time-offline-tracking ${OpenCV_LIBS})

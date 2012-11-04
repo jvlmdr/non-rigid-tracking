@@ -7,7 +7,7 @@ bool readColorImage(const std::string& filename, cv::Mat& image) {
   // Attempt to read next image.
   image = cv::imread(filename, 1);
   if (image.empty()) {
-    LOG(WARNING) << "Could not open \"" << filename << "\"";
+    LOG(WARNING) << "Could not open `" << filename << "'";
     return false;
   }
 
