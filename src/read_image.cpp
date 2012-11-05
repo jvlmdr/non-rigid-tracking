@@ -20,7 +20,7 @@ bool readImage(const std::string& filename, cv::Mat& color, cv::Mat& gray) {
   }
 
   // Convert to gray.
-  cvtColor(color, gray, CV_BGR2GRAY);
+  cv::cvtColor(color, gray, CV_BGR2GRAY);
 
   return true;
 }

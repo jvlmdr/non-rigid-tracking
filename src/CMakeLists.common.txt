@@ -592,6 +592,13 @@ TARGET_LINK_LIBRARIES(extract-multiview-examples ${OpenCV_LIBS})
 
 ADD_EXECUTABLE(linear-time-offline-tracking
   linear_time_offline_tracking.cpp
+  viterbi.cpp
   read_image.cpp)
 TARGET_LINK_LIBRARIES(linear-time-offline-tracking glog gflags)
 TARGET_LINK_LIBRARIES(linear-time-offline-tracking ${OpenCV_LIBS})
+
+ADD_EXECUTABLE(viterbi-unittest
+  viterbi_unittest.cpp
+  viterbi.cpp)
+TARGET_LINK_LIBRARIES(viterbi-unittest gtest_main gtest gflags glog)
+TARGET_LINK_LIBRARIES(viterbi-unittest ${OpenCV_LIBS})

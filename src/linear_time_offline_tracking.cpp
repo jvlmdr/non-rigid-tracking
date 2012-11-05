@@ -1,4 +1,6 @@
 #include <string>
+#include <queue>
+#include <vector>
 #include <sstream>
 #include <cstdlib>
 #include <glog/logging.h>
@@ -11,6 +13,7 @@
 
 #include "track_list.hpp"
 #include "track.hpp"
+#include "viterbi.hpp"
 
 #include "read_image.hpp"
 
@@ -69,9 +72,42 @@ void loadImages(const std::string& format,
   }
 }
 
-void onMouse(int event, int x, int y, int, void*) {
-  if (event == CV_EVENT_LBUTTONDOWN) {
-    LOG(INFO) << "Clicked (" << x << ", " << y << ")";
+struct Parameters {
+  cv::Size size;
+};
+
+struct State {
+  bool paused;
+  int time;
+  const std::vector<cv::Mat>* images;
+};
+
+struct Data {
+  State* state;
+  const Parameters* parameters;
+};
+
+void onMouse(int event, int x, int y, int, void* tag) {
+  Data* data = static_cast<Data*>(tag);
+  const Parameters& parameters = *data->parameters;
+  State& state = *data->state;
+
+  if (state.paused) {
+    if (event == CV_EVENT_LBUTTONDOWN) {
+      // Track the point.
+
+      // Extract a patch for cross-correlation.
+      int x_radius = (parameters.size.width - 1) / 2;
+      int y_radius = (parameters.size.height - 1) / 2;
+      cv::Point offset(x - x_radius, y - y_radius);
+      cv::Rect region(offset, parameters.size);
+
+      cv::Mat original = (*state.images)[state.time](region);
+
+      //linearTimeOfflineTracking(original, state.images, 1);
+
+      LOG(INFO) << "Clicked (" << x << ", " << y << ", " << state.time << ")";
+    }
   }
 }
 
@@ -85,41 +121,63 @@ int main(int argc, char** argv) {
 
   // Pre-load images.
   LOG(INFO) << "Loading images...";
-  std::vector<cv::Mat> images;
-  loadImages(image_format, num_frames, screen_size, images);
-  LOG(INFO) << "Loaded " << images.size() << " images";
+  std::vector<cv::Mat> color_images;
+  loadImages(image_format, num_frames, screen_size, color_images);
+
+  // Convert to grayscale.
+  LOG(INFO) << "Loaded " << color_images.size() << " images";
+  std::vector<cv::Mat> gray_images;
+  std::vector<cv::Mat>::const_iterator color_image;
+  for (color_image = color_images.begin();
+       color_image != color_images.end();
+       ++color_image) {
+    cv::Mat gray_image;
+    cv::cvtColor(*color_image, gray_image, CV_BGR2GRAY);
+    gray_images.push_back(gray_image);
+  }
 
   TrackList<cv::Point2d> track;
 
-  int t = 0;
   bool exit = false;
-  bool pause = false;
+  State state;
+  state.time = 0;
+  state.paused = false;
+  state.images = &gray_images;
+
+  Parameters parameters;
+  parameters.size = cv::Size(11, 11);
+
+  Data data;
+  data.state = &state;
+  data.parameters = &parameters;
 
   cv::namedWindow("video");
-  cv::setMouseCallback("video", onMouse);
+  cv::setMouseCallback("video", onMouse, &data);
 
   while (!exit) {
-    const cv::Mat& image = images[t];
-
-    cv::imshow("video", image);
-
     char c = cv::waitKey(30);
 
     if (c == 27) {
       exit = true;
-    } else if (c == ' ') {
-      pause = !pause;
-    } else if (c == 'j') {
-      pause = true;
-      t = (t + 1) % num_frames;
-    } else if (c == 'k') {
-      pause = true;
-      t = (t + num_frames - 1) % num_frames;
-    }
+    } else {
+      if (c == ' ') {
+        state.paused = !state.paused;
+      }
 
-    if (!exit) {
-      if (!pause) {
-        t = (t + 1) % num_frames;
+      if (!state.paused) {
+        // Show next frame.
+        state.time = (state.time + 1) % num_frames;
+        cv::imshow("video", color_images[state.time]);
+      } else {
+        if (c == 'j') {
+          // Show next frame.
+          state.time = (state.time + 1) % num_frames;
+          cv::imshow("video", color_images[state.time]);
+        } else if (c == 'k') {
+          // Show previous frame.
+          state.time = (state.time + num_frames - 1) % num_frames;
+          cv::imshow("video", color_images[state.time]);
+        }
       }
     }
   }
