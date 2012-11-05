@@ -5,7 +5,7 @@
 #include "gtest/gtest.h"
 #include "glog/logging.h"
 
-TEST(SolveViterbi, BruteForce) {
+TEST(SolveViterbi, VersusExhaustive) {
   int n = 4;
   int k = 30;
 
@@ -32,9 +32,9 @@ TEST(SolveViterbi, BruteForce) {
       for (x[2] = 0; x[2] < k; x[2] += 1) {
         for (x[3] = 0; x[3] < k; x[3] += 1) {
           double f = g[0][x[0]] + g[1][x[1]] + g[2][x[2]] + g[3][x[3]] +
-              h[0].at<double>(x[0], x[1]) +
-              h[1].at<double>(x[1], x[2]) +
-              h[2].at<double>(x[2], x[3]);
+              h[0].at<double>(x[1], x[0]) +
+              h[1].at<double>(x[2], x[1]) +
+              h[2].at<double>(x[3], x[2]);
 
           if (x_brute.empty() || f < f_brute) {
             f_brute = f;
@@ -51,7 +51,7 @@ TEST(SolveViterbi, BruteForce) {
   ASSERT_EQ(f_brute, f_viterbi);
 }
 
-TEST(SolveViterbiQuadratic, BruteForce) {
+TEST(SolveViterbiQuadratic, VersusExhaustive) {
   int n = 4;
   int k = 30;
 
@@ -91,7 +91,7 @@ TEST(SolveViterbiQuadratic, BruteForce) {
   ASSERT_EQ(f_brute, f_viterbi);
 }
 
-TEST(SolveViterbiQuadratic2D, BruteForce) {
+TEST(SolveViterbiQuadratic2D, VersusExhaustive) {
   int n = 4;
   int kx = 5;
   int ky = 6;
@@ -147,4 +147,45 @@ TEST(SolveViterbiQuadratic2D, BruteForce) {
   double f_viterbi = solveViterbiQuadratic2D(g, x_viterbi);
 
   ASSERT_EQ(f_brute, f_viterbi);
+}
+
+TEST(SolveViterbiQuadratic2D, VersusNaive) {
+  int n = 256;
+  int kx = 5;
+  int ky = 6;
+  int k = kx * ky;
+
+  std::vector<cv::Mat> g_matrix(n);
+  std::deque<std::vector<double> > g_vector(n);
+  std::vector<cv::Mat> h(n);
+
+  for (int i = 0; i < n; i += 1) {
+    g_matrix[i] = cv::Mat_<double>(ky, kx, 0.);
+    cv::randn(g_matrix[i], 0, 1);
+
+    g_vector[i] = std::vector<double>(k);
+    h[i] = cv::Mat_<double>(k, k);
+
+    for (int x = 0; x < kx; x += 1) {
+      for (int y = 0; y < ky; y += 1) {
+        int p = y + ky * x;
+        g_vector[i][p] = g_matrix[i].at<double>(y, x);
+
+        for (int u = 0; u < kx; u += 1) {
+          for (int v = 0; v < ky; v += 1) {
+            int q = v + ky * u;
+            h[i].at<double>(p, q) = (u - x) * (u - x) + (v - y) * (v - y);
+          }
+        }
+      }
+    }
+  }
+
+  std::vector<int> x_vector;
+  double f_vector = solveViterbi(g_vector, h, x_vector);
+
+  std::vector<cv::Vec2i> x_matrix;
+  double f_matrix = solveViterbiQuadratic2D(g_matrix, x_matrix);
+
+  ASSERT_EQ(f_vector, f_matrix);
 }

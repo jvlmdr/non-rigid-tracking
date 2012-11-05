@@ -42,7 +42,7 @@ double solveViterbi(const std::deque<std::vector<double> >& g,
   for (int i = 0; i < n - 1; i += 1) {
     // Compute distance transform for next variable.
     std::vector<double> d;
-    distanceTransform(f, h[i].t(), d, args[i]);
+    distanceTransform(f, h[i], d, args[i]);
 
     int k = g[i + 1].size();
     f.assign(k, 0);
