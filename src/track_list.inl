@@ -151,6 +151,25 @@ TrackListTimeIterator<T>::TrackListTimeIterator(const TrackList<T>& tracks)
   }
 }
 
+template<class T>
+TrackListTimeIterator<T>::TrackListTimeIterator(const TrackList<T>& tracks,
+                                                int t)
+    : cursors_(), t_(t) {
+  // Iterate through tracks.
+  typename TrackList<T>::const_iterator track = tracks.begin();
+  // Monitor track index.
+  int i = 0;
+
+  for (track = tracks.begin(); track != tracks.end(); ++track) {
+    // Add a cursor for each non-empty track.
+    if (!track->empty()) {
+      cursors_[i] = TrackIterator<T>(*track, t);
+    }
+
+    i += 1;
+  }
+}
+
 // Copy constructor.
 template<class T>
 TrackListTimeIterator<T>::TrackListTimeIterator(

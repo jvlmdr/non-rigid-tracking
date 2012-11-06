@@ -20,6 +20,9 @@
 DEFINE_int32(width, 1280, "Screen width");
 DEFINE_int32(height, 800, "Screen width");
 
+const int RADIUS = 5;
+const int DIAMETER = 2 * RADIUS + 1;
+
 std::string makeFrameFilename(const std::string& format, int time) {
   return boost::str(boost::format(format) % (time + 1));
 }
@@ -73,19 +76,91 @@ void loadImages(const std::string& format,
 }
 
 struct Parameters {
+  const std::vector<cv::Mat>* images;
   cv::Size size;
 };
 
 struct State {
   bool paused;
   int time;
-  const std::vector<cv::Mat>* images;
+  TrackList<cv::Point2d> tracks;
+  //std::vector<cv::Scalar> colors;
 };
 
 struct Data {
   State* state;
   const Parameters* parameters;
 };
+
+void findBestInEveryFrame(const cv::Mat& templ,
+                          const std::vector<cv::Mat>& images,
+                          Track<cv::Point2d>& track) {
+  track.clear();
+
+  LOG(INFO) << "Performing cross-correlation...";
+
+  std::vector<cv::Mat>::const_iterator image;
+  int t = 0;
+
+  for (image = images.begin(); image != images.end(); ++image) {
+    // Evaluate response to template.
+    cv::Mat response;
+    cv::matchTemplate(*image, templ, response, cv::TM_CCORR_NORMED);
+
+    // Convert to 64-bit.
+    response = cv::Mat_<double>(response);
+    response = -1e3 * response;
+
+    // Find min in response.
+    cv::Point arg;
+    cv::minMaxLoc(response, NULL, NULL, &arg, NULL);
+
+    int rx = (templ.cols - 1) / 2 + 1;
+    int ry = (templ.rows - 1) / 2 + 1;
+    arg.x += rx;
+    arg.y += ry;
+
+    track[t] = arg;
+
+    t += 1;
+  }
+}
+
+void linearTimeOfflineTracking(const cv::Mat& templ,
+                               const std::vector<cv::Mat>& images,
+                               double lambda,
+                               Track<cv::Point2d>& track) {
+  // Match the template to every image.
+  std::vector<cv::Mat> responses;
+
+  LOG(INFO) << "Performing cross-correlation...";
+  std::vector<cv::Mat>::const_iterator image;
+  for (image = images.begin(); image != images.end(); ++image) {
+    // Evaluate response to template.
+    cv::Mat response;
+    cv::matchTemplate(*image, templ, response, cv::TM_CCORR_NORMED);
+    // Convert to 64-bit.
+    response = cv::Mat_<double>(response);
+    response = -1. / lambda * response;
+    // Add to list.
+    responses.push_back(response);
+  }
+
+  LOG(INFO) << "Solving dynamic program...";
+  std::vector<cv::Vec2i> x;
+  solveViterbiQuadratic2D(responses, x);
+
+  // Convert to a track.
+  track.clear();
+  int num_frames = images.size();
+
+  for (int t = 0; t < num_frames; t += 1) {
+    int rx = (templ.cols - 1) / 2 + 1;
+    int ry = (templ.rows - 1) / 2 + 1;
+
+    track[t] = cv::Point2d(x[t][1] + rx, x[t][0] + ry);
+  }
+}
 
 void onMouse(int event, int x, int y, int, void* tag) {
   Data* data = static_cast<Data*>(tag);
@@ -94,19 +169,22 @@ void onMouse(int event, int x, int y, int, void* tag) {
 
   if (state.paused) {
     if (event == CV_EVENT_LBUTTONDOWN) {
-      // Track the point.
-
       // Extract a patch for cross-correlation.
       int x_radius = (parameters.size.width - 1) / 2;
       int y_radius = (parameters.size.height - 1) / 2;
       cv::Point offset(x - x_radius, y - y_radius);
       cv::Rect region(offset, parameters.size);
+      cv::Mat original = (*parameters.images)[state.time](region);
 
-      cv::Mat original = (*state.images)[state.time](region);
+      // Track the point.
+      Track<cv::Point2d> track;
+      linearTimeOfflineTracking(original, *parameters.images, 1e-3, track);
+      //findBestInEveryFrame(original, *parameters.images, track);
 
-      //linearTimeOfflineTracking(original, state.images, 1);
+      state.tracks.push_back(Track<cv::Point2d>());
+      state.tracks.back().swap(track);
 
-      LOG(INFO) << "Clicked (" << x << ", " << y << ", " << state.time << ")";
+      state.paused = false;
     }
   }
 }
@@ -141,11 +219,11 @@ int main(int argc, char** argv) {
   bool exit = false;
   State state;
   state.time = 0;
-  state.paused = false;
-  state.images = &gray_images;
+  state.paused = true;
 
   Parameters parameters;
-  parameters.size = cv::Size(11, 11);
+  parameters.size = cv::Size(DIAMETER, DIAMETER);
+  parameters.images = &gray_images;
 
   Data data;
   data.state = &state;
@@ -167,18 +245,34 @@ int main(int argc, char** argv) {
       if (!state.paused) {
         // Show next frame.
         state.time = (state.time + 1) % num_frames;
-        cv::imshow("video", color_images[state.time]);
       } else {
         if (c == 'j') {
           // Show next frame.
           state.time = (state.time + 1) % num_frames;
-          cv::imshow("video", color_images[state.time]);
         } else if (c == 'k') {
           // Show previous frame.
           state.time = (state.time + num_frames - 1) % num_frames;
-          cv::imshow("video", color_images[state.time]);
         }
       }
+
+      cv::Mat display = color_images[state.time].clone();
+
+      // Draw tracks on frame.
+      std::map<int, cv::Point2d> keypoints;
+      TrackListTimeIterator<cv::Point2d> frame(state.tracks, state.time);
+      frame.getPoints(keypoints);
+
+      std::map<int, cv::Point2d>::const_iterator iter;
+      for (iter = keypoints.begin(); iter != keypoints.end(); ++iter) {
+        int index = iter->first;
+        const cv::Point2d& keypoint = iter->second;
+
+        cv::Point2d pt1 = keypoint - cv::Point2d(RADIUS, RADIUS);
+        cv::Point2d pt2 = keypoint + cv::Point2d(RADIUS, RADIUS);
+        cv::rectangle(display, pt1, pt2, cv::Scalar(0, 0, 255), 2);
+      }
+
+      cv::imshow("video", display);
     }
   }
 

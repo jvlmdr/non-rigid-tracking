@@ -49,6 +49,10 @@ TEST(SolveViterbi, VersusExhaustive) {
   double f_viterbi = solveViterbi(g, h, x_viterbi);
 
   ASSERT_EQ(f_brute, f_viterbi);
+
+  for (int i = 0; i < n; i += 1) {
+    ASSERT_EQ(x_brute[i], x_viterbi[i]);
+  }
 }
 
 TEST(SolveViterbiQuadratic, VersusExhaustive) {
@@ -89,12 +93,16 @@ TEST(SolveViterbiQuadratic, VersusExhaustive) {
   double f_viterbi = solveViterbiQuadratic(g, x_viterbi);
 
   ASSERT_EQ(f_brute, f_viterbi);
+
+  for (int i = 0; i < n; i += 1) {
+    ASSERT_EQ(x_brute[i], x_viterbi[i]);
+  }
 }
 
 TEST(SolveViterbiQuadratic2D, VersusExhaustive) {
   int n = 4;
-  int kx = 5;
-  int ky = 6;
+  int kx = 7;
+  int ky = 11;
 
   std::vector<cv::Mat> g(n);
   for (int i = 0; i < n; i += 1) {
@@ -147,29 +155,45 @@ TEST(SolveViterbiQuadratic2D, VersusExhaustive) {
   double f_viterbi = solveViterbiQuadratic2D(g, x_viterbi);
 
   ASSERT_EQ(f_brute, f_viterbi);
+
+  for (int i = 0; i < n; i += 1) {
+    ASSERT_EQ(x_brute[i], x_viterbi[i][1]);
+    ASSERT_EQ(y_brute[i], x_viterbi[i][0]);
+  }
 }
 
 TEST(SolveViterbiQuadratic2D, VersusNaive) {
   int n = 256;
-  int kx = 5;
-  int ky = 6;
+  int kx = 7;
+  int ky = 11;
   int k = kx * ky;
 
   std::vector<cv::Mat> g_matrix(n);
   std::deque<std::vector<double> > g_vector(n);
-  std::vector<cv::Mat> h(n);
+  std::vector<cv::Mat> h(n - 1);
 
   for (int i = 0; i < n; i += 1) {
+    // Set unary terms randomly.
     g_matrix[i] = cv::Mat_<double>(ky, kx, 0.);
     cv::randn(g_matrix[i], 0, 1);
 
+    // Vectorize.
     g_vector[i] = std::vector<double>(k);
+    for (int x = 0; x < kx; x += 1) {
+      for (int y = 0; y < ky; y += 1) {
+        int p = y + ky * x;
+        g_vector[i][p] = g_matrix[i].at<double>(y, x);
+      }
+    }
+  }
+
+  for (int i = 0; i < n - 1; i += 1) {
+    // Compute pairwise terms.
     h[i] = cv::Mat_<double>(k, k);
 
     for (int x = 0; x < kx; x += 1) {
       for (int y = 0; y < ky; y += 1) {
         int p = y + ky * x;
-        g_vector[i][p] = g_matrix[i].at<double>(y, x);
 
         for (int u = 0; u < kx; u += 1) {
           for (int v = 0; v < ky; v += 1) {
@@ -188,4 +212,9 @@ TEST(SolveViterbiQuadratic2D, VersusNaive) {
   double f_matrix = solveViterbiQuadratic2D(g_matrix, x_matrix);
 
   ASSERT_EQ(f_vector, f_matrix);
+
+  for (int i = 0; i < n; i += 1) {
+    ASSERT_EQ(x_matrix[i][1], x_vector[i] / ky);
+    ASSERT_EQ(x_matrix[i][0], x_vector[i] % ky);
+  }
 }

@@ -184,8 +184,8 @@ void quadraticDistanceTransform2D(const cv::Mat& f, cv::Mat& d, cv::Mat& arg) {
   CHECK(f.type() == cv::DataType<double>::type);
 
   // Distance transform for j given i.
-  cv::Mat d_i(f.rows, f.cols, cv::DataType<double>::type);
-  cv::Mat arg_i(f.rows, f.cols, cv::DataType<int>::type);
+  d.create(f.rows, f.cols, cv::DataType<double>::type);
+  cv::Mat j_star(f.rows, f.cols, cv::DataType<int>::type);
 
   // Distance transform each row.
   for (int i = 0; i < f.rows; i += 1) {
@@ -201,20 +201,19 @@ void quadraticDistanceTransform2D(const cv::Mat& f, cv::Mat& d, cv::Mat& arg) {
     quadraticDistanceTransform(g, y, x);
 
     for (int j = 0; j < f.cols; j += 1) {
-      d_i.at<double>(i, j) = y[j];
-      arg_i.at<int>(i, j) = x[j];
+      d.at<double>(i, j) = y[j];
+      j_star.at<int>(i, j) = x[j];
     }
   }
 
-  d.create(f.rows, f.cols, cv::DataType<double>::type);
-  arg.create(f.rows, f.cols, cv::DataType<cv::Vec2i>::type);
+  cv::Mat i_star(f.rows, f.cols, cv::DataType<int>::type);
 
   // Distance transform each column.
   for (int j = 0; j < f.cols; j += 1) {
     // Copy column into vector.
     std::vector<double> g(f.rows);
     for (int i = 0; i < f.rows; i += 1) {
-      g[i] = d_i.at<double>(i, j);
+      g[i] = d.at<double>(i, j);
     }
 
     // Find distance transform.
@@ -224,7 +223,17 @@ void quadraticDistanceTransform2D(const cv::Mat& f, cv::Mat& d, cv::Mat& arg) {
 
     for (int i = 0; i < f.rows; i += 1) {
       d.at<double>(i, j) = y[i];
-      arg.at<cv::Vec2i>(i, j) = cv::Vec2i(x[i], arg_i.at<double>(x[i], j));
+      i_star.at<int>(i, j) = x[i];
+    }
+  }
+
+  arg.create(f.rows, f.cols, cv::DataType<cv::Vec2i>::type);
+
+  for (int i = 0; i < f.rows; i += 1) {
+    for (int j = 0; j < f.cols; j += 1) {
+      int i_dash = i_star.at<int>(i, j);
+      int j_dash = j_star.at<int>(i_dash, j);
+      arg.at<cv::Vec2i>(i, j) = cv::Vec2i(i_dash, j_dash);
     }
   }
 }
@@ -251,7 +260,7 @@ double solveViterbiQuadratic2D(const std::vector<cv::Mat>& g,
   double f_star;
   cv::Point point;
   cv::minMaxLoc(f, &f_star, NULL, &point, NULL);
-  // Remember to convert from (x, y) back to (i, j).
+  // Convert from (x, y) back to (i, j).
   x[n - 1] = cv::Vec2i(point.y, point.x);
 
   // Trace solutions back.

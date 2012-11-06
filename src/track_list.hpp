@@ -68,17 +68,19 @@ void swap(TrackList<T>& lhs, TrackList<T>& rhs);
 template<class T>
 class TrackListTimeIterator {
   public:
+    // Initializes at start of tracks.
+    TrackListTimeIterator(const TrackList<T>& tracks);
+    // Initializes at a given frame.
+    TrackListTimeIterator(const TrackList<T>& tracks, int t);
+    // Copy constructor.
+    TrackListTimeIterator(const TrackListTimeIterator& rhs);
+
     typedef std::map<int, T> Points;
 
     // Writes out the points in the current frame.
     void getPoints(Points& points) const;
     // Returns true if this is the last frame.
     bool end() const;
-
-    // Initializes at start of tracks.
-    TrackListTimeIterator(const TrackList<T>& tracks);
-    // Copy constructor.
-    TrackListTimeIterator(const TrackListTimeIterator& rhs);
 
     // Pre-increment.
     TrackListTimeIterator<T>& operator++();
