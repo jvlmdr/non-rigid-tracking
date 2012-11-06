@@ -14,6 +14,7 @@
 #include "track_list.hpp"
 #include "track.hpp"
 #include "viterbi.hpp"
+#include "admm_tracking.hpp"
 
 #include "read_image.hpp"
 
@@ -21,6 +22,7 @@ DEFINE_int32(width, 1280, "Screen width");
 DEFINE_int32(height, 800, "Screen width");
 
 DEFINE_double(lambda, 1., "Temporal regularization");
+DEFINE_double(rho, 1., "ADMM parameter");
 
 const int RADIUS = 5;
 const int DIAMETER = 2 * RADIUS + 1;
@@ -128,6 +130,45 @@ void findBestInEveryFrame(const cv::Mat& templ,
   }
 }
 
+void admmOfflineTracking(const cv::Mat& templ,
+                         const std::vector<cv::Mat>& images,
+                         double lambda,
+                         double rho,
+                         Track<cv::Point2d>& track) {
+  // Match the template to every image.
+  std::vector<cv::Mat> responses;
+
+  LOG(INFO) << "Performing cross-correlation...";
+  std::vector<cv::Mat>::const_iterator image;
+  for (image = images.begin(); image != images.end(); ++image) {
+    // Evaluate response to template.
+    cv::Mat response;
+    cv::matchTemplate(*image, templ, response, cv::TM_CCORR_NORMED);
+    // Convert to 64-bit.
+    response = cv::Mat_<double>(response);
+    response = -1. * response;
+    // Add to list.
+    responses.push_back(response);
+  }
+
+  LOG(INFO) << "Solving ADMM...";
+  std::vector<cv::Point2d> x;
+  findClassifierTrackAdmm(responses, x, lambda, rho);
+
+  /*
+  // Convert to a track.
+  track.clear();
+  int num_frames = images.size();
+
+  for (int t = 0; t < num_frames; t += 1) {
+    int rx = (templ.cols - 1) / 2 + 1;
+    int ry = (templ.rows - 1) / 2 + 1;
+
+    track[t] = cv::Point2d(x[t][1] + rx, x[t][0] + ry);
+  }
+  */
+}
+
 void linearTimeOfflineTracking(const cv::Mat& templ,
                                const std::vector<cv::Mat>& images,
                                double lambda,
@@ -180,8 +221,10 @@ void onMouse(int event, int x, int y, int, void* tag) {
 
       // Track the point.
       Track<cv::Point2d> track;
-      linearTimeOfflineTracking(original, *parameters.images, FLAGS_lambda,
+      admmOfflineTracking(original, *parameters.images, FLAGS_lambda, FLAGS_rho,
           track);
+      //linearTimeOfflineTracking(original, *parameters.images, FLAGS_lambda,
+      //    track);
       //findBestInEveryFrame(original, *parameters.images, track);
 
       state.tracks.push_back(Track<cv::Point2d>());
