@@ -20,6 +20,8 @@
 DEFINE_int32(width, 1280, "Screen width");
 DEFINE_int32(height, 800, "Screen width");
 
+DEFINE_double(lambda, 1., "Temporal regularization");
+
 const int RADIUS = 5;
 const int DIAMETER = 2 * RADIUS + 1;
 
@@ -178,7 +180,8 @@ void onMouse(int event, int x, int y, int, void* tag) {
 
       // Track the point.
       Track<cv::Point2d> track;
-      linearTimeOfflineTracking(original, *parameters.images, 1e-3, track);
+      linearTimeOfflineTracking(original, *parameters.images, FLAGS_lambda,
+          track);
       //findBestInEveryFrame(original, *parameters.images, track);
 
       state.tracks.push_back(Track<cv::Point2d>());
@@ -267,8 +270,8 @@ int main(int argc, char** argv) {
         int index = iter->first;
         const cv::Point2d& keypoint = iter->second;
 
-        cv::Point2d pt1 = keypoint - cv::Point2d(RADIUS, RADIUS);
-        cv::Point2d pt2 = keypoint + cv::Point2d(RADIUS, RADIUS);
+        cv::Point2d pt1 = keypoint - cv::Point2d(RADIUS + 1, RADIUS + 1);
+        cv::Point2d pt2 = keypoint + cv::Point2d(RADIUS + 1, RADIUS + 1);
         cv::rectangle(display, pt1, pt2, cv::Scalar(0, 0, 255), 2);
       }
 
