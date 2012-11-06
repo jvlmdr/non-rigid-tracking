@@ -3,23 +3,20 @@
 
 #include <opencv2/highgui/highgui.hpp>
 
-// z is 1x2, u is 1x2, x is 1x2
-void findBestResponse(const cv::Mat& z,
-                      const cv::Mat& u,
+void findBestResponse(const cv::Point2d& z,
+                      const cv::Point2d& u,
                       const cv::Mat& response,
                       double rho,
-                      cv::Mat& x) {
+                      cv::Point2d& x) {
   cv::Size size = response.size();
 
-  cv::Mat v = z - u;
-  double vx = v.at<double>(0, 0);
-  double vy = v.at<double>(0, 1);
+  cv::Point2d v = z - u;
 
   // Compute distance from v.
   cv::Mat distance = cv::Mat_<double>(size);
   for (int i = 0; i < size.height; i += 1) {
     for (int j = 0; j < size.width; j += 1) {
-      distance.at<double>(i, j) = sqr(i - vy) + sqr(j - vx);
+      distance.at<double>(i, j) = sqr(v.x - j) + sqr(v.y - i);
     }
   }
 
@@ -27,12 +24,21 @@ void findBestResponse(const cv::Mat& z,
   cv::Mat cost = response + rho / 2. * distance;
 
   // Find minimum.
-  cv::Point arg;
   double min;
-  cv::minMaxLoc(cost, &min, NULL, &arg, NULL);
+  cv::Point loc;
+  cv::minMaxLoc(cost, &min, NULL, &loc, NULL);
+  cv::Point2d p = loc;
 
-  x.at<double>(0, 0) = arg.x;
-  x.at<double>(0, 1) = arg.y;
+  // Vector from p to v.
+  cv::Point2d r = v - p;
+
+  // Restrict to half-pixel trust region.
+  double d = cv::norm(r);
+  if (d > 0.5) {
+    x = p + 0.5 / d * r;
+  } else {
+    x = v;
+  }
 }
 
 // x is nx1, u is nx1, z is nx1
@@ -73,8 +79,14 @@ double findClassifierTrackAdmm(const std::vector<cv::Mat>& responses,
   while (true) {
     // Solve first sub-problem.
     for (int t = 0; t < n; t += 1) {
-      cv::Mat dst = x.row(t);
-      findBestResponse(z.row(t), u.row(t), responses[t], rho, dst);
+      cv::Point2d z_t(z.at<double>(t, 0), z.at<double>(t, 1));
+      cv::Point2d u_t(u.at<double>(t, 0), u.at<double>(t, 1));
+
+      cv::Point2d x_t;
+      findBestResponse(z_t, u_t, responses[t], rho, x_t);
+
+      x.at<double>(t, 0) = x_t.x;
+      x.at<double>(t, 1) = x_t.y;
     }
     LOG(INFO) << "x-update:";
     LOG(INFO) << "norm(x - z) => " << cv::norm(x - z);
