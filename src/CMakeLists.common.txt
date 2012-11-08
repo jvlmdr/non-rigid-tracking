@@ -603,3 +603,10 @@ ADD_EXECUTABLE(viterbi-unittest
   viterbi.cpp)
 TARGET_LINK_LIBRARIES(viterbi-unittest gtest_main gtest gflags glog)
 TARGET_LINK_LIBRARIES(viterbi-unittest ${OpenCV_LIBS})
+
+ADD_EXECUTABLE(display-admm-tracking
+  display_admm_tracking.cpp
+  viterbi.cpp
+  read_image.cpp)
+TARGET_LINK_LIBRARIES(display-admm-tracking glog gflags)
+TARGET_LINK_LIBRARIES(display-admm-tracking ${OpenCV_LIBS})

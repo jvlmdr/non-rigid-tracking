@@ -89,7 +89,7 @@ double findClassifierTrackAdmm(const std::vector<cv::Mat>& responses,
       x.at<double>(t, 1) = x_t.y;
     }
     LOG(INFO) << "x-update:";
-    LOG(INFO) << "norm(x - z) => " << cv::norm(x - z);
+    LOG(INFO) << "norm(x - z) => " << cv::norm(x - z) / n;
 
     // Solve second sub-problem.
     for (int d = 0; d < 2; d += 1) {
@@ -101,5 +101,15 @@ double findClassifierTrackAdmm(const std::vector<cv::Mat>& responses,
 
     // Update multipliers.
     u += x - z;
+
+    LOG(INFO) << "x[0] => " << x.row(0);
+    LOG(INFO) << "z[0] => " << z.row(0);
+    LOG(INFO);
+    LOG(INFO) << "x[1] => " << x.row(1);
+    LOG(INFO) << "z[1] => " << z.row(1);
+    LOG(INFO);
+    LOG(INFO) << "x[2] => " << x.row(2);
+    LOG(INFO) << "z[2] => " << z.row(2);
+    LOG(INFO);
   }
 }
