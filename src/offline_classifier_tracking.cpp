@@ -18,6 +18,9 @@
 
 #include "read_image.hpp"
 
+#include "track_list_writer.hpp"
+#include "image_point_writer.hpp"
+
 DEFINE_int32(width, 1280, "Screen width");
 DEFINE_int32(height, 800, "Screen width");
 
@@ -35,13 +38,13 @@ void init(int& argc, char**& argv) {
   std::ostringstream usage;
   usage << "Linear time offline tracking" << std::endl;
   usage << std::endl;
-  usage << argv[0] << " image-format num-frames" << std::endl;
+  usage << argv[0] << " image-format num-frames points tracks" << std::endl;
   google::SetUsageMessage(usage.str());
 
   google::InitGoogleLogging(argv[0]);
   google::ParseCommandLineFlags(&argc, &argv, true);
 
-  if (argc != 3) {
+  if (argc != 5) {
     google::ShowUsageWithFlags(argv[0]);
     std::exit(1);
   }
@@ -88,6 +91,7 @@ struct State {
   bool paused;
   int time;
   TrackList<cv::Point2d> tracks;
+  TrackList<cv::Point> seeds;
   //std::vector<cv::Scalar> colors;
 };
 
@@ -175,6 +179,7 @@ void linearTimeOfflineTracking(const cv::Mat& templ,
                                Track<cv::Point2d>& track) {
   // Match the template to every image.
   std::vector<cv::Mat> responses;
+  int n = images.size();
 
   LOG(INFO) << "Performing cross-correlation...";
   std::vector<cv::Mat>::const_iterator image;
@@ -184,7 +189,7 @@ void linearTimeOfflineTracking(const cv::Mat& templ,
     cv::matchTemplate(*image, templ, response, cv::TM_CCORR_NORMED);
     // Convert to 64-bit.
     response = cv::Mat_<double>(response);
-    response = -1. / lambda * response;
+    response = -1. / (lambda / n) * response;
     // Add to list.
     responses.push_back(response);
   }
@@ -215,20 +220,24 @@ void onMouse(int event, int x, int y, int, void* tag) {
       // Extract a patch for cross-correlation.
       int x_radius = (parameters.size.width - 1) / 2;
       int y_radius = (parameters.size.height - 1) / 2;
-      cv::Point offset(x - x_radius, y - y_radius);
+      cv::Point offset(x - x_radius - 1, y - y_radius - 1);
       cv::Rect region(offset, parameters.size);
       cv::Mat original = (*parameters.images)[state.time](region);
+      cv::imshow("template", original);
 
       // Track the point.
       Track<cv::Point2d> track;
-      admmOfflineTracking(original, *parameters.images, FLAGS_lambda, FLAGS_rho,
-          track);
-      //linearTimeOfflineTracking(original, *parameters.images, FLAGS_lambda,
+      //admmOfflineTracking(original, *parameters.images, FLAGS_lambda, FLAGS_rho,
       //    track);
+      linearTimeOfflineTracking(original, *parameters.images, FLAGS_lambda,
+          track);
       //findBestInEveryFrame(original, *parameters.images, track);
 
       state.tracks.push_back(Track<cv::Point2d>());
       state.tracks.back().swap(track);
+
+      state.seeds.push_back(Track<cv::Point>());
+      state.seeds.back()[state.time] = cv::Point(x, y);
 
       state.paused = false;
     }
@@ -240,6 +249,9 @@ int main(int argc, char** argv) {
 
   std::string image_format = argv[1];
   int num_frames = boost::lexical_cast<int>(argv[2]);
+  std::string points_file = argv[3];
+  std::string tracks_file = argv[4];
+
   CHECK(num_frames > 0) << "Need at least one frame, two would be great";
   cv::Size screen_size(FLAGS_width, FLAGS_height);
 
@@ -310,7 +322,6 @@ int main(int argc, char** argv) {
 
       std::map<int, cv::Point2d>::const_iterator iter;
       for (iter = keypoints.begin(); iter != keypoints.end(); ++iter) {
-        int index = iter->first;
         const cv::Point2d& keypoint = iter->second;
 
         cv::Point2d pt1 = keypoint - cv::Point2d(RADIUS + 1, RADIUS + 1);
@@ -321,6 +332,17 @@ int main(int argc, char** argv) {
       cv::imshow("video", display);
     }
   }
+
+  bool ok;
+
+  // Save points and tracks out.
+  ImagePointWriter<int> pixel_writer;
+  ok = saveTrackList(points_file, state.seeds, pixel_writer);
+  CHECK(ok) << "Could not save points";
+
+  ImagePointWriter<double> point_writer;
+  ok = saveTrackList(tracks_file, state.tracks, point_writer);
+  CHECK(ok) << "Could not save tracks";
 
   return 0;
 }

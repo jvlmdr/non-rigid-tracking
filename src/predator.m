@@ -1,14 +1,22 @@
-addpath(genpath('~/src/OpenTLD'));
-tic;
+%{
+tld_path = '~/src/OpenTLD';
+yaml_path = '~/src/yamlmatlab';
+
+image_dir = '../input/clap-subset-2-small/7/';
+seeds_file = '../release/seeds.yaml';
+tracks_file = 'predator-tracks.yaml';
 
 RADIUS = 5;
 DIAMETER = 2 * RADIUS + 1;
 
+addpath(genpath(tld_path));
+tic;
+
 % Load seeds from file.
 seeds = [];
-addpath(genpath('~/src/yamlmatlab'));
-data = ReadYaml('../release/seeds.yaml');
-rmpath(genpath('~/src/yamlmatlab'));
+addpath(genpath(yaml_path));
+data = ReadYaml(seeds_file);
+rmpath(genpath(yaml_path));
 num_points = length(data.list);
 for i = 1:num_points
   point = data.list{i}.list{1}.point;
@@ -25,8 +33,7 @@ for i = 1:num_points
   seed = seeds(i, :);
   bbox = [seed(1) - RADIUS; seed(2) - RADIUS; ...
           seed(1) + RADIUS; seed(2) + RADIUS];
-  opt.source = struct('camera', 0 ,'input', '../input/clap-subset-2-small/7/', ...
-      'bb0', bbox);
+  opt.source = struct('camera', 0 ,'input', image_dir, 'bb0', bbox);
   opt.output = '_output/';
   mkdir(opt.output);
   min_win = RADIUS;
@@ -56,6 +63,7 @@ for i = 1:num_points
   [bb, conf] = tldExample(opt);
   results(:, :, i) = bb;
 end
+%}
 
 % Save results.
 num_frames = size(results, 2);
@@ -74,7 +82,7 @@ for i = 1:num_points
       point.y = (bbox(4) + bbox(2)) / 2;
 
       frame = [];
-      frame.t = t;
+      frame.t = int32(t - 1);
       frame.point = point;
 
       track.list = [track.list {frame}];
@@ -83,6 +91,6 @@ for i = 1:num_points
   tracks.list{i} = track;
 end
 
-addpath(genpath('~/src/yamlmatlab'));
-WriteYaml('predator-tracks.yaml', tracks);
-rmpath(genpath('~/src/yamlmatlab'));
+addpath(genpath(yaml_path));
+WriteYaml(tracks_file, tracks);
+rmpath(genpath(yaml_path));

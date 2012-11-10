@@ -4,10 +4,13 @@
 #include <opencv2/core/core.hpp>
 #include "writer.hpp"
 
-class ImagePointWriter : public Writer<cv::Point2d> {
+template<class T>
+class ImagePointWriter : public Writer<cv::Point_<T> > {
   public:
     ~ImagePointWriter();
-    void write(cv::FileStorage& file, const cv::Point2d& point);
+    void write(cv::FileStorage& file, const cv::Point_<T>& point);
 };
+
+#include "image_point_writer.inl"
 
 #endif

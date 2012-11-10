@@ -85,7 +85,7 @@ int main(int argc, char** argv) {
       Undistort(K, camera.distort_w));
 
   // Write out undistorted points.
-  ImagePointWriter point_writer;
+  ImagePointWriter<double> point_writer;
   ok = saveList(undistorted_points_file, points, point_writer);
   CHECK(ok) << "Could not save points";
 

@@ -8,6 +8,7 @@
 #include <boost/bind.hpp>
 #include <boost/format.hpp>
 #include <boost/lexical_cast.hpp>
+#include <boost/scoped_ptr.hpp>
 #include <opencv2/core/core.hpp>
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/features2d/features2d.hpp>
@@ -18,9 +19,13 @@
 #include "sift_position.hpp"
 #include "draw_sift_position.hpp"
 #include "random_color.hpp"
+#include "feature_drawer.hpp"
+#include "sift_feature_drawer.hpp"
+#include "translation_feature_drawer.hpp"
 
 #include "sift_position_reader.hpp"
 #include "track_list_reader.hpp"
+#include "image_point_reader.hpp"
 
 // Parameters for random color generation.
 const double SATURATION = 0.99;
@@ -31,22 +36,82 @@ DEFINE_string(output_format, "%d.png", "Location to save image.");
 DEFINE_bool(save, false, "Save to file?");
 DEFINE_bool(display, true, "Show in window?");
 
+DEFINE_bool(similarity, false, "Use similarity transform features?");
+DEFINE_int32(radius, 5, "Half-width of translation feature window");
+
 std::string makeFilename(const std::string& format, int n) {
   return boost::str(boost::format(format) % (n + 1));
 }
 
+typedef boost::shared_ptr<FeatureDrawer> DrawerPointer;
+
 void drawFeatures(cv::Mat& image,
-                  const std::map<int, SiftPosition>& features,
+                  const std::map<int, DrawerPointer>& features,
                   const std::vector<cv::Scalar>& colors) {
-  typedef std::map<int, SiftPosition> FeatureSet;
+  typedef std::map<int, DrawerPointer> FeatureSet;
   typedef std::vector<cv::Scalar> ColorList;
 
   FeatureSet::const_iterator mapping;
   for (mapping = features.begin(); mapping != features.end(); ++mapping) {
     int index = mapping->first;
-    const SiftPosition& feature = mapping->second;
+    const DrawerPointer& feature = mapping->second;
 
-    drawSiftPosition(image, feature, colors[index], LINE_THICKNESS);
+    feature->draw(image, colors[index], LINE_THICKNESS);
+  }
+}
+
+void translationTrackToDrawers(const Track<cv::Point2d>& feature_track,
+                               Track<DrawerPointer>& drawer_track,
+                               int radius) {
+  drawer_track.clear();
+  Track<cv::Point2d>::const_iterator feature;
+  for (feature = feature_track.begin();
+       feature != feature_track.end();
+       ++feature) {
+    drawer_track[feature->first].reset(
+        new TranslationFeatureDrawer(feature->second, radius));
+  }
+}
+
+void translationTracksToDrawers(const TrackList<cv::Point2d>& feature_tracks,
+                                TrackList<DrawerPointer>& drawer_tracks,
+                                int radius) {
+  drawer_tracks.clear();
+  TrackList<cv::Point2d>::const_iterator feature_track;
+  for (feature_track = feature_tracks.begin();
+       feature_track != feature_tracks.end();
+       ++feature_track) {
+    Track<DrawerPointer> drawer_track;
+    translationTrackToDrawers(*feature_track, drawer_track, radius);
+
+    drawer_tracks.push_back(Track<DrawerPointer>());
+    drawer_tracks.back().swap(drawer_track);
+  }
+}
+
+void siftPositionTrackToDrawers(const Track<SiftPosition>& feature_track,
+                                Track<DrawerPointer>& drawer_track) {
+  drawer_track.clear();
+  Track<SiftPosition>::const_iterator feature;
+  for (feature = feature_track.begin();
+       feature != feature_track.end();
+       ++feature) {
+    drawer_track[feature->first].reset(new SiftFeatureDrawer(feature->second));
+  }
+}
+
+void siftPositionTracksToDrawers(const TrackList<SiftPosition>& feature_tracks,
+                                 TrackList<DrawerPointer>& drawer_tracks) {
+  drawer_tracks.clear();
+  TrackList<SiftPosition>::const_iterator feature_track;
+  for (feature_track = feature_tracks.begin();
+       feature_track != feature_tracks.end();
+       ++feature_track) {
+    Track<DrawerPointer> drawer_track;
+    siftPositionTrackToDrawers(*feature_track, drawer_track);
+
+    drawer_tracks.push_back(Track<DrawerPointer>());
+    drawer_tracks.back().swap(drawer_track);
   }
 }
 
@@ -75,11 +140,28 @@ int main(int argc, char** argv) {
 
   bool ok;
 
-  // Load tracks.
-  TrackList<SiftPosition> tracks;
-  SiftPositionReader feature_reader;
-  ok = loadTrackList(tracks_file, tracks, feature_reader);
-  CHECK(ok) << "Could not load tracks";
+  TrackList<DrawerPointer> tracks;
+
+  if (FLAGS_similarity) {
+    // Load tracks.
+    TrackList<SiftPosition> sift_tracks;
+    SiftPositionReader feature_reader;
+    ok = loadTrackList(tracks_file, sift_tracks, feature_reader);
+    CHECK(ok) << "Could not load tracks";
+
+    // Convert SIFT features to generic drawable features.
+    siftPositionTracksToDrawers(sift_tracks, tracks);
+  } else {
+    // Load tracks.
+    TrackList<cv::Point2d> point_tracks;
+    ImagePointReader feature_reader;
+    ok = loadTrackList(tracks_file, point_tracks, feature_reader);
+    CHECK(ok) << "Could not load tracks";
+
+    // Convert SIFT features to generic drawable features.
+    translationTracksToDrawers(point_tracks, tracks, FLAGS_radius);
+  }
+
   LOG(INFO) << "Loaded " << tracks.size() << " tracks";
 
   // Make a list of random colors.
@@ -90,8 +172,7 @@ int main(int argc, char** argv) {
   }
 
   // Iterate through frames in which track was observed.
-  TrackListTimeIterator<SiftPosition> frame(tracks);
-  frame.seekToStart();
+  TrackListTimeIterator<DrawerPointer> frame(tracks, 0);
 
   while (!frame.end()) {
     // Get the current time.
@@ -104,7 +185,7 @@ int main(int argc, char** argv) {
     CHECK(ok) << "Could not read image";
 
     // Get the features.
-    typedef std::map<int, SiftPosition> FeatureSet;
+    typedef std::map<int, DrawerPointer> FeatureSet;
     FeatureSet features;
     frame.getPoints(features);
 
@@ -113,7 +194,8 @@ int main(int argc, char** argv) {
 
     if (FLAGS_save) {
       std::string output_file = makeFilename(output_format, t);
-      cv::imwrite(output_file, color_image);
+      ok = cv::imwrite(output_file, color_image);
+      CHECK(ok) << "Could not save image";
     }
 
     if (FLAGS_display) {
