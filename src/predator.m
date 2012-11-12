@@ -1,7 +1,9 @@
-function tracks = predator(image_dir, seeds, radius)
+function tracks = predator(image_dir, seeds, base_radius)
 
-  diameter = 2 * radius + 1;
+  base_diameter = 2 * base_radius + 1;
   num_points = size(seeds, 1);
+
+  SIFT_SIZE_TO_SCALE = 1 / 4;
 
   % Generate tracks.
   for i = 1:num_points
@@ -10,13 +12,14 @@ function tracks = predator(image_dir, seeds, radius)
     close all;
     % Track each point using TLD.
     seed = seeds(i);
+    radius = seed.size * SIFT_SIZE_TO_SCALE * base_radius
     bbox = [seed.x - radius; seed.y - radius; ...
             seed.x + radius; seed.y + radius];
 
     opt.source = struct('camera', 0 ,'input', image_dir, 'bb0', bbox);
     opt.output = '_output/';
-    min_win = radius;
-    patchsize = [diameter, diameter];
+    min_win = base_radius;
+    patchsize = 2 * [base_diameter, base_diameter];
     fliplr = 0;
     maxbbox = 1;
     update_detector = 1;

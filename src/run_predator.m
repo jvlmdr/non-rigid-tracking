@@ -13,9 +13,13 @@ function run_predator(image_dir, seeds_file, tracks_file, num_cores)
   end
 
   % Run the algorithm.
-  %results = predator(image_dir, seeds, RADIUS);
-  results = parallelize(@(x) predator(image_dir, x, RADIUS), seeds, ...
-      num_points, num_cores);
+  if exist('parallelize', 'file')
+    results = parallelize(@(x) predator(image_dir, x, RADIUS), seeds, ...
+        num_points, num_cores);
+  else
+    warning('Could not find parallelize');
+    results = predator(image_dir, seeds, RADIUS);
+  end
   save('results', 'results');
 
   % Save results.
