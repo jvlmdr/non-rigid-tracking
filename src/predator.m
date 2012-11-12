@@ -1,7 +1,7 @@
 function tracks = predator(image_dir, seeds, base_radius)
 
   base_diameter = 2 * base_radius + 1;
-  num_points = size(seeds, 1);
+  num_points = numel(seeds);
 
   SIFT_SIZE_TO_SCALE = 1 / 4;
 
