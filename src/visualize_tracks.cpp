@@ -17,13 +17,16 @@
 #include "read_image.hpp"
 #include "track_list.hpp"
 #include "sift_position.hpp"
+#include "scale_space_position.hpp"
 #include "draw_sift_position.hpp"
 #include "random_color.hpp"
 #include "feature_drawer.hpp"
 #include "sift_feature_drawer.hpp"
 #include "translation_feature_drawer.hpp"
+#include "scale_space_feature_drawer.hpp"
 
 #include "sift_position_reader.hpp"
+#include "scale_space_position_reader.hpp"
 #include "track_list_reader.hpp"
 #include "image_point_reader.hpp"
 
@@ -36,6 +39,7 @@ DEFINE_string(output_format, "%d.png", "Location to save image.");
 DEFINE_bool(save, false, "Save to file?");
 DEFINE_bool(display, true, "Show in window?");
 
+DEFINE_bool(scale, false, "Use features with scale?");
 DEFINE_bool(similarity, false, "Use similarity transform features?");
 DEFINE_int32(radius, 5, "Half-width of translation feature window");
 
@@ -115,6 +119,35 @@ void siftPositionTracksToDrawers(const TrackList<SiftPosition>& feature_tracks,
   }
 }
 
+void scaleFeatureTrackToDrawers(const Track<ScaleSpacePosition>& features,
+                                Track<DrawerPointer>& drawers,
+                                int radius) {
+  drawers.clear();
+
+  Track<ScaleSpacePosition>::const_iterator feature;
+  for (feature = features.begin(); feature != features.end(); ++feature) {
+    drawers[feature->first].reset(
+        new ScaleSpaceFeatureDrawer(feature->second, radius));
+  }
+}
+
+void scaleFeatureTracksToDrawers(
+    const TrackList<ScaleSpacePosition>& feature_tracks,
+    TrackList<DrawerPointer>& drawer_tracks,
+    int radius) {
+  drawer_tracks.clear();
+  TrackList<ScaleSpacePosition>::const_iterator feature_track;
+  for (feature_track = feature_tracks.begin();
+       feature_track != feature_tracks.end();
+       ++feature_track) {
+    Track<DrawerPointer> drawer_track;
+    scaleFeatureTrackToDrawers(*feature_track, drawer_track, radius);
+
+    drawer_tracks.push_back(Track<DrawerPointer>());
+    drawer_tracks.back().swap(drawer_track);
+  }
+}
+
 void init(int& argc, char**& argv) {
   std::ostringstream usage;
   usage << "Visualizes rigid-warp tracks." << std::endl;
@@ -151,6 +184,15 @@ int main(int argc, char** argv) {
 
     // Convert SIFT features to generic drawable features.
     siftPositionTracksToDrawers(sift_tracks, tracks);
+  } else if (FLAGS_scale) {
+    // Load tracks.
+    TrackList<ScaleSpacePosition> scale_tracks;
+    ScaleSpacePositionReader feature_reader;
+    ok = loadTrackList(tracks_file, scale_tracks, feature_reader);
+    CHECK(ok) << "Could not load tracks";
+
+    // Convert SIFT features to generic drawable features.
+    scaleFeatureTracksToDrawers(scale_tracks, tracks, FLAGS_radius);
   } else {
     // Load tracks.
     TrackList<cv::Point2d> point_tracks;

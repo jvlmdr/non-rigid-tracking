@@ -106,14 +106,17 @@ TARGET_LINK_LIBRARIES(pca-descriptor ${OpenCV_LIBS})
 ADD_EXECUTABLE(visualize-tracks
   visualize_tracks.cpp
   sift_position.cpp
+  scale_space_position.cpp
   draw_sift_position.cpp
   sift_feature_drawer.cpp
   translation_feature_drawer.cpp
+  scale_space_feature_drawer.cpp
   read_image.cpp
   random_color.cpp
   hsv.cpp
   image_point_reader.cpp
-  sift_position_reader.cpp)
+  sift_position_reader.cpp
+  scale_space_position_reader.cpp)
 TARGET_LINK_LIBRARIES(visualize-tracks glog gflags)
 TARGET_LINK_LIBRARIES(visualize-tracks ${OpenCV_LIBS})
 
