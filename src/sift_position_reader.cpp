@@ -16,18 +16,22 @@ bool SiftPositionReader::read(const cv::FileNode& node, SiftPosition& feature) {
   }
 
   if (!::read<double>(node["x"], feature.x)) {
+    LOG(WARNING) << "Could not find `x' parameter";
     return false;
   }
 
   if (!::read<double>(node["y"], feature.y)) {
+    LOG(WARNING) << "Could not find `y' parameter";
     return false;
   }
 
   if (!::read<double>(node["size"], feature.size)) {
+    LOG(WARNING) << "Could not find `size' parameter";
     return false;
   }
 
   if (!::read<double>(node["angle"], feature.theta)) {
+    LOG(WARNING) << "Could not find `angle' parameter";
     return false;
   }
 

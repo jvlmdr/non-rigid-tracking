@@ -12,11 +12,13 @@
 #include "random.hpp"
 #include "multiview_track.hpp"
 #include "multiview_track_list.hpp"
+#include "track_list.hpp"
 #include "hsv.hpp"
 #include "sift_position.hpp"
 #include "draw_sift_position.hpp"
 
 #include "multiview_track_list_reader.hpp"
+#include "track_list_reader.hpp"
 #include "default_reader.hpp"
 #include "read_lines.hpp"
 #include "sift_position_reader.hpp"
@@ -41,6 +43,73 @@ DEFINE_bool(display, true, "Show in window?");
 DEFINE_bool(show_matches, false, "Show cross-view matches?");
 DEFINE_bool(exclude_single_view, true, "Show multi-view tracks that aren't?");
 DEFINE_bool(show_trails, false, "Show point trails within view?");
+
+class FileStream {
+  public:
+    virtual ~FileStream() {}
+    virtual std::string get(int t) const = 0;
+};
+
+class SingleViewFileStream : public FileStream {
+  public:
+    SingleViewFileStream();
+    SingleViewFileStream(const std::string& format);
+    ~SingleViewFileStream();
+    std::string get(int t) const;
+
+  private:
+    std::string format_;
+};
+
+class MultiViewFileStream : public FileStream {
+  public:
+    MultiViewFileStream();
+    MultiViewFileStream(const std::string& format, const std::string& view);
+    ~MultiViewFileStream();
+    std::string get(int t) const;
+
+  private:
+    std::string format_;
+    std::string view_;
+};
+
+SingleViewFileStream::SingleViewFileStream() : format_() {}
+
+SingleViewFileStream::SingleViewFileStream(const std::string& format)
+    : format_(format) {}
+
+SingleViewFileStream::~SingleViewFileStream() {}
+
+std::string SingleViewFileStream::get(int t) const {
+  return boost::str(boost::format(format_) % (t + 1));
+}
+
+MultiViewFileStream::MultiViewFileStream() : format_(), view_() {}
+
+MultiViewFileStream::MultiViewFileStream(const std::string& format,
+                                         const std::string& view)
+    : format_(format), view_(view) {}
+
+MultiViewFileStream::~MultiViewFileStream() {}
+
+std::string MultiViewFileStream::get(int t) const {
+  return boost::str(boost::format(format_) % view_ % (t + 1));
+}
+
+////////////////////////////////////////////////////////////////////////////////
+
+void trackListToMultiview(const TrackList<SiftPosition>& single,
+                          MultiviewTrackList<SiftPosition>& multi) {
+  multi = MultiviewTrackList<SiftPosition>(1);
+
+  TrackList<SiftPosition>::const_iterator track;
+  for (track = single.begin(); track != single.end(); ++track) {
+    multi.push_back(MultiviewTrack<SiftPosition>(1));
+    multi.back().view(0) = *track;
+  }
+}
+
+////////////////////////////////////////////////////////////////////////////////
 
 struct ViewCollage {
   // These cv::Mats are simply headers referring to external data.
@@ -103,16 +172,6 @@ struct Collage {
   }
 };
 
-std::string makeTimeFilename(boost::format format, int time) {
-  return boost::str(format % (time + 1));
-}
-
-std::string makeFrameFilename(const std::string& format,
-                              const std::string& view,
-                              int time) {
-  return boost::str(boost::format(format) % view % (time + 1));
-}
-
 int numObservations(const MultiviewTrack<SiftPosition>& track) {
   // Add size of all tracks.
   return std::accumulate(track.begin(), track.end(), 0,
@@ -144,7 +203,9 @@ void removeSingleViewTracks(const MultiviewTrackList<SiftPosition>& input,
 
 void init(int& argc, char**& argv) {
   std::ostringstream usage;
-  usage << "Visualizes multi-view tracks." << std::endl;
+  usage << "Visualizes single- or multi-view tracks" << std::endl;
+  usage << std::endl;
+  usage << argv[0] << " tracks image-format num-frames" << std::endl;
   usage << std::endl;
   usage << argv[0] << " tracks image-format view-names num-frames" << std::endl;
   google::SetUsageMessage(usage.str());
@@ -152,24 +213,23 @@ void init(int& argc, char**& argv) {
   google::InitGoogleLogging(argv[0]);
   google::ParseCommandLineFlags(&argc, &argv, true);
 
-  if (argc != 5) {
+  if (!(argc == 4 || argc == 5)) {
     google::ShowUsageWithFlags(argv[0]);
     std::exit(1);
   }
 }
 
-bool loadImages(const std::string& image_format,
+bool loadImages(const std::vector<const FileStream*>& streams,
                 int time,
-                const std::vector<std::string>& views,
                 int num_frames,
                 Collage& collage) {
-  int num_views = views.size();
+  int num_views = streams.size();
 
   for (int i = 0; i < num_views; i += 1) {
     // Load image for this frame.
     cv::Mat image;
     cv::Mat gray_image;
-    std::string file = makeFrameFilename(image_format, views[i], time);
+    std::string file = streams[i]->get(time);
     bool ok = readImage(file, image, gray_image);
     if (!ok) {
       return false;
@@ -453,11 +513,14 @@ void drawTimeSlices(const MultiviewTrackList<SiftPosition>& tracks,
   }
 }
 
+std::string makeTimeFilename(boost::format format, int time) {
+  return boost::str(format % (time + 1));
+}
+
 void drawMovie(const MultiviewTrackList<SiftPosition>& tracks,
                const std::vector<cv::Scalar>& colors,
-               const std::vector<std::string>& views,
                int num_frames,
-               const std::string& image_format,
+               const std::vector<const FileStream*>& image_streams,
                bool show_matches,
                bool show_trails,
                bool display,
@@ -473,7 +536,7 @@ void drawMovie(const MultiviewTrackList<SiftPosition>& tracks,
 
     // Load image for each view.
     Collage collage;
-    bool ok = loadImages(image_format, t, views, num_frames, collage);
+    bool ok = loadImages(image_streams, t, num_frames, collage);
     CHECK(ok) << "Could not load images";
 
     // Visualize all features.
@@ -500,36 +563,77 @@ void drawMovie(const MultiviewTrackList<SiftPosition>& tracks,
 }
 
 int main(int argc, char** argv) {
+  bool ok;
+
   init(argc, argv);
 
   std::string tracks_file = argv[1];
   std::string image_format = argv[2];
-  std::string views_file = argv[3];
-  int num_frames = boost::lexical_cast<int>(argv[4]);
+  int num_frames;
 
-  bool ok;
-
-  // Load names of views.
-  std::vector<std::string> views;
-  ok = readLines(views_file, views);
-  CHECK(ok) << "Could not load view names";
-  int num_views = views.size();
-
-  // Load tracks.
   MultiviewTrackList<SiftPosition> tracks;
-  SiftPositionReader feature_reader;
-  ok = loadMultiviewTrackList(tracks_file, tracks, feature_reader);
-  CHECK(ok) << "Could not load tracks";
-  LOG(INFO) << "Loaded " << tracks.numTracks() << " multi-view tracks";
 
-  // Ensure that number of views matches.
-  CHECK(num_views == tracks.numViews());
+  int num_views;
+  std::vector<const FileStream*> image_streams;
+  SingleViewFileStream single_view_stream;
+  std::list<MultiViewFileStream> multi_view_streams;
+
+  if (argc == 4) {
+    // Single view.
+    LOG(INFO) << "Single view mode";
+    num_frames = boost::lexical_cast<int>(argv[3]);
+    num_views = 1;
+
+    // Load tracks.
+    TrackList<SiftPosition> single_view_tracks;
+    SiftPositionReader feature_reader;
+    ok = loadTrackList(tracks_file, single_view_tracks, feature_reader);
+    CHECK(ok) << "Could not load tracks";
+    LOG(INFO) << "Loaded " << single_view_tracks.size() << " tracks";
+
+    // Convert to multi-view tracks (with one view).
+    trackListToMultiview(single_view_tracks, tracks);
+
+    // Set up single-view image stream.
+    single_view_stream = SingleViewFileStream(image_format);
+    image_streams.push_back(&single_view_stream);
+  } else {
+    // Multiview.
+    LOG(INFO) << "Multiple view mode";
+    std::string views_file = argv[3];
+    num_frames = boost::lexical_cast<int>(argv[4]);
+
+    // Load tracks.
+    SiftPositionReader feature_reader;
+    ok = loadMultiviewTrackList(tracks_file, tracks, feature_reader);
+    CHECK(ok) << "Could not load tracks";
+    LOG(INFO) << "Loaded " << tracks.numTracks() << " multi-view tracks";
+
+    // Load names of views.
+    std::vector<std::string> views;
+    ok = readLines(views_file, views);
+    CHECK(ok) << "Could not load view names";
+    num_views = views.size();
+
+    // Ensure that number of views matches.
+    CHECK(num_views == tracks.numViews());
+
+    // Set up multi-view image streams.
+    std::vector<std::string>::const_iterator view;
+    for (view = views.begin(); view != views.end(); ++view) {
+      // Create multi-view stream.
+      multi_view_streams.push_back(MultiViewFileStream(image_format, *view));
+      // Add a pointer to the list of streams.
+      image_streams.push_back(&multi_view_streams.back());
+    }
+  }
+
   // Ensure that there aren't more frames than there are in the sequence.
   // TODO: Is there any point storing the number of frames?
   CHECK(tracks.numFrames() <= num_frames);
 
   // Remove any single-view tracks.
-  if (FLAGS_exclude_single_view) {
+  if (num_views > 1 && FLAGS_exclude_single_view) {
     MultiviewTrackList<SiftPosition> multi;
     removeSingleViewTracks(tracks, multi);
     tracks.swap(multi);
@@ -557,8 +661,8 @@ int main(int argc, char** argv) {
     evenlySpacedColors(subset->numTracks(), SATURATION, BRIGHTNESS, colors);
 
     // Draw movie.
-    drawMovie(*subset, colors, views, num_frames, image_format,
-        FLAGS_show_matches, FLAGS_show_trails, FLAGS_display, FLAGS_save,
+    drawMovie(*subset, colors, num_frames, image_streams, FLAGS_show_matches,
+        FLAGS_show_trails, FLAGS_display, FLAGS_save,
         boost::format(FLAGS_output_format) % i);
 
     i += 1;
