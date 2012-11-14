@@ -14,7 +14,7 @@
 #include "iterator_reader.hpp"
 #include "read_image.hpp"
 
-#include "sift_position_writer.hpp"
+#include "default_writer.hpp"
 #include "iterator_writer.hpp"
 
 DEFINE_int32(radius, 5, "Base radius of features");
@@ -57,7 +57,7 @@ void init(int& argc, char**& argv) {
   std::ostringstream usage;
   usage << "Allows the user to choose a subset of keypoints" << std::endl;
   usage << std::endl;
-  usage << argv[0] << " keypoints image subset" << std::endl;
+  usage << argv[0] << " keypoints image indices" << std::endl;
   google::SetUsageMessage(usage.str());
 
   google::InitGoogleLogging(argv[0]);
@@ -97,12 +97,13 @@ int main(int argc, char** argv) {
   cv::setMouseCallback("keypoints", onMouse, static_cast<void*>(&state));
 
   boost::scoped_ptr<cv::Rect> bounds;
-  std::vector<SiftPosition> inside;
+  std::vector<int> subset;
 
   while (!exit) {
     bool have_rect = (state.corner1 && state.corner2);
 
-    inside.clear();
+    subset.clear();
+    std::vector<SiftPosition> inside;
     std::vector<SiftPosition> outside;
 
     // If rectangle is set, divide features into two sets.
@@ -114,12 +115,17 @@ int main(int argc, char** argv) {
       }
 
       std::vector<SiftPosition>::const_iterator feature;
+      int index = 0;
+
       for (feature = keypoints.begin(); feature != keypoints.end(); ++feature) {
         if (bounds->contains(feature->point())) {
+          subset.push_back(index);
           inside.push_back(*feature);
         } else {
           outside.push_back(*feature);
         }
+
+        index += 1;
       }
     } else {
       bounds.reset();
@@ -164,10 +170,10 @@ int main(int argc, char** argv) {
   }
 
   if (save) {
-    SiftPositionWriter feature_writer;
-    saveList(subset_file, inside, feature_writer);
+    DefaultWriter<int> index_writer;
+    saveList(subset_file, subset, index_writer);
 
-    LOG(INFO) << "Selected " << inside.size() << " / " << num_keypoints <<
+    LOG(INFO) << "Selected " << subset.size() << " / " << num_keypoints <<
         " keypoints";
   }
 

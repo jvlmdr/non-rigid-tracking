@@ -12,31 +12,40 @@ typedef std::vector<Match> MatchList;
 void drawMatches(const std::vector<SiftPosition>& keypoints1,
                  const std::vector<SiftPosition>& keypoints2,
                  const std::vector<Match>& matches,
-                 cv::Mat& image1,
-                 cv::Mat& image2,
+                 const cv::Mat& image1,
+                 const cv::Mat& image2,
                  cv::Mat& render,
                  int line_thickness) {
-  MatchList::const_iterator match;
-  for (match = matches.begin(); match != matches.end(); ++match) {
-    // Generate a random color.
-    cv::Scalar color = randomColor(SATURATION, BRIGHTNESS);
-
-    // Draw the keypoint in each image.
-    drawSiftPosition(image1, keypoints1[match->first], color, line_thickness);
-    drawSiftPosition(image2, keypoints2[match->second], color, line_thickness);
-  }
-
   // Initialize large side-by-side image with black background.
   int rows = std::max(image1.rows, image2.rows);
   int cols = image1.cols + image2.cols;
   render.create(rows, cols, cv::DataType<cv::Vec3b>::type);
   render = cv::Scalar::all(0);
 
-  // Copy each image into output.
-  cv::Mat dst;
-  dst = render(cv::Range(0, rows), cv::Range(0, image1.cols));
-  image1.copyTo(dst);
-  dst = render(cv::Range(0, rows), cv::Range(image1.cols, cols));
-  image2.copyTo(dst);
-}
+  cv::Mat viewport1 = render(cv::Range(0, image1.rows),
+                             cv::Range(0, image1.cols));
+  cv::Mat viewport2 = render(cv::Range(0, image2.rows),
+                             cv::Range(image1.cols, cols));
 
+  // Copy images into viewports.
+  image1.copyTo(viewport1);
+  image2.copyTo(viewport2);
+
+  MatchList::const_iterator match;
+  for (match = matches.begin(); match != matches.end(); ++match) {
+    // Generate a random color.
+    cv::Scalar color = randomColor(SATURATION, BRIGHTNESS);
+
+    SiftPosition keypoint1 = keypoints1[match->first];
+    SiftPosition keypoint2 = keypoints2[match->second];
+
+    // Draw the keypoint in each image.
+    drawSiftPosition(viewport1, keypoint1, color, line_thickness);
+    drawSiftPosition(viewport2, keypoint2, color, line_thickness);
+
+    // Draw line between two keypoints.
+    cv::Point pt1 = keypoint1.point();
+    cv::Point pt2(keypoint2.x + image1.cols, keypoint2.y);
+    cv::line(render, pt1, pt2, color, line_thickness);
+  }
+}

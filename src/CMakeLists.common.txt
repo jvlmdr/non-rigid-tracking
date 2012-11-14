@@ -625,3 +625,11 @@ ADD_EXECUTABLE(choose-keypoints
   sift_position_writer.cpp)
 TARGET_LINK_LIBRARIES(choose-keypoints glog gflags)
 TARGET_LINK_LIBRARIES(choose-keypoints ${OpenCV_LIBS})
+
+ADD_EXECUTABLE(select-keypoint-subset
+  select_keypoint_subset.cpp
+  sift_position.cpp
+  sift_position_reader.cpp
+  sift_position_writer.cpp)
+TARGET_LINK_LIBRARIES(select-keypoint-subset glog gflags)
+TARGET_LINK_LIBRARIES(select-keypoint-subset ${OpenCV_LIBS})

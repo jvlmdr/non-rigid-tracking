@@ -9,8 +9,8 @@
 void drawMatches(const std::vector<SiftPosition>& keypoints1,
                  const std::vector<SiftPosition>& keypoints2,
                  const std::vector<Match>& matches,
-                 cv::Mat& image1,
-                 cv::Mat& image2,
+                 const cv::Mat& image1,
+                 const cv::Mat& image2,
                  cv::Mat& render,
                  int line_thickness);
 
