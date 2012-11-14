@@ -615,3 +615,13 @@ ADD_EXECUTABLE(display-admm-tracking
   read_image.cpp)
 TARGET_LINK_LIBRARIES(display-admm-tracking glog gflags)
 TARGET_LINK_LIBRARIES(display-admm-tracking ${OpenCV_LIBS})
+
+ADD_EXECUTABLE(choose-keypoints
+  choose_keypoints.cpp
+  sift_position.cpp
+  draw_sift_position.cpp
+  read_image.cpp
+  sift_position_reader.cpp
+  sift_position_writer.cpp)
+TARGET_LINK_LIBRARIES(choose-keypoints glog gflags)
+TARGET_LINK_LIBRARIES(choose-keypoints ${OpenCV_LIBS})
