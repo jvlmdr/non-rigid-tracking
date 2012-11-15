@@ -633,3 +633,13 @@ ADD_EXECUTABLE(select-keypoint-subset
   sift_position_writer.cpp)
 TARGET_LINK_LIBRARIES(select-keypoint-subset glog gflags)
 TARGET_LINK_LIBRARIES(select-keypoint-subset ${OpenCV_LIBS})
+
+ADD_EXECUTABLE(restrict-tracks-to-box
+  restrict_tracks_to_box.cpp
+  scale_space_position.cpp
+  scale_space_feature_drawer.cpp
+  random_color.cpp
+  read_image.cpp
+  scale_space_position_reader.cpp)
+TARGET_LINK_LIBRARIES(restrict-tracks-to-box glog gflags)
+TARGET_LINK_LIBRARIES(restrict-tracks-to-box ${OpenCV_LIBS})
