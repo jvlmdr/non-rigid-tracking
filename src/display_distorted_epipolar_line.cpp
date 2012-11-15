@@ -96,6 +96,8 @@ int main(int argc, char** argv) {
     x1 = undistort(x1, camera1.distort_w);
     x1 = affineTransformImagePoint(x1, K1);
 
+    // TODO: Draw circle of maximum radius.
+
     // Find line.
     std::vector<cv::Point> line;
     rasterizer.compute(x1, line);

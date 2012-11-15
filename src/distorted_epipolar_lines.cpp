@@ -14,7 +14,7 @@ struct ComparePoints {
 bool ComparePoints::operator()(
     const cv::Point& p,
     const cv::Point& q) {
-  if (p.x != p.y) {
+  if (p.x != q.x) {
     return p.x < q.x;
   } else {
     return p.y < q.y;
