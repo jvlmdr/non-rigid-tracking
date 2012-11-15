@@ -27,7 +27,6 @@ DEFINE_int32(line_thickness, 2, "Line thickness for drawing");
 
 const double SATURATION = 0.99;
 const double BRIGHTNESS = 0.99;
-const double LINE_THICKNESS = 2;
 
 std::string makeImageFilename(const std::string& format, int time) {
   return boost::str(boost::format(format) % (time + 1));
@@ -135,8 +134,7 @@ int main(int argc, char** argv) {
         rect = cv::Rect(*state.corner, state.position);
       }
 
-      cv::rectangle(display, rect, cv::Scalar(0xCC, 0xCC, 0xCC),
-          FLAGS_line_thickness);
+      cv::rectangle(display, rect, cv::Scalar(0xCC, 0xCC, 0xCC), 1);
     }
 
     // Draw features.

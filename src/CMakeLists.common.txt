@@ -643,3 +643,13 @@ ADD_EXECUTABLE(restrict-tracks-to-box
   scale_space_position_reader.cpp)
 TARGET_LINK_LIBRARIES(restrict-tracks-to-box glog gflags)
 TARGET_LINK_LIBRARIES(restrict-tracks-to-box ${OpenCV_LIBS})
+
+ADD_EXECUTABLE(choose-points
+  choose_points.cpp
+  match.cpp
+  random_color.cpp
+  read_image.cpp
+  read_lines.cpp
+  match_writer.cpp)
+TARGET_LINK_LIBRARIES(choose-points glog gflags)
+TARGET_LINK_LIBRARIES(choose-points ${OpenCV_LIBS})
