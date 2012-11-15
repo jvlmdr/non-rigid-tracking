@@ -9,7 +9,7 @@ struct ScaleSpacePosition {
   double scale;
 
   ScaleSpacePosition();
-  ScaleSpacePosition(double x, double y);
+  ScaleSpacePosition(double x, double y, double scale);
 
   cv::Point2d point() const;
 };

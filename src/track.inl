@@ -47,6 +47,11 @@ typename Track<T>::const_iterator Track<T>::find(int x) const {
 }
 
 template<class T>
+void Track<T>::erase(iterator position) {
+  map_.erase(position);
+}
+
+template<class T>
 typename Track<T>::iterator Track<T>::lower_bound(int x) {
   return map_.lower_bound(x);
 }

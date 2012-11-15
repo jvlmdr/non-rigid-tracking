@@ -22,6 +22,9 @@
 #include "scale_space_position_reader.hpp"
 #include "read_image.hpp"
 
+#include "track_list_writer.hpp"
+#include "scale_space_position_writer.hpp"
+
 DEFINE_int32(radius, 5, "Base feature radius");
 DEFINE_int32(line_thickness, 2, "Line thickness for drawing");
 
@@ -36,19 +39,21 @@ void init(int& argc, char**& argv) {
   std::ostringstream usage;
   usage << "Allows the user to clean up tracks" << std::endl;
   usage << std::endl;
-  usage << argv[0] << " tracks image-format num-frames" << std::endl;
+  usage << argv[0] << " tracks image-format num-frames clean-tracks" <<
+      std::endl;
   google::SetUsageMessage(usage.str());
 
   google::InitGoogleLogging(argv[0]);
   google::ParseCommandLineFlags(&argc, &argv, true);
 
-  if (argc != 4) {
+  if (argc != 5) {
     google::ShowUsageWithFlags(argv[0]);
     std::exit(1);
   }
 }
 
 struct State {
+  bool paused;
   cv::Point position;
   boost::scoped_ptr<cv::Point> corner;
   boost::scoped_ptr<cv::Rect> rect;
@@ -57,19 +62,21 @@ struct State {
 void onMouse(int event, int x, int y, int, void* tag) {
   State& state = *static_cast<State*>(tag);
 
-  // Set position.
-  state.position = cv::Point(x, y);
+  if (state.paused) {
+    // Set position.
+    state.position = cv::Point(x, y);
 
-  if (event == cv::EVENT_LBUTTONDOWN) {
-    // Set first corner.
-    state.corner.reset(new cv::Point(x, y));
-    state.rect.reset();
-  } else if (event == cv::EVENT_LBUTTONUP) {
-    // Set rectangle using second corner.
-    cv::Point other(x, y);
-    state.rect.reset(new cv::Rect(*state.corner, other));
-    // Clear first corner.
-    state.corner.reset();
+    if (event == cv::EVENT_LBUTTONDOWN) {
+      // Set first corner.
+      state.corner.reset(new cv::Point(x, y));
+      state.rect.reset();
+    } else if (event == cv::EVENT_LBUTTONUP) {
+      // Set rectangle using second corner.
+      cv::Point other(x, y);
+      state.rect.reset(new cv::Rect(*state.corner, other));
+      // Clear first corner.
+      state.corner.reset();
+    }
   }
 }
 
@@ -79,6 +86,7 @@ int main(int argc, char** argv) {
   std::string tracks_file = argv[1];
   std::string image_format = argv[2];
   int num_frames = boost::lexical_cast<int>(argv[3]);
+  std::string output_file = argv[4];
 
   bool ok;
 
@@ -99,6 +107,7 @@ int main(int argc, char** argv) {
   }
 
   State state;
+  state.paused = true;
 
   cv::namedWindow("Tracks");
   cv::setMouseCallback("Tracks", onMouse, static_cast<void*>(&state));
@@ -107,7 +116,6 @@ int main(int argc, char** argv) {
   cv::Mat display;
   bool exit = false;
   bool changed = true;
-  bool paused = true;
   int t = 0;
 
   while (!exit) {
@@ -165,38 +173,57 @@ int main(int argc, char** argv) {
     if (c == 27) {
       exit = true;
     } else if (c == ' ')  {
-      if (paused) {
+      if (state.paused) {
         // Unpause.
-        paused = false;
+        state.paused = false;
       } else {
-        paused = true;
+        state.paused = true;
       }
     } else if (c == '\n' || c == '\r')  {
-      // If a rectangle is selected, remove all the features outside it.
-      if (state.rect) {
-        LOG(INFO) << "Do something!";
+      if (state.paused) {
+        // If a rectangle is selected, remove all the features outside it.
+        if (state.rect) {
+          TrackList<ScaleSpacePosition>::iterator track;
+          for (track = tracks.begin(); track != tracks.end(); ++track) {
+            Track<ScaleSpacePosition>::iterator elem = track->find(t);
+            if (elem != track->end()) {
+              cv::Point2d point = elem->second.point();
+
+              if (!state.rect->contains(point)) {
+                track->erase(elem);
+              }
+            }
+          }
+
+          // Move to next frame.
+          t = (t + 1) % num_frames;
+        }
       }
     } else if (c == 'j') {
       // If we weren't paused, we are now.
-      paused = true;
+      state.paused = true;
 
       // Move to next frame.
       t = (t + 1) % num_frames;
       changed = true;
     } else if (c == 'k') {
       // If we weren't paused, we are now.
-      paused = true;
+      state.paused = true;
 
       // Move to previous frame.
       t = (t + num_frames - 1) % num_frames;
       changed = true;
     }
 
-    if (!paused) {
+    if (!state.paused) {
       t = (t + 1) % num_frames;
       changed = true;
     }
   }
+
+  ScaleSpacePositionWriter feature_writer;
+  ok = saveTrackList(output_file, tracks, feature_writer);
+  CHECK(ok) << "Could not save tracks";
 
   return 0;
 }

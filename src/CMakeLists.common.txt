@@ -640,7 +640,8 @@ ADD_EXECUTABLE(restrict-tracks-to-box
   scale_space_feature_drawer.cpp
   random_color.cpp
   read_image.cpp
-  scale_space_position_reader.cpp)
+  scale_space_position_reader.cpp
+  scale_space_position_writer.cpp)
 TARGET_LINK_LIBRARIES(restrict-tracks-to-box glog gflags)
 TARGET_LINK_LIBRARIES(restrict-tracks-to-box ${OpenCV_LIBS})
 
