@@ -34,6 +34,7 @@ class Track {
     iterator find(int x);
     const_iterator find(int x) const;
     void erase(iterator position);
+    void erase(iterator first, iterator last);
 
     iterator lower_bound(int x);
     const_iterator lower_bound(int x) const;

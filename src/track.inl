@@ -52,6 +52,11 @@ void Track<T>::erase(iterator position) {
 }
 
 template<class T>
+void Track<T>::erase(iterator first, iterator last) {
+  map_.erase(first, last);
+}
+
+template<class T>
 typename Track<T>::iterator Track<T>::lower_bound(int x) {
   return map_.lower_bound(x);
 }

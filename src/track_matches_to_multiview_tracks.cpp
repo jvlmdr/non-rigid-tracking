@@ -6,15 +6,15 @@
 
 #include "match.hpp"
 #include "track_list.hpp"
-#include "sift_position.hpp"
+#include "scale_space_position.hpp"
 #include "multiview_track_list.hpp"
 
 #include "iterator_reader.hpp"
 #include "match_reader.hpp"
 #include "track_list_reader.hpp"
-#include "sift_position_reader.hpp"
+#include "scale_space_position_reader.hpp"
 #include "multiview_track_list_writer.hpp"
-#include "sift_position_writer.hpp"
+#include "scale_space_position_writer.hpp"
 
 void init(int& argc, char**& argv) {
   std::ostringstream usage;
@@ -42,8 +42,8 @@ int main(int argc, char** argv) {
 
   bool ok;
   std::vector<Match> matches;
-  TrackList<SiftPosition> tracks1;
-  TrackList<SiftPosition> tracks2;
+  TrackList<ScaleSpacePosition> tracks1;
+  TrackList<ScaleSpacePosition> tracks2;
 
   // Load matches.
   MatchReader match_reader;
@@ -51,7 +51,7 @@ int main(int argc, char** argv) {
   CHECK(ok) << "Could not load matches";
 
   // Load tracks.
-  SiftPositionReader feature_reader;
+  ScaleSpacePositionReader feature_reader;
   ok = loadTrackList(tracks_file1, tracks1, feature_reader);
   CHECK(ok) << "Could not load tracks";
   ok = loadTrackList(tracks_file2, tracks2, feature_reader);
@@ -59,21 +59,21 @@ int main(int argc, char** argv) {
 
   // Create multi-view track.
   int num_views = 2;
-  MultiviewTrackList<SiftPosition> multiview_tracks(num_views);
+  MultiviewTrackList<ScaleSpacePosition> multiview_tracks(num_views);
 
   // Add multiview track for each match.
   int num_matches = matches.size();
   for (int i = 0; i < num_matches; i += 1) {
-    MultiviewTrack<SiftPosition> track(2);
+    MultiviewTrack<ScaleSpacePosition> track(2);
     track.view(0).swap(tracks1[matches[i].first]);
     track.view(1).swap(tracks2[matches[i].second]);
 
-    multiview_tracks.push_back(MultiviewTrack<SiftPosition>());
+    multiview_tracks.push_back(MultiviewTrack<ScaleSpacePosition>());
     multiview_tracks.back().swap(track);
   }
 
   // Save track list.
-  SiftPositionWriter writer;
+  ScaleSpacePositionWriter writer;
   ok = saveMultiviewTrackList(multiview_tracks_file, multiview_tracks, writer);
   CHECK(ok) << "Could not save multi-view tracks";
 
