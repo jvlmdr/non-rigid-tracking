@@ -11,17 +11,19 @@
 #include "multiview_track.hpp"
 #include "multiview_track_list.hpp"
 #include "random_color.hpp"
-#include "sift_position.hpp"
-#include "draw_sift_position.hpp"
+#include "scale_space_position.hpp"
+#include "draw_scale_space_position.hpp"
 
 #include "multiview_track_list_reader.hpp"
 #include "read_lines.hpp"
-#include "sift_position_reader.hpp"
+#include "scale_space_position_reader.hpp"
 #include "read_image.hpp"
 
 const double SATURATION = 0.99;
 const double BRIGHTNESS = 0.99;
 const double LINE_THICKNESS = 2;
+
+DEFINE_int32(radius, 5, "Base radius");
 
 DEFINE_string(output_format, "%d.png", "Location to save image.");
 DEFINE_bool(save, false, "Save to file?");
@@ -51,19 +53,19 @@ std::string makeFrameFilename(const std::string& format,
   return boost::str(boost::format(format) % view % (time + 1));
 }
 
-void removeSingleViewTracks(const MultiviewTrackList<SiftPosition>& input,
-                            MultiviewTrackList<SiftPosition>& output) {
-  output = MultiviewTrackList<SiftPosition>(input.numViews());
+void removeSingleViewTracks(const MultiviewTrackList<ScaleSpacePosition>& input,
+                            MultiviewTrackList<ScaleSpacePosition>& output) {
+  output = MultiviewTrackList<ScaleSpacePosition>(input.numViews());
 
   // Copy track list.
-  typedef std::list<MultiviewTrack<SiftPosition> > TrackList;
+  typedef std::list<MultiviewTrack<ScaleSpacePosition> > TrackList;
   TrackList tracks(input.begin(), input.end());
 
   TrackList::iterator track;
   for (track = tracks.begin(); track != tracks.end(); ++track) {
     // Filter out single-view tracks.
     if (track->numViewsPresent() > 1) {
-      output.push_back(MultiviewTrack<SiftPosition>());
+      output.push_back(MultiviewTrack<ScaleSpacePosition>());
       output.back().swap(*track);
     }
   }
@@ -120,35 +122,36 @@ bool loadImages(const std::string& image_format,
 }
 
 void drawFeatures(cv::Mat& image,
-                  const std::map<int, SiftPosition>& features,
+                  const std::map<int, ScaleSpacePosition>& features,
                   const std::vector<cv::Scalar>& colors) {
-  typedef std::map<int, SiftPosition> FeatureSet;
+  typedef std::map<int, ScaleSpacePosition> FeatureSet;
   typedef std::vector<cv::Scalar> ColorList;
 
   FeatureSet::const_iterator mapping;
   for (mapping = features.begin(); mapping != features.end(); ++mapping) {
     int index = mapping->first;
-    const SiftPosition& feature = mapping->second;
+    const ScaleSpacePosition& feature = mapping->second;
 
-    drawSiftPosition(image, feature, colors[index], LINE_THICKNESS);
+    drawScaleSpacePosition(image, feature, FLAGS_radius, colors[index],
+        LINE_THICKNESS);
   }
 }
 
 void getFeaturesInView(
-    const std::map<int, std::map<int, SiftPosition> >& features,
+    const std::map<int, std::map<int, ScaleSpacePosition> >& features,
     int view,
-    std::map<int, SiftPosition>& subset) {
+    std::map<int, ScaleSpacePosition>& subset) {
   subset.clear();
 
   // Iterate through multiview observations of each feature.
-  std::map<int, std::map<int, SiftPosition> >::const_iterator observations;
+  std::map<int, std::map<int, ScaleSpacePosition> >::const_iterator observations;
   for (observations = features.begin();
        observations != features.end();
        ++observations) {
     int id = observations->first;
 
     // Check if this feature appeared in the current view.
-    std::map<int, SiftPosition>::const_iterator observation;
+    std::map<int, ScaleSpacePosition>::const_iterator observation;
     observation = observations->second.find(view);
 
     if (observation != observations->second.end()) {
@@ -159,7 +162,7 @@ void getFeaturesInView(
 }
 
 void drawFeaturesInAllViews(
-    const std::map<int, std::map<int, SiftPosition> >& features,
+    const std::map<int, std::map<int, ScaleSpacePosition> >& features,
     Collage& collage,
     const std::vector<cv::Scalar>& colors) {
   int num_views = collage.offsets.size();
@@ -170,7 +173,7 @@ void drawFeaturesInAllViews(
     cv::Mat viewport = collage.viewport(view);
 
     // Get features for this view.
-    std::map<int, SiftPosition> subset;
+    std::map<int, ScaleSpacePosition> subset;
     getFeaturesInView(features, view, subset);
 
     drawFeatures(viewport, subset, colors);
@@ -178,17 +181,17 @@ void drawFeaturesInAllViews(
 }
 
 void drawInterViewMatches(
-    const std::map<int, std::map<int, SiftPosition> >& features,
+    const std::map<int, std::map<int, ScaleSpacePosition> >& features,
     Collage& collage,
     const std::vector<cv::Scalar>& colors) {
-  std::map<int, std::map<int, SiftPosition> >::const_iterator views;
+  std::map<int, std::map<int, ScaleSpacePosition> >::const_iterator views;
   for (views = features.begin(); views != features.end(); ++views) {
     int id = views->first;
     // 
-    std::map<int, SiftPosition>::const_iterator view1;
+    std::map<int, ScaleSpacePosition>::const_iterator view1;
 
     for (view1 = views->second.begin(); view1 != views->second.end(); ++view1) {
-      std::map<int, SiftPosition>::const_iterator view2;
+      std::map<int, ScaleSpacePosition>::const_iterator view2;
 
       for (view2 = views->second.begin();
            view2 != views->second.end();
@@ -210,20 +213,20 @@ void drawInterViewMatches(
   }
 }
 
-void drawTrail(TrackIterator<SiftPosition> position,
+void drawTrail(TrackIterator<ScaleSpacePosition> position,
                cv::Mat& image,
                const cv::Scalar& color,
                int time) {
   // First go looking forwards in time.
 }
 
-void drawTrails(const SingleViewTimeIterator<SiftPosition>& iterator,
+void drawTrails(const SingleViewTimeIterator<ScaleSpacePosition>& iterator,
                 cv::Mat& image,
                 const std::vector<cv::Scalar>& colors) {
 }
 
 void drawTrailsInAllViews(
-    const MultiViewTimeIterator<SiftPosition>& iterator,
+    const MultiViewTimeIterator<ScaleSpacePosition>& iterator,
     Collage& collage,
     const std::vector<cv::Scalar>& colors) {
   int num_views = collage.offsets.size();
@@ -254,8 +257,8 @@ int main(int argc, char** argv) {
   int num_views = views.size();
 
   // Load tracks.
-  MultiviewTrackList<SiftPosition> tracks;
-  SiftPositionReader feature_reader;
+  MultiviewTrackList<ScaleSpacePosition> tracks;
+  ScaleSpacePositionReader feature_reader;
   ok = loadMultiviewTrackList(tracks_file, tracks, feature_reader);
   CHECK(ok) << "Could not load tracks";
   LOG(INFO) << "Loaded " << tracks.numTracks() << " multi-view tracks";
@@ -268,7 +271,7 @@ int main(int argc, char** argv) {
 
   // Remove any single-view tracks.
   if (FLAGS_exclude_single_view) {
-    MultiviewTrackList<SiftPosition> multi;
+    MultiviewTrackList<ScaleSpacePosition> multi;
     removeSingleViewTracks(tracks, multi);
     tracks.swap(multi);
   }
@@ -280,13 +283,13 @@ int main(int argc, char** argv) {
   }
 
   // Iterate through time.
-  MultiViewTimeIterator<SiftPosition> iterator(tracks);
+  MultiViewTimeIterator<ScaleSpacePosition> iterator(tracks);
 
   for (int time = 0; time < num_frames; time += 1) {
     LOG(INFO) << time;
 
     // Get points at this time instant, indexed by feature number.
-    std::map<int, std::map<int, SiftPosition> > features;
+    std::map<int, std::map<int, ScaleSpacePosition> > features;
     iterator.get(features);
 
     // Load image for each view.

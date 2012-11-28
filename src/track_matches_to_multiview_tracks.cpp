@@ -42,8 +42,8 @@ int main(int argc, char** argv) {
 
   bool ok;
   std::vector<Match> matches;
-  TrackList<ScaleSpacePosition> tracks1;
-  TrackList<ScaleSpacePosition> tracks2;
+  TrackList<ScaleSpacePosition> track_list1;
+  TrackList<ScaleSpacePosition> track_list2;
 
   // Load matches.
   MatchReader match_reader;
@@ -52,10 +52,23 @@ int main(int argc, char** argv) {
 
   // Load tracks.
   ScaleSpacePositionReader feature_reader;
-  ok = loadTrackList(tracks_file1, tracks1, feature_reader);
+  ok = loadTrackList(tracks_file1, track_list1, feature_reader);
   CHECK(ok) << "Could not load tracks";
-  ok = loadTrackList(tracks_file2, tracks2, feature_reader);
+  ok = loadTrackList(tracks_file2, track_list2, feature_reader);
   CHECK(ok) << "Could not load tracks";
+
+  // Move tracks into maps.
+  std::map<int, Track<ScaleSpacePosition> > tracks1;
+  std::map<int, Track<ScaleSpacePosition> > tracks2;
+
+  int n1 = track_list1.size();
+  for (int i = 0; i < n1; i += 1) {
+    tracks1[i].swap(track_list1[i]);
+  }
+  int n2 = track_list2.size();
+  for (int i = 0; i < n2; i += 1) {
+    tracks2[i].swap(track_list2[i]);
+  }
 
   // Create multi-view track.
   int num_views = 2;
@@ -64,13 +77,59 @@ int main(int argc, char** argv) {
   // Add multiview track for each match.
   int num_matches = matches.size();
   for (int i = 0; i < num_matches; i += 1) {
+    // Move tracks into multiview structure.
+    std::map<int, Track<ScaleSpacePosition> >::iterator track1 =
+        tracks1.find(matches[i].first);
+    CHECK(track1 != tracks1.end()) << "Track already used";
+    std::map<int, Track<ScaleSpacePosition> >::iterator track2 =
+        tracks2.find(matches[i].first);
+    CHECK(track2 != tracks2.end()) << "Track already used";
+
     MultiviewTrack<ScaleSpacePosition> track(2);
-    track.view(0).swap(tracks1[matches[i].first]);
-    track.view(1).swap(tracks2[matches[i].second]);
+    track.view(0).swap(track1->second);
+    track.view(1).swap(track2->second);
 
     multiview_tracks.push_back(MultiviewTrack<ScaleSpacePosition>());
     multiview_tracks.back().swap(track);
+
+    // Remove entry in map.
+    tracks1.erase(track1);
+    tracks2.erase(track2);
   }
+
+  LOG(INFO) << "Multi-view: " << multiview_tracks.numTracks();
+  LOG(INFO) << "First view only: " << tracks1.size();
+  LOG(INFO) << "Second view only: " << tracks2.size();
+
+  // Add all remaining tracks as their own multiview track.
+  while (!tracks1.empty()) {
+    std::map<int, Track<ScaleSpacePosition> >::iterator track1 =
+        tracks1.begin();
+
+    MultiviewTrack<ScaleSpacePosition> track(2);
+    track.view(0).swap(track1->second);
+
+    multiview_tracks.push_back(MultiviewTrack<ScaleSpacePosition>());
+    multiview_tracks.back().swap(track);
+
+    tracks1.erase(track1);
+  }
+
+  // Add all remaining tracks as their own multiview track.
+  while (!tracks2.empty()) {
+    std::map<int, Track<ScaleSpacePosition> >::iterator track2 =
+        tracks2.begin();
+
+    MultiviewTrack<ScaleSpacePosition> track(2);
+    track.view(1).swap(track2->second);
+
+    multiview_tracks.push_back(MultiviewTrack<ScaleSpacePosition>());
+    multiview_tracks.back().swap(track);
+
+    tracks2.erase(track2);
+  }
+
+  LOG(INFO) << "Total: " << multiview_tracks.numTracks();
 
   // Save track list.
   ScaleSpacePositionWriter writer;

@@ -3,8 +3,6 @@ function tracks = predator(image_dir, seeds, base_radius)
   base_diameter = 2 * base_radius + 1;
   num_points = numel(seeds);
 
-  SIFT_SIZE_TO_SCALE = 1 / 4;
-
   % Generate tracks.
   for i = 1:num_points
     fprintf('%d / %d\n', i, num_points);
@@ -12,7 +10,7 @@ function tracks = predator(image_dir, seeds, base_radius)
     close all;
     % Track each point using TLD.
     seed = seeds(i);
-    radius = seed.size * SIFT_SIZE_TO_SCALE * base_radius
+    radius = seed.size * base_radius
     bbox = [seed.x - radius; seed.y - radius; ...
             seed.x + radius; seed.y + radius];
 
