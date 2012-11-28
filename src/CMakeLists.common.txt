@@ -673,3 +673,8 @@ ADD_EXECUTABLE(merge-forward-and-reverse-tracks
   scale_space_position_writer.cpp)
 TARGET_LINK_LIBRARIES(merge-forward-and-reverse-tracks glog gflags)
 TARGET_LINK_LIBRARIES(merge-forward-and-reverse-tracks ${OpenCV_LIBS})
+
+ADD_EXECUTABLE(track-live
+  track_live.cpp)
+TARGET_LINK_LIBRARIES(track-live glog gflags)
+TARGET_LINK_LIBRARIES(track-live ${OpenCV_LIBS})

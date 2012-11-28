@@ -30,9 +30,6 @@
 DEFINE_int32(max_frames, -1,
     "Maximum number of frames to track in either direction. "
     "Negative for no limit.");
-DEFINE_bool(display, true, "Show visualization in window.");
-DEFINE_bool(save, false, "Save visualization to file.");
-DEFINE_string(save_format, "%d.png", "Format for frame filenames.");
 
 // Size (resolution) of window to track.
 const int PATCH_SIZE = 17;
