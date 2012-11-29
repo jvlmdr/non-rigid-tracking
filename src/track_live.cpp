@@ -86,6 +86,41 @@ void init(int& argc, char**& argv) {
   google::ParseCommandLineFlags(&argc, &argv, true);
 }
 
+struct State {
+  const TranslationWarper* translation_warper;
+  const SimilarityWarper* similarity_warper;
+  std::list<TrackedFeature>* features;
+  const cv::Mat* image;
+  int radius;
+  const FlowOptions* options;
+};
+
+void onMouse(int event, int x, int y, int, void* tag) {
+  State& state = *static_cast<State*>(tag);
+
+  if (event == CV_EVENT_LBUTTONDOWN || event == CV_EVENT_RBUTTONDOWN) {
+    // Clicked! Add a feature.
+    TrackedFeature feature;
+
+    if (event == CV_EVENT_LBUTTONDOWN) {
+      // Left-clicked. Add a translation feature.
+      feature.warp.reset(
+          new TranslationWarp(x, y, *state.translation_warper));
+    } else {
+      // Right-clicked. Add a similarity feature.
+      feature.warp.reset(
+          new SimilarityWarp(x, y, std::log(2.), 0., *state.similarity_warper));
+    }
+
+    // Extract initial appearance.
+    int diameter = 2 * state.radius + 1;
+    samplePatch(*feature.warp, *state.image, feature.appearance, diameter,
+        false, state.options->interpolation);
+
+    state.features->push_back(feature);
+  }
+}
+
 int main(int argc, char** argv) {
   init(argc, argv);
 
@@ -124,6 +159,19 @@ int main(int argc, char** argv) {
   typedef std::list<TrackedFeature> FeatureList;
   FeatureList features;
 
+  cv::Mat image;
+
+  State state;
+  state.translation_warper = &translation_warper;
+  state.similarity_warper = &similarity_warper;
+  state.features = &features;
+  state.image = &image;
+  state.radius = FLAGS_radius;
+  state.options = &options;
+
+  cv::namedWindow("video");
+  cv::setMouseCallback("video", onMouse, &state);
+
   while (!exit) {
     cv::Mat color_image;
     capture >> color_image;
@@ -136,7 +184,6 @@ int main(int argc, char** argv) {
     cv::Mat integer_gray_image;
     cv::cvtColor(color_image, integer_gray_image, CV_BGR2GRAY);
     // Convert to floating point in [0, 1].
-    cv::Mat image;
     integer_gray_image.convertTo(image, cv::DataType<double>::type, 1. / 255.);
 
     // Compute gradients using central difference.
@@ -165,21 +212,6 @@ int main(int argc, char** argv) {
       }
     }
 
-    // Add some features?
-    if (keypress == ' ') {
-      // Add a translation feature at the middle of the image.
-      TrackedFeature feature;
-      // Create warp.
-      feature.warp.reset(
-          new SimilarityWarp(image.cols / 2., image.rows / 2., std::log(2.), 0.,
-            similarity_warper));
-      // Extract initial appearance.
-      samplePatch(*feature.warp, image, feature.appearance, diameter, false,
-          options.interpolation);
-
-      features.push_back(feature);
-    }
-
     // Convert grayscale back to color for displaying.
     cv::Mat display;
     cv::cvtColor(integer_gray_image, display, CV_GRAY2BGR);
@@ -195,7 +227,7 @@ int main(int argc, char** argv) {
     }
 
     // Display image.
-    cv::imshow("image", display);
+    cv::imshow("video", display);
     keypress = cv::waitKey(1000 / 30);
 
     if (keypress == 27) {
