@@ -1,5 +1,5 @@
-#ifndef TRANSLATION_WARP_HPP_
-#define TRANSLATION_WARP_HPP_
+#ifndef TRANSLATION_WARPER_HPP_
+#define TRANSLATION_WARPER_HPP_
 
 #include "warp.hpp"
 

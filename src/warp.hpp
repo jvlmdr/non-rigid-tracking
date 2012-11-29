@@ -31,7 +31,10 @@ class Warp {
     virtual bool isValid(const cv::Size& image_size, int radius) const = 0;
 
     // Draws the warp on an image.
-    //virtual void draw(cv::Mat& image) const = 0;
+    virtual void draw(cv::Mat& image,
+                      int radius,
+                      const cv::Scalar& color,
+                      int thickness) const = 0;
 
     // Provides access to the parameters.
     virtual double* params() = 0;

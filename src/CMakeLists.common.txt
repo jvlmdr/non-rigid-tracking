@@ -679,7 +679,11 @@ ADD_EXECUTABLE(track-live
   track_live.cpp
   flow.cpp
   warp.cpp
-  util.cpp)
+  util.cpp
+  translation_warp.cpp
+  translation_warper.cpp
+  similarity_warp.cpp
+  similarity_warper.cpp)
 TARGET_LINK_LIBRARIES(track-live glog gflags)
 TARGET_LINK_LIBRARIES(track-live ${OpenCV_LIBS})
 TARGET_LINK_LIBRARIES(track-live ceres)

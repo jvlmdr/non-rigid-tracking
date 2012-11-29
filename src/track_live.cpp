@@ -14,6 +14,7 @@
 
 #include "read_image.hpp"
 #include "warp.hpp"
+#include "translation_warp.hpp"
 #include "similarity_warp.hpp"
 #include "sift_position.hpp"
 #include "flow.hpp"
@@ -26,9 +27,10 @@
 #include "track_list_writer.hpp"
 #include "util.hpp"
 
-DEFINE_int32(image_size, 512, "Maximum average dimension of image");
+DEFINE_int32(max_image_size, 512, "Maximum average dimension of image");
 DEFINE_int32(radius, 8, "Half of [patch size - 1]");
 DEFINE_double(mask_sigma, 4., "Sigma to use in mask");
+DEFINE_double(min_scale, 1., "Minimum warp scale");
 
 // Optical flow settings (frame to frame).
 const int MAX_NUM_ITERATIONS = 100;
@@ -41,7 +43,7 @@ const double MAX_CONDITION = 1e3;
 
 struct TrackedFeature {
   boost::shared_ptr<Warp> warp;
-  cv::Mat reference;
+  cv::Mat appearance;
 };
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -108,7 +110,16 @@ int main(int argc, char** argv) {
   // Construct mask.
   cv::Mat mask = makeGaussian(FLAGS_mask_sigma, diameter);
 
+  // Set up different warps.
+  TranslationWarper::CostFunction translation_cost(
+      new TranslationWarpFunction());
+  TranslationWarper translation_warper(translation_cost);
+
+  SimilarityWarper::CostFunction similarity_cost(new SimilarityWarpFunction());
+  SimilarityWarper similarity_warper(similarity_cost, FLAGS_min_scale);
+
   bool exit = false;
+  char keypress = 0;
 
   typedef std::list<TrackedFeature> FeatureList;
   FeatureList features;
@@ -116,7 +127,7 @@ int main(int argc, char** argv) {
   while (!exit) {
     cv::Mat color_image;
     capture >> color_image;
-    int max_pixels = FLAGS_image_size * FLAGS_image_size;
+    int max_pixels = FLAGS_max_image_size * FLAGS_max_image_size;
     while (color_image.total() > max_pixels) {
       cv::pyrDown(color_image, color_image);
     }
@@ -125,9 +136,8 @@ int main(int argc, char** argv) {
     cv::Mat integer_gray_image;
     cv::cvtColor(color_image, integer_gray_image, CV_BGR2GRAY);
     // Convert to floating point in [0, 1].
-    cv::Mat gray_image;
-    integer_gray_image.convertTo(gray_image, cv::DataType<double>::type,
-        1. / 255.);
+    cv::Mat image;
+    integer_gray_image.convertTo(image, cv::DataType<double>::type, 1. / 255.);
 
     // Compute gradients using central difference.
     // Don't worry about smoothing, this will be done by downsampling.
@@ -135,25 +145,60 @@ int main(int argc, char** argv) {
     cv::Mat ddy;
     cv::Mat diff = (cv::Mat_<double>(1, 3) << -0.5, 0, 0.5);
     cv::Mat identity = (cv::Mat_<double>(1, 1) << 1);
-    cv::sepFilter2D(gray_image, ddx, -1, diff, identity);
-    cv::sepFilter2D(gray_image, ddy, -1, identity, diff);
+    cv::sepFilter2D(image, ddx, -1, diff, identity);
+    cv::sepFilter2D(image, ddy, -1, identity, diff);
 
-    // Update each feature using the new image.
-    FeatureList::iterator feature;
-    for (feature = features.begin(); feature != features.end(); ++feature) {
-      bool tracked = trackPatch(*feature->warp, feature->reference, gray_image,
-          ddx, ddy, mask, options);
+    // Track features from the previous image.
+    {
+      FeatureList::iterator feature = features.begin();
+      while (feature != features.end()) {
+        bool tracked = trackPatch(*feature->warp, feature->appearance, image,
+            ddx, ddy, mask, options);
+
+        if (!tracked) {
+          // Failed to track. Erase feature and move on.
+          features.erase(feature++);
+        } else {
+          // Move to next.
+          ++feature;
+        }
+      }
+    }
+
+    // Add some features?
+    if (keypress == ' ') {
+      // Add a translation feature at the middle of the image.
+      TrackedFeature feature;
+      // Create warp.
+      feature.warp.reset(
+          new SimilarityWarp(image.cols / 2., image.rows / 2., std::log(2.), 0.,
+            similarity_warper));
+      // Extract initial appearance.
+      samplePatch(*feature.warp, image, feature.appearance, diameter, false,
+          options.interpolation);
+
+      features.push_back(feature);
     }
 
     // Convert grayscale back to color for displaying.
     cv::Mat display;
     cv::cvtColor(integer_gray_image, display, CV_GRAY2BGR);
 
+    // Draw features.
+    LOG(INFO) << features.size() << " features";
+    {
+      FeatureList::const_iterator feature;
+      for (feature = features.begin(); feature != features.end(); ++feature) {
+        cv::Scalar color(200, 0, 0);
+        feature->warp->draw(display, FLAGS_radius, color, 1);
+      }
+    }
+
     // Display image.
     cv::imshow("image", display);
-    char c = cv::waitKey(1000 / 30);
+    keypress = cv::waitKey(1000 / 30);
 
-    if (c == 27) {
+    if (keypress == 27) {
       exit = true;
     }
   }

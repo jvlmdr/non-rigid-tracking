@@ -20,6 +20,11 @@ class SimilarityWarp : public Warp {
     cv::Mat matrix() const;
     bool isValid(const cv::Size& image_size, int patch_radius) const;
 
+    void draw(cv::Mat& image,
+              int radius,
+              const cv::Scalar& color,
+              int thickness) const;
+
     double* params();
     const double* params() const;
     const Warper* warper() const;
