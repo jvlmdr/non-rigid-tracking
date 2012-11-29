@@ -2,13 +2,12 @@
 #include <opencv2/imgproc/imgproc.hpp>
 
 void samplePatch(const Warp& warp,
-                 const double* params,
                  const cv::Mat& image,
                  cv::Mat& patch,
                  int width,
                  bool invert,
                  int interpolation) {
-  cv::Mat M = warp.matrix(params);
+  cv::Mat M = warp.matrix();
   samplePatchAffine(image, patch, M, width, invert, interpolation);
 }
 

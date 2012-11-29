@@ -3,15 +3,15 @@
 
 #include <opencv2/core/core.hpp>
 #include <ceres/ceres.h>
+#include "warper.hpp"
 
-// Describes a parametrized affine warp.
+// Describes a specific parametrized affine warp.
 //
 // Has:
 // - number of parameters
-// - radius
-// - method to transform a point given parameters
-// - method to produce an affine matrix from the parameters
-// - method to draw a warped patch on an image
+// - method to transform a point
+// - method to produce an affine matrix
+// - parameters
 class Warp {
   public:
     virtual ~Warp() {}
@@ -21,25 +21,28 @@ class Warp {
 
     // Evaluates the warp, finds the Jacobian with respect to warp parameters.
     virtual cv::Point2d evaluate(const cv::Point2d& position,
-                                 const double* params,
                                  double* jacobian) const = 0;
 
     // Returns a matrix representation of the affine warp.
     // For use with warpAffine().
-    virtual cv::Mat matrix(const double* params) const = 0;
-};
+    virtual cv::Mat matrix() const = 0;
 
-class WarpValidator {
-  public:
-    virtual ~WarpValidator() {}
+    // Returns whether the warp is valid.
+    virtual bool isValid(const cv::Size& image_size, int radius) const = 0;
 
-    // Checks if a set of parameters are valid.
-    virtual bool check(const double* params) const = 0;
+    // Draws the warp on an image.
+    //virtual void draw(cv::Mat& image) const = 0;
+
+    // Provides access to the parameters.
+    virtual double* params() = 0;
+    virtual const double* params() const = 0;
+
+    // Provide the underlying warper.
+    virtual const Warper* warper() const = 0;
 };
 
 // Extracts a square patch of an image after applying a warp.
 void samplePatch(const Warp& warp,
-                 const double* params,
                  const cv::Mat& image,
                  cv::Mat& patch,
                  int width,

@@ -1,48 +1,49 @@
 #include "similarity_warp.hpp"
 #include <cmath>
+#include "util.hpp"
 
-SimilarityWarpParams::SimilarityWarpParams() {}
+SimilarityWarp::SimilarityWarp(double x,
+                               double y,
+                               double log_scale,
+                               double theta,
+                               const SimilarityWarper& warper)
+    : params_(NUM_PARAMS, 0.), warper_(&warper) {
+  params_[0] = x;
+  params_[1] = y;
+  params_[2] = log_scale;
+  params_[3] = theta;
+}
 
-SimilarityWarpParams::SimilarityWarpParams(double x,
-                                           double y,
-                                           double log_scale,
-                                           double theta)
-      : x(x), y(y), log_scale(log_scale), theta(theta) {}
-
-////////////////////////////////////////////////////////////////////////////////
-
-SimilarityWarp::SimilarityWarp() : warp_(new SimilarityWarpFunction()) {}
+SimilarityWarp::SimilarityWarp() : params_(NUM_PARAMS, 0.), warper_(NULL) {}
 
 SimilarityWarp::~SimilarityWarp() {}
 
-cv::Point2d SimilarityWarp::evaluate(const cv::Point2d& position,
-                                     const double* params,
-                                     double* jacobian) const {
-  // Get derivative of warp function.
-  double x[2] = { position.x, position.y };
-  // Create somewhere to write out the result.
-  double y[2];
-
-  const double* param_blocks[2] = { x, params };
-  double* jacobian_blocks[2] = { NULL, jacobian };
-
-  // Use Ceres to get the derivative of the warp function.
-  warp_.Evaluate(param_blocks, y, jacobian_blocks);
-
-  return cv::Point2d(y[0], y[1]);
-}
-
 int SimilarityWarp::numParams() const {
-  return NUM_PARAMS;
+  return warper_->numParams();
 }
 
-cv::Mat SimilarityWarp::matrix(const double* params) const {
-  SimilarityWarpParams p(params[0], params[1], params[2], params[3]);
+cv::Point2d SimilarityWarp::evaluate(const cv::Point2d& position,
+                                     double* jacobian) const {
+  return warper_->evaluate(position, params(), jacobian);
+}
 
-  double scale = std::exp(p.log_scale);
-  cv::Mat M = (cv::Mat_<double>(2, 3) <<
-      scale * std::cos(p.theta), scale * -std::sin(p.theta), p.x,
-      scale * std::sin(p.theta), scale *  std::cos(p.theta), p.y);
+cv::Mat SimilarityWarp::matrix() const {
+  return warper_->matrix(params());
+}
 
-  return M;
+bool SimilarityWarp::isValid(const cv::Size& image_size,
+                             int patch_radius) const {
+  return warper_->isValid(params(), image_size, patch_radius);
+}
+
+double* SimilarityWarp::params() {
+  return &params_.front();
+}
+
+const double* SimilarityWarp::params() const {
+  return &params_.front();
+}
+
+const Warper* SimilarityWarp::warper() const {
+  return warper_;
 }

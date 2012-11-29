@@ -1,38 +1,40 @@
 #include "translation_warp.hpp"
 
-TranslationWarpParams::TranslationWarpParams() : x(0), y(0) {}
+TranslationWarp(double x, double y, const TranslationWarper& warper)
+    : params_(NUM_PARAMS, 0.), warper_(&warper) {
+  params_[0] = x;
+  params_[1] = y;
+}
 
-TranslationWarpParams::TranslationWarpParams(double x, double y) : x(x), y(y) {}
-
-////////////////////////////////////////////////////////////////////////////////
-
-TranslationWarp::TranslationWarp() : warp_(new TranslationWarpFunction) {}
+TranslationWarp::TranslationWarp() : params_(NUM_PARAMS, 0.), warp_(NULL) {}
 
 TranslationWarp::~TranslationWarp() {}
 
 int TranslationWarp::numParams() const {
-  return 2;
+  return warper_->numParams();
 }
 
 cv::Point2d TranslationWarp::evaluate(const cv::Point2d& position,
-                                      const double* params,
                                       double* jacobian) const {
-  // Get derivative of warp function.
-  double x[2] = { position.x, position.y };
-  // Create somewhere to write out the result.
-  double y[2];
-
-  const double* param_blocks[2] = { x, params };
-  double* jacobian_blocks[2] = { NULL, jacobian };
-
-  // Use Ceres to get the derivative of the warp function.
-  warp_.Evaluate(param_blocks, y, jacobian_blocks);
-
-  return cv::Point2d(y[0], y[1]);
+  return warper_->evaluate(position, params(), jacobian);
 }
 
-cv::Mat TranslationWarp::matrix(const double* params) const {
-  TranslationWarpParams p(params[0], params[1]);
-  cv::Mat M = (cv::Mat_<double>(2, 3) << 1, 0, p->x, 0, 1, p->y);
-  return M;
+cv::Mat TranslationWarp::matrix() const {
+  return warper_->matrix(params());
+}
+
+bool TranslationWarp::isValid(const cv::Size& image_size, int radius) const {
+  return warper_->isValid(params(), image_size, radius);
+}
+
+double* TranslationWarp::params() {
+  return &params_.front();
+}
+
+const double* TranslationWarp::params() const {
+  return &params_.front();
+}
+
+const Warper* TranslationWarp::warper() const {
+  return warper_;
 }

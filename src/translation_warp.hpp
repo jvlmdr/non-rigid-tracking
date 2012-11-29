@@ -2,40 +2,32 @@
 #define TRANSLATION_WARP_HPP_
 
 #include "warp.hpp"
-
-struct TranslationWarpParams {
-  double x;
-  double y;
-
-  TranslationWarpParams();
-  TranslationWarpParams(double x, double y);
-};
-
-class TranslationWarpFunction {
-  public:
-    template<class T>
-    bool operator()(const T* const x, const T* const p, T* q) const;
-};
+#include "translation_warper.hpp"
 
 class TranslationWarp : public Warp {
-  private:
-    static const int NUM_PARAMS = 2;
-    ceres::AutoDiffCostFunction<TranslationWarpFunction, 2, 2,
-                                NUM_PARAMS> warp_;
-
   public:
+    TranslationWarp(double x, double y, const TranslationWarper& warper);
     TranslationWarp();
     ~TranslationWarp();
 
     int numParams() const;
 
-    cv::Point2d evaluate(const cv::Point2d& position,
-                         const double* params,
-                         double* jacobian) const;
+    cv::Point2d evaluate(const cv::Point2d& position, double* jacobian) const;
+    cv::Mat matrix() const;
+    bool isValid(const cv::Size& image_size, int radius) const;
 
-    cv::Mat matrix(const double* params) const;
+    double* params();
+    const double* params() const;
+    const Warper* warper() const;
+
+    inline double x() const { return params_[0]; }
+    inline double y() const { return params_[1]; }
+
+  private:
+    std::vector<double> params_;
+    const TranslationWarper* warper_;
+
+    static const int NUM_PARAMS = 2;
 };
-
-#include "translation_warp.inl"
 
 #endif

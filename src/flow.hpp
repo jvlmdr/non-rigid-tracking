@@ -12,14 +12,12 @@ struct FlowOptions {
   double max_condition;
 };
 
-bool trackPatch(const Warp& warp,
+bool trackPatch(Warp& warp,
                 const cv::Mat& reference,
                 const cv::Mat& image,
                 const cv::Mat& ddx_image,
                 const cv::Mat& ddy_image,
-                double* params,
                 const cv::Mat& mask,
-                const FlowOptions& options,
-                const WarpValidator* validator);
+                const FlowOptions& options);
 
 #endif

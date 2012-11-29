@@ -5,6 +5,7 @@
 #include <algorithm>
 #include <boost/format.hpp>
 #include <boost/lexical_cast.hpp>
+#include <boost/scoped_ptr.hpp>
 #include <gflags/gflags.h>
 #include <glog/logging.h>
 #include <opencv2/core/core.hpp>
@@ -30,13 +31,13 @@
 DEFINE_int32(max_frames, -1,
     "Maximum number of frames to track in either direction. "
     "Negative for no limit.");
+DEFINE_double(min_scale, 1., "Scale below which feature will be dropped");
 
-// Size (resolution) of window to track.
-const int PATCH_SIZE = 17;
+DEFINE_int32(radius, 8, "Half of [patch size - 1]");
+
 // Scale of Gaussian mask.
 // Patch size should be about 2 * (2 or 3 sigma).
 const double MASK_SIGMA = 4.;
-const int NUM_PIXELS = PATCH_SIZE * PATCH_SIZE;
 
 // Optical flow settings (frame to frame).
 const int MAX_NUM_ITERATIONS = 100;
@@ -48,15 +49,11 @@ const bool CHECK_CONDITION = true;
 const double MAX_CONDITION = 1e3;
 
 // Tracking settings.
-// Do not want to interpolate much below one pixel.
-const double MIN_SCALE = 1.;
 // Align to the template from the previous frame?
 const bool UPDATE_TEMPLATE = true;
 // Maximum average intensity difference as a fraction of the range.
 // (A value of 1 means anything is permitted.)
 const double MAX_RESIDUAL = 0.05;
-
-typedef std::vector<double> Params;
 
 std::string makeFilename(const std::string& format, int n) {
   return boost::str(boost::format(format) % (n + 1));
@@ -84,39 +81,30 @@ cv::Mat makeGaussian(double sigma, int width) {
   return gaussian;
 }
 
-Params featureToParams(const SiftPosition& feature) {
-  Params params(4);
-
-  params[0] = feature.x;
-  params[1] = feature.y;
-  params[3] = feature.theta;
-
+SimilarityWarp constructWarpFromSiftPosition(const SiftPosition& feature,
+                                             const SimilarityWarper& warper) {
   // Convert SIFT size to feature scale.
   double sigma = SIFT_SIZE_TO_SIGMA * feature.size;
   double scale = sigma / MASK_SIGMA;
-  params[2] = std::log(scale);
 
-  return params;
+  SimilarityWarp warp(feature.x, feature.y, std::log(scale), feature.theta,
+      warper);
+
+  return warp;
 }
 
-SiftPosition paramsToFeature(const Params& params) {
-  SiftPosition feature;
-
-  feature.x = params[0];
-  feature.y = params[1];
-  feature.theta = params[3];
-
-  // Convert feature scale to SIFT size.
-  double scale = std::exp(params[2]);
+SiftPosition extractSiftPositionFromWarp(const SimilarityWarp& warp) {
+  double scale = std::exp(warp.logScale());
+  // Convert SIFT size to feature scale.
   double sigma = scale * MASK_SIGMA;
-  feature.size = sigma / SIFT_SIZE_TO_SIGMA;
+  double size = sigma / SIFT_SIZE_TO_SIGMA;
 
-  return feature;
+  return SiftPosition(warp.x(), warp.y(), size, warp.theta());
 }
 
-std::pair<int, SiftPosition> paramsPairToFeaturePair(
-    const std::pair<int, Params>& pair) {
-  return std::make_pair(pair.first, paramsToFeature(pair.second));
+std::pair<int, SiftPosition> indexedSimilarityWarpToIndexedSiftPosition(
+    const std::pair<int, SimilarityWarp>& pair) {
+  return std::make_pair(pair.first, extractSiftPositionFromWarp(pair.second));
 }
 
 void init(int& argc, char**& argv) {
@@ -145,16 +133,16 @@ void init(int& argc, char**& argv) {
 //   - previous appearance
 //   - initial appearance
 struct TrackedFeature {
-  Params warp_params;
+  SimilarityWarp warp;
   cv::Mat previous_patch;
   cv::Mat initial_patch;
 
-  TrackedFeature(const Params& params, const cv::Mat& patch)
-      : warp_params(params),
+  TrackedFeature(const SimilarityWarp& warp, const cv::Mat& patch)
+      : warp(warp),
         previous_patch(patch.clone()),
         initial_patch(patch.clone()) {}
 
-  TrackedFeature() : warp_params(), previous_patch(), initial_patch() {}
+  TrackedFeature() : warp(), previous_patch(), initial_patch() {}
 };
 
 // Computes the average pixel residual, weighted by W.
@@ -170,19 +158,17 @@ double patchResidual(const cv::Mat& A, const cv::Mat& B, const cv::Mat& W) {
 }
 
 // Tracks a collection of warps through a sequence.
-void trackFeatures(const Warp& warp,
-                   const std::vector<Params>& keypoints,
-                   TrackList<Params>& tracks,
+void trackFeatures(const std::vector<SimilarityWarp>& warps,
+                   TrackList<SiftPosition>& tracks,
                    int width,
                    const cv::Mat& mask,
                    const std::string& image_format,
                    int time,
                    const FlowOptions& options,
                    int max_duration,
-                   bool reverse,
-                   const WarpValidator* validator) {
-  int num_keypoints = keypoints.size();
-  tracks = TrackList<Params>(num_keypoints);
+                   bool reverse) {
+  int num_keypoints = warps.size();
+  tracks = TrackList<SiftPosition>(num_keypoints);
 
   int duration = 0;
   bool ok = true;
@@ -211,14 +197,14 @@ void trackFeatures(const Warp& warp,
       for (int i = 0; i < num_keypoints; i += 1) {
         // Extract patch.
         cv::Mat patch;
-        samplePatch(warp, &keypoints[i].front(), image, patch, width, false,
+        samplePatch(warps[i], image, patch, width, false,
             options.interpolation);
 
         // Insert into active set.
         TrackedFeature& feature = (active[i] = TrackedFeature());
 
         // Copy warp parameters.
-        feature.warp_params = keypoints[i];
+        feature.warp = warps[i];
         // Copy into previous patch.
         feature.previous_patch = patch.clone();
         // Transfer ownership to set initial patch (using shared pointer).
@@ -248,14 +234,14 @@ void trackFeatures(const Warp& warp,
         }
 
         // Track the patch.
-        bool tracked = trackPatch(warp, *reference, image, ddx, ddy,
-            &feature.warp_params.front(), mask, options, validator);
+        bool tracked = trackPatch(feature.warp, *reference, image, ddx, ddy,
+            mask, options);
 
         if (tracked) {
           // Sample patch for appearance check and/or template update.
           cv::Mat patch;
-          samplePatch(warp, &feature.warp_params.front(), image, patch, width,
-              false, options.interpolation);
+          samplePatch(feature.warp, image, patch, width, false,
+              options.interpolation);
 
           // Do appearance check.
           double residual = patchResidual(patch, feature.initial_patch, mask);
@@ -288,7 +274,7 @@ void trackFeatures(const Warp& warp,
       int id = it->first;
       const TrackedFeature& feature = it->second;
 
-      tracks[id][time] = feature.warp_params;
+      tracks[id][time] = extractSiftPositionFromWarp(feature.warp);
     }
 
     if (reverse) {
@@ -300,50 +286,6 @@ void trackFeatures(const Warp& warp,
   }
 }
 
-class SimilarityWarpValidator : public WarpValidator {
-  public:
-    SimilarityWarpValidator(const cv::Size& size,
-                            int patch_size,
-                            double min_scale)
-        : size_(size), patch_size_(patch_size), min_scale_(min_scale) {}
-
-    ~SimilarityWarpValidator() {}
-
-    bool check(const double* params) const {
-      SimilarityWarpParams p(params[0], params[1], params[2], params[3]);
-      double scale = std::exp(p.log_scale);
-
-      if (!isFinite(scale)) {
-        DLOG(INFO) << "Scale became infinite";
-        return false;
-      }
-
-      if (scale < min_scale_) {
-        DLOG(INFO) << "Scale too small (" << scale << " < " << min_scale_ <<
-            ")";
-        return false;
-      }
-
-      // Check if region is entirely within image.
-      double radius = scale * patch_size_ / 2.;
-      // Reduce size by radius of patch.
-      int width = size_.width - 2. * radius;
-      int height = size_.height - 2. * radius;
-      cv::Rect_<double> bounds(radius, radius, width, height);
-      if (!bounds.contains(cv::Point2d(p.x, p.y))) {
-        DLOG(INFO) << "Feature outside image";
-        return false;
-      }
-
-      return true;
-    }
-
-  private:
-    cv::Size size_;
-    int patch_size_;
-    double min_scale_;
-};
-
 int main(int argc, char** argv) {
   init(argc, argv);
 
@@ -351,6 +293,8 @@ int main(int argc, char** argv) {
   int frame_number = boost::lexical_cast<int>(argv[2]);
   std::string keypoints_file = argv[3];
   std::string tracks_file = argv[4];
+
+  const int DIAMETER = FLAGS_radius * 2 + 1;
 
   // Load initial keypoints (x, y, size, theta).
   std::vector<SiftPosition> keypoints;
@@ -362,9 +306,19 @@ int main(int argc, char** argv) {
   LOG(INFO) << "Loaded " << num_features << " keypoints";
 
   // Convert each SIFT feature to a tracking feature.
-  std::vector<Params> warp_params;
-  std::transform(keypoints.begin(), keypoints.end(),
-      std::back_inserter(warp_params), featureToParams);
+  typedef std::vector<SimilarityWarp> WarpList;
+  WarpList warps;
+
+  // Construct similarity warp cost function.
+  SimilarityWarper::CostFunction cost_function(new SimilarityWarpFunction());
+  SimilarityWarper warper(cost_function, FLAGS_min_scale);
+
+  std::vector<SiftPosition>::const_iterator keypoint;
+  for (keypoint = keypoints.begin(); keypoint != keypoints.end(); ++keypoint) {
+    // Convert to a warp.
+    SimilarityWarp warp = constructWarpFromSiftPosition(*keypoint, warper);
+    warps.push_back(warp);
+  }
 
   // Read one image to get size.
   cv::Size size;
@@ -377,8 +331,6 @@ int main(int argc, char** argv) {
     size = color_image.size();
   }
 
-  // Track similarity transform.
-  SimilarityWarp warp;
   // Linear solver options.
   FlowOptions options;
   options.solver_options.linear_solver_type = ceres::DENSE_QR;
@@ -391,18 +343,17 @@ int main(int argc, char** argv) {
   options.iteration_limit_is_fatal = ITERATION_LIMIT_IS_FATAL;
   options.interpolation = cv::INTER_AREA;
   // Construct mask.
-  cv::Mat mask = makeGaussian(MASK_SIGMA, PATCH_SIZE);
-  // Checks that scale is not vanishing or infinite.
-  SimilarityWarpValidator validator(size, PATCH_SIZE, MIN_SCALE);
+  cv::Mat mask = makeGaussian(MASK_SIGMA, DIAMETER);
 
   // Check whether any of the features are initialized as invalid.
   // This warrants a warning.
-  std::vector<Params> valid;
+  WarpList valid;
   for (int i = 0; i < num_features; i += 1) {
-    if (validator.check(&warp_params[i].front())) {
-      valid.push_back(warp_params[i]);
+    if (warps[i].isValid(size, FLAGS_radius)) {
+      valid.push_back(warps[i]);
     }
   }
+
   int num_valid = valid.size();
   int num_invalid = num_features - num_valid;
   if (num_invalid > 0) {
@@ -413,30 +364,21 @@ int main(int argc, char** argv) {
   //num_features = num_valid;
 
   // Track forwards.
-  TrackList<Params> forward_tracks;
-  trackFeatures(warp, warp_params, forward_tracks, PATCH_SIZE, mask,
-      image_format, frame_number, options, FLAGS_max_frames, false, &validator);
+  TrackList<SiftPosition> forward_tracks;
+  trackFeatures(warps, forward_tracks, DIAMETER, mask, image_format,
+      frame_number, options, FLAGS_max_frames, false);
 
   // Track backwards.
-  TrackList<Params> reverse_tracks;
-  trackFeatures(warp, warp_params, reverse_tracks, PATCH_SIZE, mask,
-      image_format, frame_number, options, FLAGS_max_frames, true, &validator);
+  TrackList<SiftPosition> reverse_tracks;
+  trackFeatures(warps, reverse_tracks, DIAMETER, mask, image_format,
+      frame_number, options, FLAGS_max_frames, true);
 
   // Merge tracks.
-  TrackList<Params> param_tracks(num_features);
-  for (int i = 0; i < num_features; i += 1) {
-    Track<Params> track;
-    track.insert(forward_tracks[i].begin(), forward_tracks[i].end());
-    track.insert(reverse_tracks[i].begin(), reverse_tracks[i].end());
-    param_tracks[i].swap(track);
-  }
-
-  // Convert to features.
   TrackList<SiftPosition> tracks(num_features);
   for (int i = 0; i < num_features; i += 1) {
     Track<SiftPosition> track;
-    std::transform(param_tracks[i].begin(), param_tracks[i].end(),
-        std::inserter(track, track.begin()), paramsPairToFeaturePair);
+    track.insert(forward_tracks[i].begin(), forward_tracks[i].end());
+    track.insert(reverse_tracks[i].begin(), reverse_tracks[i].end());
     tracks[i].swap(track);
   }
 

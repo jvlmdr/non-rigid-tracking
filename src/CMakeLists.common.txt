@@ -58,6 +58,7 @@ ADD_EXECUTABLE(track-features-bidir
   flow.cpp
   warp.cpp
   util.cpp
+  similarity_warper.cpp
   similarity_warp.cpp
   sift_position.cpp
   sift_position_reader.cpp
@@ -675,6 +676,13 @@ TARGET_LINK_LIBRARIES(merge-forward-and-reverse-tracks glog gflags)
 TARGET_LINK_LIBRARIES(merge-forward-and-reverse-tracks ${OpenCV_LIBS})
 
 ADD_EXECUTABLE(track-live
-  track_live.cpp)
+  track_live.cpp
+  flow.cpp
+  warp.cpp
+  util.cpp)
 TARGET_LINK_LIBRARIES(track-live glog gflags)
 TARGET_LINK_LIBRARIES(track-live ${OpenCV_LIBS})
+TARGET_LINK_LIBRARIES(track-live ceres)
+TARGET_LINK_LIBRARIES(track-live cxsparse)
+TARGET_LINK_LIBRARIES(track-live cholmod ccolamd camd colamd amd)
+TARGET_LINK_LIBRARIES(track-live ${LAPACK_LIB})

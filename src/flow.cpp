@@ -6,6 +6,7 @@
 #include <opencv2/imgproc/imgproc.hpp>
 #include <ceres/ceres.h>
 #include "util.hpp"
+#include "warper.hpp"
 
 class WarpCost : public ceres::CostFunction {
   public:
@@ -17,7 +18,7 @@ class WarpCost : public ceres::CostFunction {
     // dIdx, dIdy -- The x and y derivative of the image.
     // mask -- Weighting mask, same size as template.
     //   Should be rotationally symmetric and circular.
-    WarpCost(const Warp& warp,
+    WarpCost(const Warper& warper,
              const cv::Mat& J,
              const cv::Mat& I,
              const cv::Mat& dIdx,
@@ -25,8 +26,7 @@ class WarpCost : public ceres::CostFunction {
              const cv::Mat& mask,
              int interpolation,
              bool check_condition,
-             double max_condition,
-             const WarpValidator* validator);
+             double max_condition);
 
     ~WarpCost() {}
 
@@ -35,7 +35,7 @@ class WarpCost : public ceres::CostFunction {
                   double** jacobians) const;
 
   private:
-    const Warp* warp_;
+    const Warper* warper_;
     const cv::Mat* J_;
     const cv::Mat* I_;
     const cv::Mat* dIdx_;
@@ -44,10 +44,9 @@ class WarpCost : public ceres::CostFunction {
     int interpolation_;
     bool check_condition_;
     double max_condition_;
-    const WarpValidator* validator_;
 };
 
-WarpCost::WarpCost(const Warp& warp,
+WarpCost::WarpCost(const Warper& warper,
                    const cv::Mat& J,
                    const cv::Mat& I,
                    const cv::Mat& dIdx,
@@ -55,9 +54,8 @@ WarpCost::WarpCost(const Warp& warp,
                    const cv::Mat& mask,
                    int interpolation,
                    bool check_condition,
-                   double max_condition,
-                   const WarpValidator* validator)
-    : warp_(&warp),
+                   double max_condition)
+    : warper_(&warper),
       J_(&J),
       I_(&I),
       dIdx_(&dIdx),
@@ -65,15 +63,14 @@ WarpCost::WarpCost(const Warp& warp,
       mask_(&mask),
       interpolation_(interpolation),
       check_condition_(check_condition),
-      max_condition_(max_condition),
-      validator_(validator) {
+      max_condition_(max_condition) {
   // Check that we have a square patch.
   CHECK(J.rows == J.cols);
   // Check that mask is correct size.
   CHECK(mask.size() == J.size());
 
   // Set the number of inputs (configure as a single block).
-  mutable_parameter_block_sizes()->push_back(warp_->numParams());
+  mutable_parameter_block_sizes()->push_back(warper_->numParams());
 
   // Set the number of outputs.
   set_num_residuals(J.total());
@@ -82,25 +79,25 @@ WarpCost::WarpCost(const Warp& warp,
 bool WarpCost::Evaluate(const double* const* params,
                         double* residuals,
                         double** jacobians) const {
+  int num_params = warper_->numParams();
+  int diameter = J_->rows;
+  int radius = (diameter - 1) / 2;
+
   // Check that configuration is valid.
-  if (validator_ != NULL) {
-    if (!validator_->check(params[0])) {
-      return false;
-    }
+  if (!warper_->isValid(params[0], I_->size(), radius)) {
+    return false;
   }
 
-  int width = J_->rows;
-  int num_pixels = width * width;
-  int num_params = warp_->numParams();
+  int num_pixels = diameter * diameter;
 
   // Build matrix representing affine transformation.
-  cv::Mat M = warp_->matrix(params[0]);
+  cv::Mat M = warper_->matrix(params[0]);
   // Sample image for x in regular grid.
   cv::Mat patch;
-  samplePatchAffine(*I_, patch, M, width, false, interpolation_);
+  samplePatchAffine(*I_, patch, M, diameter, false, interpolation_);
 
   // Compute residuals.
-  cv::Mat error = cv::Mat_<double>(width, width, residuals);
+  cv::Mat error = cv::Mat_<double>(diameter, diameter, residuals);
   error = patch - *J_;
   // Weight by the mask.
   cv::multiply(error, *mask_, error);
@@ -118,16 +115,15 @@ bool WarpCost::Evaluate(const double* const* params,
     // (for efficiency and hopefully correct downsampling)
     cv::Mat ddx_patch;
     cv::Mat ddy_patch;
-    samplePatchAffine(*dIdx_, ddx_patch, M, width, false, interpolation_);
-    samplePatchAffine(*dIdy_, ddy_patch, M, width, false, interpolation_);
+    samplePatchAffine(*dIdx_, ddx_patch, M, diameter, false, interpolation_);
+    samplePatchAffine(*dIdy_, ddy_patch, M, diameter, false, interpolation_);
 
-    double radius = (width - 1) / 2.;
     cv::Point2d center(radius, radius);
 
-    for (int u = 0; u < width; u += 1) {
-      for (int v = 0; v < width; v += 1) {
+    for (int u = 0; u < diameter; u += 1) {
+      for (int v = 0; v < diameter; v += 1) {
         // Get row-major order index.
-        int i = v * width + u;
+        int i = v * diameter + u;
 
         // Get image derivative at each warped point.
         cv::Mat dIdx = (cv::Mat_<double>(1, 2) <<
@@ -136,7 +132,7 @@ bool WarpCost::Evaluate(const double* const* params,
         // Get derivative of warp function.
         double dWdp_data[2 * num_params];
         cv::Point2d position = cv::Point2d(u, v) - center;
-        warp_->evaluate(position, params[0], dWdp_data);
+        warper_->evaluate(position, params[0], dWdp_data);
 
         // Use chain rule.
         cv::Mat dWdp(2, num_params, cv::DataType<double>::type, dWdp_data);
@@ -165,24 +161,22 @@ bool WarpCost::Evaluate(const double* const* params,
 ////////////////////////////////////////////////////////////////////////////////
 
 // Returns false if the optimization did not converge.
-bool trackPatch(const Warp& warp,
+bool trackPatch(Warp& warp,
                 const cv::Mat& reference,
                 const cv::Mat& image,
                 const cv::Mat& ddx_image,
                 const cv::Mat& ddy_image,
-                double* params,
                 const cv::Mat& mask,
-                const FlowOptions& options,
-                const WarpValidator* validator) {
+                const FlowOptions& options) {
   CHECK(reference.rows == reference.cols) << "Template must be square";
 
   // Set up non-linear optimization problem.
-  ceres::CostFunction* objective = new WarpCost(warp, reference,
+  ceres::CostFunction* objective = new WarpCost(*warp.warper(), reference,
       image, ddx_image, ddy_image, mask, options.interpolation,
-      options.check_condition, options.max_condition, validator);
+      options.check_condition, options.max_condition);
 
   ceres::Problem problem;
-  problem.AddResidualBlock(objective, NULL, params);
+  problem.AddResidualBlock(objective, NULL, warp.params());
 
   // Solve!
   ceres::Solver::Summary summary;
