@@ -13,11 +13,12 @@ void distanceTransform(const std::vector<double>& f,
   d.assign(m, 0);
   arg.assign(m, -1);
 
-  for (int p = 0; p < n; p += 1) {
+  // From p to q.
+  for (int p = 0; p < m; p += 1) {
     double d_star = 0;
     int q_star = -1;
 
-    for (int q = 0; q < m; q += 1) {
+    for (int q = 0; q < n; q += 1) {
       double d_pq = f[q] + g.at<double>(p, q);
 
       if (q == 0 || d_pq < d_star) {
@@ -266,6 +267,240 @@ double solveViterbiQuadratic2D(const std::vector<cv::Mat>& g,
   // Trace solutions back.
   for (int i = n - 1; i > 0; i -= 1) {
     x[i - 1] = args[i - 1].at<cv::Vec2i>(x[i]);
+  }
+
+  return f_star;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+
+MixedVariable::MixedVariable() : set(-1), two_d(-1, -1), one_d(-1) {}
+
+// f(u, v) contains the sampled 2D function.
+// g(i, u, v) contains the cost of transitioning from (u, v) to i.
+//
+// arg(i) contains the minimizer (u*, v*)
+void distanceTransform2D1D(const cv::Mat& f,
+                           const cv::Mat& g,
+                           std::vector<double>& d,
+                           std::vector<cv::Vec2i>& arg) {
+  CHECK(g.type() == cv::DataType<double>::type);
+  CHECK(g.dims == 3);
+
+  int p = f.rows;
+  int q = f.cols;
+
+  int m = g.size[0];
+  CHECK(g.size[1] == p);
+  CHECK(g.size[2] == q);
+
+  // Flatten from 3D tensor to matrix.
+  // TODO: Avoid copying?
+  std::vector<double> vec_f;
+  std::copy(f.begin<double>(), f.end<double>(), std::back_inserter(vec_f));
+  int dims[] = { m, p * q };
+  cv::Mat vec_g = g.reshape(1, 2, dims);
+  std::vector<int> index;
+  distanceTransform(vec_f, vec_g, d, index);
+
+  // Convert from 1D index to 2D index.
+  arg.assign(m, cv::Vec2i(-1, -1));
+  for (int i = 0; i < m; i += 1) {
+    // Matrix is p x q. Un-flatten indices.
+    arg[i] = cv::Vec2i(index[i] / q, index[i] % q);
+    //arg[i] = cv::Vec2i(index[i] % p, index[i] / p);
+  }
+}
+
+// f[i] contains the sampled 1D function.
+// g(u, v, i) contains the cost of transitioning from i to (u, v).
+//
+// arg(u, v) contains the minimizer i*
+void distanceTransform1D2D(const std::vector<double>& f,
+                           const cv::Mat& g,
+                           cv::Mat& d,
+                           cv::Mat& arg) {
+  CHECK(g.type() == cv::DataType<double>::type);
+  CHECK(g.dims == 3);
+
+  int n = f.size();
+  int p = g.size[0];
+  int q = g.size[1];
+  CHECK(g.size[2] == n);
+  int m = p * q;
+
+  // Flatten from 3D tensor to matrix.
+  int dims[] = { m, n };
+  cv::Mat vec_g = g.reshape(1, 2, dims);
+
+  std::vector<double> vec_d;
+  std::vector<int> vec_arg;
+  distanceTransform(f, vec_g, vec_d, vec_arg);
+
+  // Pop out from matrix to tensor.
+  // TODO: Avoid copying?
+  d = cv::Mat(vec_d, true).reshape(1, p);
+  arg = cv::Mat(vec_arg, true).reshape(1, p);
+}
+
+// The objective is split into regular (grid-aligned) and general arguments.
+//
+// Minimizes
+//   sum_i g_i(x[i]) + sum_i h_i(x[i], x[i + 1])
+// where
+// g_i(x) = g_A[i](x[0], x[1]), if x in A
+//          g_B[i][x],          if x in B.
+// h_i(x, y) = ||x - y||^2,            if x, y in A
+//             h_AB[i](x[0], x[1], y), if x in A, y in B
+//             h_BA[i](x, y[0], y[1]), if x in B, y in A
+//             h_BB[i](x, y),          if x, y in B
+//
+// Assumes that neighbouring A's are identical or empty.
+double solveViterbiPartialQuadratic2D(
+    const std::vector<cv::Mat>& g_A,
+    const std::deque<std::vector<double> >& g_B,
+    const std::vector<cv::Mat>& h_AB,
+    const std::vector<cv::Mat>& h_BA,
+    const std::vector<cv::Mat>& h_BB,
+    std::vector<MixedVariable>& x) {
+  // Check sequences of unary terms have same length.
+  int n = g_A.size();
+  CHECK(g_B.size() == n);
+  // Check binary terms are appropriate length.
+  CHECK(h_BB.size() == n - 1);
+  CHECK(h_AB.size() == n - 1);
+  CHECK(h_BA.size() == n - 1);
+
+  // Initialize partial solutions to unary term.
+  cv::Mat f_A = g_A[0];
+  std::vector<double> f_B = g_B[0];
+
+  // Minimizer of each update.
+  std::deque<std::deque<std::vector<MixedVariable> > > args_A;
+  std::deque<std::vector<MixedVariable> > args_B;
+
+  for (int i = 0; i < n - 1; i += 1) {
+    // Compute distance transform.
+    cv::Mat d_AA;
+    cv::Mat args_AA;
+    quadraticDistanceTransform2D(f_A, d_AA, args_AA);
+
+    std::vector<double> d_AB;
+    std::vector<cv::Vec2i> args_AB;
+    distanceTransform2D1D(f_A, h_AB[i], d_AB, args_AB);
+
+    cv::Mat d_BA;
+    cv::Mat args_BA;
+    distanceTransform1D2D(f_B, h_BA[i], d_BA, args_BA);
+
+    std::vector<double> d_BB;
+    std::vector<int> args_BB;
+    distanceTransform(f_B, h_BB[i], d_BB, args_BB);
+
+    // Take min over the two sets.
+
+    // Dimensions of distance transform component.
+    int p = g_A[i].rows;
+    int q = g_A[i].cols;
+
+    if (g_A[i].empty() || g_A[i + 1].empty()) {
+      p = 0;
+      q = 0;
+    } else {
+      CHECK(g_A[i].rows == g_A[i + 1].rows);
+      CHECK(g_A[i].cols == g_A[i + 1].cols);
+    }
+
+    cv::Mat d_A = cv::Mat_<double>(p, q);
+    std::deque<std::vector<MixedVariable> > args_A_i(p);
+    for (int u = 0; u < p; u += 1) {
+      args_A_i[u].assign(q, MixedVariable());
+    }
+
+    for (int u = 0; u < p; u += 1) {
+      for (int v = 0; v < q; v += 1) {
+        if (d_BA.at<double>(u, v) < d_AA.at<double>(u, v)) {
+          d_A.at<double>(u, v) = d_BA.at<double>(u, v);
+          args_A_i[u][v].set = 1;
+          args_A_i[u][v].one_d = args_BA.at<int>(u, v);
+        } else {
+          d_A.at<double>(u, v) = d_AA.at<double>(u, v);
+          args_A_i[u][v].set = 0;
+          args_A_i[u][v].two_d = args_AA.at<cv::Vec2i>(u, v);
+        }
+      }
+    }
+
+    int k_B = g_B[i + 1].size();
+    std::vector<double> d_B(k_B);
+    std::vector<MixedVariable> args_B_i(k_B);
+    for (int u = 0; u < k_B; u += 1) {
+      if (d_BB[u] < d_AB[u]) {
+        d_B[u] = d_BB[u];
+        args_B_i[u].set = 1;
+        args_B_i[u].one_d = args_BB[u];
+      } else {
+        d_B[u] = d_AB[u];
+        args_B_i[u].set = 0;
+        args_B_i[u].two_d = args_AB[u];
+      }
+    }
+
+    args_A.push_back(args_A_i);
+    args_B.push_back(args_B_i);
+
+    // Add unary terms to result of distance transform.
+    f_A = d_A + g_A[i + 1];
+    f_B.assign(k_B, 0);
+    for (int u = 0; u < k_B; u += 1) {
+      f_B[u] = d_B[u] + g_B[i + 1][u];
+    }
+  }
+
+  x.assign(n, MixedVariable());
+  double f_star;
+
+  // Find minimum element in final table.
+  {
+    double f_star_A = 0;
+    cv::Point point;
+    cv::minMaxLoc(f_A, &f_star_A, NULL, &point, NULL);
+    if (point.x == -1 && point.y == -1) {
+      // minMaxLoc does not work with infinities.
+      point = cv::Point(0, 0);
+      f_star_A = std::numeric_limits<double>::infinity();
+    }
+    cv::Vec2i x_star_A(point.y, point.x);
+
+    double f_star_B = 0;
+    int x_star_B = -1;
+    int k_B = g_B[n - 1].size();
+    for (int u = 0; u < k_B; u += 1) {
+      if (u == 0 || f_B[u] < f_star_B) {
+        f_star_B = f_B[u];
+        x_star_B = u;
+      }
+    }
+
+    if (f_star_B < f_star_A) {
+      f_star = f_star_B;
+      x[n - 1].set = 1;
+      x[n - 1].one_d = x_star_B;
+    } else {
+      f_star = f_star_A;
+      x[n - 1].set = 0;
+      x[n - 1].two_d = x_star_A;
+    }
+  }
+
+  // Trace solutions back.
+  for (int i = n - 1; i > 0; i -= 1) {
+    if (x[i].set == 0) {
+      cv::Vec2i index = x[i].two_d;
+      x[i - 1] = args_A[i - 1][index[0]][index[1]];
+    } else {
+      x[i - 1] = args_B[i - 1][x[i].one_d];
+    }
   }
 
   return f_star;

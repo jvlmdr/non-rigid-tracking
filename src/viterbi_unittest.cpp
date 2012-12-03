@@ -4,6 +4,7 @@
 #include "viterbi.hpp"
 #include "gtest/gtest.h"
 #include "glog/logging.h"
+#include "util.hpp"
 
 TEST(SolveViterbi, VersusExhaustive) {
   int n = 4;
@@ -216,5 +217,139 @@ TEST(SolveViterbiQuadratic2D, VersusNaive) {
   for (int i = 0; i < n; i += 1) {
     ASSERT_EQ(x_matrix[i][1], x_vector[i] / ky);
     ASSERT_EQ(x_matrix[i][0], x_vector[i] % ky);
+  }
+}
+
+TEST(SolveViterbiPartialQuadratic2D, VersusNaive) {
+  int n = 17;
+  int k_B = 13;
+  int p = 7;
+  int q = 11;
+
+  int k_A = p * q;
+  int k = k_A + k_B;
+
+  double sigma_AB = 2.;
+  double sigma_BA = 2.;
+  double sigma_BB = 1.;
+
+  // Initialize g_A randomly.
+  std::vector<cv::Mat> g_A(n);
+  for (int i = 0; i < n; i += 1) {
+    g_A[i] = cv::Mat_<double>(p, q);
+    cv::randn(g_A[i], 0, 1);
+  }
+
+  // Initialize g_B randomly.
+  std::deque<std::vector<double> > g_B(n);
+  for (int i = 0; i < n; i += 1) {
+    g_B[i].assign(k_B, 0.);
+    cv::randn(g_B[i], 0, 1);
+  }
+
+  // Initialize h_AB randomly.
+  std::vector<cv::Mat> h_AB(n - 1);
+  for (int i = 0; i < n - 1; i += 1) {
+    int dims[] = { k_B, p, q };
+    h_AB[i] = cv::Mat_<double>(3, dims);
+    cv::randn(h_AB[i], 0, sigma_AB);
+  }
+
+  // Initialize h_BA randomly.
+  std::vector<cv::Mat> h_BA(n - 1);
+  for (int i = 0; i < n - 1; i += 1) {
+    int dims[] = { p, q, k_B };
+    h_BA[i] = cv::Mat_<double>(3, dims);
+    cv::randn(h_BA[i], 0, sigma_BA);
+  }
+
+  // Initialize h_BB randomly.
+  std::vector<cv::Mat> h_BB(n - 1);
+  for (int i = 0; i < n - 1; i += 1) {
+    h_BB[i] = cv::Mat_<double>(k_B, k_B);
+    cv::randn(h_BB[i], 0, sigma_BB);
+  }
+
+  // Flatten out unary terms.
+  std::deque<std::vector<double> > g(n);
+  for (int i = 0; i < n; i += 1) {
+    std::copy(g_A[i].begin<double>(), g_A[i].end<double>(),
+        std::back_inserter(g[i]));
+    std::copy(g_B[i].begin(), g_B[i].end(), std::back_inserter(g[i]));
+  }
+
+  // Construct quadratic distance matrix.
+  cv::Mat h_AA;
+  {
+    int dims[] = { p, q, p, q };
+    h_AA = cv::Mat_<double>(4, dims, -std::numeric_limits<double>::infinity());
+
+    for (int i = 0; i < p; i += 1) {
+      for (int j = 0; j < q; j += 1) {
+        for (int u = 0; u < p; u += 1) {
+          for (int v = 0; v < q; v += 1) {
+            int index[] = { i, j, u, v };
+            h_AA.at<double>(index) = sqr(i - u) + sqr(j - v);
+          }
+        }
+      }
+    }
+  }
+  {
+    int dims[] = { k_A, k_A };
+    h_AA = h_AA.reshape(1, 2, dims);
+  }
+
+  // Flatten and fuse pairwise terms.
+  std::vector<cv::Mat> h(n - 1);
+  for (int i = 0; i < n - 1; i += 1) {
+    // Initialize to -inf so that errors are immediately obvious.
+    h[i] = cv::Mat_<double>(k, k, -std::numeric_limits<double>::infinity());
+
+    // A to A
+    cv::Mat dst = h[i](cv::Range(0, k_A), cv::Range(0, k_A));
+    h_AA.copyTo(dst);
+
+    // B to A
+    {
+      int dims[] = { k_A, k_B };
+      cv::Mat src = h_BA[i].reshape(1, 2, dims);
+      dst = h[i](cv::Range(0, k_A), cv::Range(k_A, k));
+      src.copyTo(dst);
+    }
+
+    // A to B
+    {
+      int dims[] = { k_B, k_A };
+      cv::Mat src = h_AB[i].reshape(1, 2, dims);
+      dst = h[i](cv::Range(k_A, k), cv::Range(0, k_A));
+      src.copyTo(dst);
+    }
+
+    // B to B
+    dst = h[i](cv::Range(k_A, k), cv::Range(k_A, k));
+    h_BB[i].copyTo(dst);
+  }
+
+  // Solve naive dynamic program.
+  std::vector<int> x_naive;
+  double f_naive = solveViterbi(g, h, x_naive);
+
+  // Solve with the partially accelerated distance transform.
+  std::vector<MixedVariable> x;
+  double f = solveViterbiPartialQuadratic2D(g_A, g_B, h_AB, h_BA, h_BB, x);
+
+  // Check value.
+  ASSERT_EQ(f_naive, f);
+
+  // Check args.
+  for (int i = 0; i < int(x_naive.size()); i += 1) {
+    ASSERT_EQ(x_naive[i] < k_A, x[i].set == 0);
+
+    if (x[i].set == 0) {
+      ASSERT_EQ(cv::Vec2i(x_naive[i] / q, x_naive[i] % q), x[i].two_d);
+    } else {
+      ASSERT_EQ(x_naive[i] - k_A, x[i].one_d);
+    }
   }
 }
