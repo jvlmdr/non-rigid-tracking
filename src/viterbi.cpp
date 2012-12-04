@@ -541,15 +541,10 @@ void distanceTransform2D(const cv::Mat& f,
 double solveViterbiSplitQuadratic2D(
     const std::vector<cv::Mat>& g_A,
     const std::vector<cv::Mat>& g_B,
-    const std::vector<cv::Mat>& h_AB,
-    const std::vector<cv::Mat>& h_BA,
     std::vector<SplitVariable>& x) {
   // Check sequences of unary terms have same length.
   int length = g_A.size();
   CHECK(g_B.size() == length);
-  // Check binary terms are appropriate length.
-  CHECK(h_AB.size() == length - 1);
-  CHECK(h_BA.size() == length - 1);
 
   // Initialize partial solutions to unary term.
   cv::Mat f_A = g_A[0];
@@ -567,11 +562,11 @@ double solveViterbiSplitQuadratic2D(
 
     cv::Mat d_AB;
     cv::Mat args_AB;
-    distanceTransform2D(f_A, h_AB[t], d_AB, args_AB);
+    quadraticDistanceTransform2D(f_A, d_AB, args_AB);
 
     cv::Mat d_BA;
     cv::Mat args_BA;
-    distanceTransform2D(f_B, h_BA[t], d_BA, args_BA);
+    quadraticDistanceTransform2D(f_B, d_BA, args_BA);
 
     cv::Mat d_BB;
     cv::Mat args_BB;

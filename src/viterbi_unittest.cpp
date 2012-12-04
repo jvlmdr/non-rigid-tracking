@@ -375,22 +375,6 @@ TEST(SolveViterbiSplitQuadratic2D, VersusNaive) {
     cv::randn(g_B[i], 0, 1);
   }
 
-  // Initialize h_AB randomly.
-  std::vector<cv::Mat> h_AB(length - 1);
-  for (int i = 0; i < length - 1; i += 1) {
-    int dims[] = { p, q, m, n };
-    h_AB[i] = cv::Mat_<double>(4, dims);
-    cv::randn(h_AB[i], 0, 1);
-  }
-
-  // Initialize h_BA randomly.
-  std::vector<cv::Mat> h_BA(length - 1);
-  for (int i = 0; i < length - 1; i += 1) {
-    int dims[] = { m, n, p, q };
-    h_BA[i] = cv::Mat_<double>(4, dims);
-    cv::randn(h_BA[i], 0, 1);
-  }
-
   // Flatten out unary terms.
   std::deque<std::vector<double> > g(length);
   for (int i = 0; i < length; i += 1) {
@@ -412,6 +396,42 @@ TEST(SolveViterbiSplitQuadratic2D, VersusNaive) {
           for (int v = 0; v < n; v += 1) {
             int index[] = { i, j, u, v };
             h_AA.at<double>(index) = sqr(i - u) + sqr(j - v);
+          }
+        }
+      }
+    }
+  }
+
+  // Construct quadratic distance matrix for A to B.
+  cv::Mat h_AB;
+  {
+    int dims[] = { p, q, m, n };
+    h_AB = cv::Mat_<double>(4, dims, -std::numeric_limits<double>::infinity());
+
+    for (int i = 0; i < p; i += 1) {
+      for (int j = 0; j < q; j += 1) {
+        for (int u = 0; u < m; u += 1) {
+          for (int v = 0; v < n; v += 1) {
+            int index[] = { i, j, u, v };
+            h_AB.at<double>(index) = sqr(i - u) + sqr(j - v);
+          }
+        }
+      }
+    }
+  }
+
+  // Construct quadratic distance matrix for B to A.
+  cv::Mat h_BA;
+  {
+    int dims[] = { m, n, p, q };
+    h_BA = cv::Mat_<double>(4, dims, -std::numeric_limits<double>::infinity());
+
+    for (int i = 0; i < m; i += 1) {
+      for (int j = 0; j < n; j += 1) {
+        for (int u = 0; u < p; u += 1) {
+          for (int v = 0; v < q; v += 1) {
+            int index[] = { i, j, u, v };
+            h_BA.at<double>(index) = sqr(i - u) + sqr(j - v);
           }
         }
       }
@@ -453,7 +473,7 @@ TEST(SolveViterbiSplitQuadratic2D, VersusNaive) {
     // B to A
     {
       int dims[] = { k_A, k_B };
-      cv::Mat src = h_BA[i].reshape(1, 2, dims);
+      cv::Mat src = h_BA.reshape(1, 2, dims);
       cv::Mat dst = h[i](cv::Range(0, k_A), cv::Range(k_A, k));
       src.copyTo(dst);
     }
@@ -461,7 +481,7 @@ TEST(SolveViterbiSplitQuadratic2D, VersusNaive) {
     // A to B
     {
       int dims[] = { k_B, k_A };
-      cv::Mat src = h_AB[i].reshape(1, 2, dims);
+      cv::Mat src = h_AB.reshape(1, 2, dims);
       cv::Mat dst = h[i](cv::Range(k_A, k), cv::Range(0, k_A));
       src.copyTo(dst);
     }
@@ -481,7 +501,7 @@ TEST(SolveViterbiSplitQuadratic2D, VersusNaive) {
 
   // Solve with the partially accelerated distance transform.
   std::vector<SplitVariable> x;
-  double f = solveViterbiSplitQuadratic2D(g_A, g_B, h_AB, h_BA, x);
+  double f = solveViterbiSplitQuadratic2D(g_A, g_B, x);
 
   // Check value.
   ASSERT_EQ(f_naive, f);

@@ -80,12 +80,7 @@ struct SplitVariable {
 };
 
 // The domain is partitioned into two distance transforms.
-//
-// h_AB[t](i, j, u, v) is the cost of going from (u, v) in A to (i, j) in B.
-// h_BA[t](i, j, u, v) is the cost of going from (u, v) in B to (i, j) in A.
 double solveViterbiSplitQuadratic2D(
     const std::vector<cv::Mat>& g_A,
     const std::vector<cv::Mat>& g_B,
-    const std::vector<cv::Mat>& h_AB,
-    const std::vector<cv::Mat>& h_BA,
     std::vector<SplitVariable>& x);
