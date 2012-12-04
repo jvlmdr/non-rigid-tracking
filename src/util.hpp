@@ -1,6 +1,8 @@
 #ifndef UTIL_HPP_
 #define UTIL_HPP_
 
+#include <string>
+#include <vector>
 #include <opencv2/core/core.hpp>
 
 inline double sqr(double x);
@@ -31,6 +33,8 @@ U cast(const T& t);
 
 template<class U, class T>
 U* takeAddressAndCast(T& x);
+
+bool fileExists(const std::string& filename);
 
 #include "util.inl"
 

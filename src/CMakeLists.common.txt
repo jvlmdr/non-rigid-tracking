@@ -599,7 +599,10 @@ TARGET_LINK_LIBRARIES(extract-multiview-examples ${OpenCV_LIBS})
 ADD_EXECUTABLE(offline-classifier-tracking
   offline_classifier_tracking.cpp
   viterbi.cpp
+  image_file_sequence.cpp
   admm_tracking.cpp
+  dynamic_program_occlusion_tracker.cpp
+  util.cpp
   read_image.cpp)
 TARGET_LINK_LIBRARIES(offline-classifier-tracking glog gflags)
 TARGET_LINK_LIBRARIES(offline-classifier-tracking ${OpenCV_LIBS})
