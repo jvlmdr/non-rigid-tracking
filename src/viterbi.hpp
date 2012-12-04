@@ -49,7 +49,19 @@ struct MixedVariable {
   MixedVariable();
 };
 
-// The objective is split into regular (grid-aligned) and general arguments.
+// The objective is partitioned into grid-aligned and general arguments.
+//
+// Minimizes
+//   sum_i g_i(x[i]) + sum_i h_i(x[i], x[i + 1])
+// where
+// g_i(x) = g_A[i](x[0], x[1]), if x in A
+//          g_B[i][x],          if x in B.
+// h_i(x, y) = ||x - y||^2,            if x, y in A
+//             h_AB[i](x[0], x[1], y), if x in A, y in B
+//             h_BA[i](x, y[0], y[1]), if x in B, y in A
+//             h_BB[i](x, y),          if x, y in B
+//
+// Assumes that neighbouring A's are identical or empty.
 double solveViterbiPartialQuadratic2D(
     const std::vector<cv::Mat>& g_A,
     const std::deque<std::vector<double> >& g_B,
@@ -57,3 +69,23 @@ double solveViterbiPartialQuadratic2D(
     const std::vector<cv::Mat>& h_BA,
     const std::vector<cv::Mat>& h_BB,
     std::vector<MixedVariable>& x);
+
+////////////////////////////////////////////////////////////////////////////////
+
+struct SplitVariable {
+  int set;
+  cv::Vec2i index;
+
+  SplitVariable();
+};
+
+// The domain is partitioned into two distance transforms.
+//
+// h_AB[t](i, j, u, v) is the cost of going from (u, v) in A to (i, j) in B.
+// h_BA[t](i, j, u, v) is the cost of going from (u, v) in B to (i, j) in A.
+double solveViterbiSplitQuadratic2D(
+    const std::vector<cv::Mat>& g_A,
+    const std::vector<cv::Mat>& g_B,
+    const std::vector<cv::Mat>& h_AB,
+    const std::vector<cv::Mat>& h_BA,
+    std::vector<SplitVariable>& x);
