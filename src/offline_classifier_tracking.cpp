@@ -14,6 +14,7 @@
 #include "track_list.hpp"
 #include "track.hpp"
 #include "image_file_sequence.hpp"
+#include "dynamic_program_tracker.hpp"
 #include "dynamic_program_occlusion_tracker.hpp"
 
 #include "track_list_writer.hpp"
@@ -23,6 +24,7 @@ DEFINE_int32(radius, 5, "Radius of patch");
 DEFINE_double(lambda, 1., "Temporal regularization");
 DEFINE_double(rho, 1., "ADMM parameter");
 DEFINE_double(penalty, 0.5, "The cost of occlusion");
+DEFINE_bool(fix_seed, true, "Constrain track to go through initial point?");
 
 void init(int& argc, char**& argv) {
   std::ostringstream usage;
@@ -136,10 +138,6 @@ void onMouse(int event, int x, int y, int, void* tag) {
 
       SpaceTimeImagePoint point(seed, *state.time);
       state.tracker->track(point, track);
-      //admmOfflineTracking(templ, *parameters.images, FLAGS_lambda, FLAGS_rho,
-      //    track);
-      //linearTimeOfflineTracking(templ, *parameters.images, FLAGS_lambda, track);
-      //findBestInEveryFrame(templ, *parameters.images, track);
 
       state.tracks->push_back(Track<cv::Point2d>());
       state.tracks->back().swap(track);
@@ -169,9 +167,13 @@ int main(int argc, char** argv) {
   ImageFileSequence video(boost::format(image_format), num_frames, true);
 
   // Set up tracker.
-  DynamicProgramOcclusionTracker tracker(FLAGS_lambda, FLAGS_penalty,
-      FLAGS_radius);
-  tracker.init(video);
+  DynamicProgramTracker simple_tracker(FLAGS_lambda, FLAGS_radius,
+      FLAGS_fix_seed);
+  DynamicProgramOcclusionTracker occlusion_tracker(FLAGS_lambda, FLAGS_penalty,
+      FLAGS_radius, FLAGS_fix_seed);
+
+  OfflineTracker* tracker = &simple_tracker;
+  tracker->init(video);
 
   bool exit = false;
   int time = 0;
@@ -186,7 +188,7 @@ int main(int argc, char** argv) {
   state.radius = radius;
   state.tracks = &tracks;
   state.seeds = &seeds;
-  state.tracker = &tracker;
+  state.tracker = tracker;
 
   cv::namedWindow("video");
   cv::setMouseCallback("video", onMouse, &state);

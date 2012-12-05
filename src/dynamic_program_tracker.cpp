@@ -1,26 +1,21 @@
-#include "dynamic_program_occlusion_tracker.hpp"
-#include <cmath>
+#include "dynamic_program_tracker.hpp"
+#include <glog/logging.h>
 #include <opencv2/imgproc/imgproc.hpp>
 #include "viterbi.hpp"
 
-DynamicProgramOcclusionTracker::DynamicProgramOcclusionTracker(
-    double lambda,
-    double penalty,
-    int radius,
-    bool fix_seed) : video_(NULL),
-                     lambda_(lambda),
-                     penalty_(penalty),
-                     radius_(radius),
-                     fix_seed_(fix_seed) {}
+DynamicProgramTracker::DynamicProgramTracker(double lambda,
+                                             int radius,
+                                             bool fix_seed)
+    : video_(NULL), lambda_(lambda), radius_(radius), fix_seed_(fix_seed) {}
 
-DynamicProgramOcclusionTracker::~DynamicProgramOcclusionTracker() {}
+DynamicProgramTracker::~DynamicProgramTracker() {}
 
-void DynamicProgramOcclusionTracker::init(const Video& video) {
+void DynamicProgramTracker::init(const Video& video) {
   video_ = &video;
 }
 
-bool DynamicProgramOcclusionTracker::track(const SpaceTimeImagePoint& point,
-                                           Track<cv::Point2d>& track) const {
+bool DynamicProgramTracker::track(const SpaceTimeImagePoint& point,
+                                  Track<cv::Point2d>& track) const {
   cv::Mat initial_image;
   video_->get(point.t, initial_image);
   cv::Size size = initial_image.size();
@@ -41,7 +36,7 @@ bool DynamicProgramOcclusionTracker::track(const SpaceTimeImagePoint& point,
   int n = video_->length();
 
   LOG(INFO) << "Performing cross-correlation";
-
+  cv::Mat image;
   for (int t = 0; t < n; t += 1) {
     cv::Mat response;
 
@@ -71,29 +66,14 @@ bool DynamicProgramOcclusionTracker::track(const SpaceTimeImagePoint& point,
     appearance_costs.push_back(response);
   }
 
-  // Cost of occlusion is uniform.
-  cv::Mat occlusion_cost = cv::Mat_<double>(interior.size(),
-      penalty_ / lambda_);
-  std::vector<cv::Mat> occlusion_costs;
-  for (int t = 0; t < n; t += 1) {
-    occlusion_costs.push_back(occlusion_cost);
-  }
-  // Except in initial frame, when it is infinite.
-  occlusion_costs[point.t] = cv::Mat();
-  occlusion_costs[point.t] = cv::Mat_<double>(interior.size(),
-      std::numeric_limits<double>::infinity());
-
   LOG(INFO) << "Solving dynamic program";
-  std::vector<SplitVariable> solution;
-  solveViterbiSplitQuadratic2D(appearance_costs, occlusion_costs, solution);
+  std::vector<cv::Vec2i> x;
+  solveViterbiQuadratic2D(appearance_costs, x);
 
   // Convert to a track.
   track.clear();
   for (int t = 0; t < n; t += 1) {
-    if (solution[t].set == 0) {
-      track[t] = cv::Point2d(solution[t].index[1] + radius_,
-          solution[t].index[0] + radius_);
-    }
+    track[t] = cv::Point2d(x[t][1] + radius_, x[t][0] + radius_);
   }
 
   return true;
