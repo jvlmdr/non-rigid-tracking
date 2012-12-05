@@ -196,7 +196,7 @@ int main(int argc, char** argv) {
   } else {
     // Load tracks.
     TrackList<cv::Point2d> point_tracks;
-    ImagePointReader feature_reader;
+    ImagePointReader<double> feature_reader;
     ok = loadTrackList(tracks_file, point_tracks, feature_reader);
     CHECK(ok) << "Could not load tracks";
 

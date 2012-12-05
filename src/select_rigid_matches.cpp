@@ -80,7 +80,7 @@ int main(int argc, char** argv) {
   // Load points.
   std::vector<cv::Point2d> points1;
   std::vector<cv::Point2d> points2;
-  ImagePointReader point_reader;
+  ImagePointReader<double> point_reader;
   ok = loadList(keypoints_file1, points1, point_reader);
   CHECK(ok) << "Could not load points";
   ok = loadList(keypoints_file2, points2, point_reader);

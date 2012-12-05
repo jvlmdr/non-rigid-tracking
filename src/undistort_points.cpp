@@ -67,7 +67,7 @@ int main(int argc, char** argv) {
 
   // Load points.
   std::vector<cv::Point2d> points;
-  ImagePointReader point_reader;
+  ImagePointReader<double> point_reader;
   ok = loadList(distorted_points_file, points, point_reader);
   CHECK(ok) << "Could not load points";
 
