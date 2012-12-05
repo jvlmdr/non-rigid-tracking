@@ -221,7 +221,7 @@ TEST(SolveViterbiQuadratic2D, VersusNaive) {
 }
 
 TEST(SolveViterbiPartialQuadratic2D, VersusNaive) {
-  int n = 17;
+  int n = 257;
   int k_B = 13;
   int p = 7;
   int q = 11;
@@ -350,12 +350,12 @@ TEST(SolveViterbiPartialQuadratic2D, VersusNaive) {
   }
 }
 
-TEST(SolveViterbiSplitQuadratic2D, VersusNaive) {
-  int length = 17;
-  int m = 7;
-  int n = 11;
-  int p = 5;
-  int q = 13;
+TEST(SolveViterbiSplitQuadratic2D, Basic) {
+  int length = 257;
+  int m = 13;
+  int n = 17;
+  int p = m;
+  int q = n;
 
   int k_A = m * n;
   int k_B = p * q;
@@ -511,7 +511,7 @@ TEST(SolveViterbiSplitQuadratic2D, VersusNaive) {
     ASSERT_EQ(x_naive[t] < k_A, x[t].set == 0);
 
     cv::Vec2i index;
-    if (x[t].set == 0) {
+    if (x_naive[t] < k_A) {
       int i = x_naive[t];
       index = cv::Vec2i(i / n, i % n);
     } else {

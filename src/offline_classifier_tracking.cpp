@@ -233,7 +233,7 @@ int main(int argc, char** argv) {
 
         cv::Point2d pt1 = keypoint - cv::Point2d(radius, radius);
         cv::Point2d pt2 = keypoint + cv::Point2d(radius, radius);
-        cv::rectangle(display, pt1, pt2, cv::Scalar(0, 0, 255), 2);
+        cv::rectangle(display, pt1, pt2, cv::Scalar(0, 0, 255), 1);
       }
 
       cv::imshow("video", display);

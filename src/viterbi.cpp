@@ -547,8 +547,14 @@ double solveViterbiSplitQuadratic2D(
   CHECK(g_B.size() == length);
 
   // Initialize partial solutions to unary term.
-  cv::Mat f_A = g_A[0];
-  cv::Mat f_B = g_B[0];
+  cv::Mat f_A = g_A[0].clone();
+  cv::Mat f_B = g_B[0].clone();
+
+  // Currently only support quadratic distance transforms of same dimension.
+  CHECK(f_A.rows == f_B.rows);
+  CHECK(f_A.cols == f_B.cols);
+  int p = f_A.rows;
+  int q = f_A.cols;
 
   // Minimizer of each update.
   std::deque<std::deque<std::vector<SplitVariable> > > args_A;
@@ -573,17 +579,14 @@ double solveViterbiSplitQuadratic2D(
     quadraticDistanceTransform2D(f_B, d_BB, args_BB);
 
     // Take min transitioning from either set to A.
-    int m = g_A[t].rows;
-    int n = g_A[t].cols;
-    cv::Mat d_A = cv::Mat_<double>(m, n);
-
-    std::deque<std::vector<SplitVariable> > args_A_t(m);
-    for (int u = 0; u < m; u += 1) {
-      args_A_t[u].assign(n, SplitVariable());
+    cv::Mat d_A = cv::Mat_<double>(p, q);
+    std::deque<std::vector<SplitVariable> > args_A_t(p);
+    for (int u = 0; u < p; u += 1) {
+      args_A_t[u].assign(q, SplitVariable());
     }
 
-    for (int u = 0; u < m; u += 1) {
-      for (int v = 0; v < n; v += 1) {
+    for (int u = 0; u < p; u += 1) {
+      for (int v = 0; v < q; v += 1) {
         if (d_AA.at<double>(u, v) <= d_BA.at<double>(u, v)) {
           d_A.at<double>(u, v) = d_AA.at<double>(u, v);
           args_A_t[u][v].set = 0;
@@ -597,17 +600,14 @@ double solveViterbiSplitQuadratic2D(
     }
 
     // Take min transitioning from either set to B.
-    m = g_B[t].rows;
-    n = g_B[t].cols;
-    cv::Mat d_B = cv::Mat_<double>(m, n);
-
-    std::deque<std::vector<SplitVariable> > args_B_t(m);
-    for (int u = 0; u < m; u += 1) {
-      args_B_t[u].assign(n, SplitVariable());
+    cv::Mat d_B = cv::Mat_<double>(p, q);
+    std::deque<std::vector<SplitVariable> > args_B_t(p);
+    for (int u = 0; u < p; u += 1) {
+      args_B_t[u].assign(q, SplitVariable());
     }
 
-    for (int u = 0; u < m; u += 1) {
-      for (int v = 0; v < n; v += 1) {
+    for (int u = 0; u < p; u += 1) {
+      for (int v = 0; v < q; v += 1) {
         if (d_AB.at<double>(u, v) <= d_BB.at<double>(u, v)) {
           d_B.at<double>(u, v) = d_AB.at<double>(u, v);
           args_B_t[u][v].set = 0;
@@ -646,7 +646,7 @@ double solveViterbiSplitQuadratic2D(
   cv::minMaxLoc(f_B, &f_star_B, NULL, &point, NULL);
   if (point.x == -1 && point.y == -1) {
     // minMaxLoc does not work with +inf.
-    f_star_A = std::numeric_limits<double>::infinity();
+    f_star_B = std::numeric_limits<double>::infinity();
     point = cv::Point(0, 0);
   }
   cv::Vec2i x_star_B(point.y, point.x);

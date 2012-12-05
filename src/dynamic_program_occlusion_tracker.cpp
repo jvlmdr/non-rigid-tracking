@@ -22,16 +22,16 @@ bool DynamicProgramOcclusionTracker::track(const SpaceTimeImagePoint& point,
   cv::Point center = cv::Point(std::floor(point.x() + 0.5),
                                std::floor(point.y() + 0.5));
 
-  cv::Mat image;
-  video_->get(point.t, image);
-  cv::Size size = image.size();
+  cv::Mat initial_image;
+  video_->get(point.t, initial_image);
+  cv::Size size = initial_image.size();
 
   // Sample template from image.
   cv::Mat templ;
   cv::Point corner(point.x() - radius_, point.y() - radius_);
   int diameter = 2 * radius_ + 1;
   cv::Rect region(corner, cv::Size(diameter, diameter));
-  templ = image(region).clone();
+  templ = initial_image(region).clone();
 
   // Region of image in which template can be matched.
   cv::Rect interior(cv::Point(radius_, radius_),
@@ -53,7 +53,9 @@ bool DynamicProgramOcclusionTracker::track(const SpaceTimeImagePoint& point,
       cv::Point corner = center - cv::Point(radius_, radius_);
       response.at<double>(corner) = 0; // any finite constant
     } else {
-      video_->get(t, image);
+      cv::Mat image;
+      bool ok = video_->get(t, image);
+      CHECK(ok) << "Could not read image";
       // Evaluate response to template.
       cv::matchTemplate(image, templ, response, cv::TM_CCORR_NORMED);
       // Convert to 64-bit.
@@ -69,7 +71,10 @@ bool DynamicProgramOcclusionTracker::track(const SpaceTimeImagePoint& point,
   // Cost of occlusion is uniform.
   cv::Mat occlusion_cost = cv::Mat_<double>(interior.size(),
       penalty_ / lambda_);
-  std::vector<cv::Mat> occlusion_costs(n, occlusion_cost);
+  std::vector<cv::Mat> occlusion_costs;
+  for (int t = 0; t < n; t += 1) {
+    occlusion_costs.push_back(occlusion_cost);
+  }
   // Except in initial frame, when it is infinite.
   occlusion_costs[point.t] = cv::Mat();
   occlusion_costs[point.t] = cv::Mat_<double>(interior.size(),
@@ -77,8 +82,7 @@ bool DynamicProgramOcclusionTracker::track(const SpaceTimeImagePoint& point,
 
   LOG(INFO) << "Solving dynamic program";
   std::vector<SplitVariable> solution;
-  double f = solveViterbiSplitQuadratic2D(appearance_costs, occlusion_costs,
-      solution);
+  solveViterbiSplitQuadratic2D(appearance_costs, occlusion_costs, solution);
 
   // Convert to a track.
   track.clear();
@@ -88,8 +92,6 @@ bool DynamicProgramOcclusionTracker::track(const SpaceTimeImagePoint& point,
           solution[t].index[0] + radius_);
     }
   }
-
-  LOG(INFO) << "f* = " << f;
 
   return true;
 }
