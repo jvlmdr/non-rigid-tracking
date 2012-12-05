@@ -172,7 +172,7 @@ int main(int argc, char** argv) {
   DynamicProgramOcclusionTracker occlusion_tracker(FLAGS_lambda, FLAGS_penalty,
       FLAGS_radius, FLAGS_fix_seed);
 
-  OfflineTracker* tracker = &simple_tracker;
+  OfflineTracker* tracker = &occlusion_tracker;
   tracker->init(video);
 
   bool exit = false;
