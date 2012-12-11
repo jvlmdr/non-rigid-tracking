@@ -2,8 +2,7 @@
 #define CAMERA_PROPERTIES_HPP_
 
 #include <opencv2/core/core.hpp>
-
-// Reserve the name CameraIntrinsics for the K matrix.
+#include "axis_aligned_ellipse.hpp"
 
 struct CameraProperties {
   cv::Size image_size;
@@ -13,6 +12,16 @@ struct CameraProperties {
   double distort_w;
 
   cv::Matx33d matrix() const;
+
+  cv::Point2d calibrate(const cv::Point2d& y) const;
+  cv::Point2d uncalibrate(const cv::Point2d& x) const;
+  cv::Point2d calibrateAndUndistort(const cv::Point2d& y) const;
+  cv::Point2d distortAndUncalibrate(const cv::Point2d& x) const;
+
+  // Returns the undistortable region of the uncalibrated, distorted image.
+  AxisAlignedEllipse undistortableRegion() const;
+
+  cv::Rect bounds() const;
 };
 
 #endif

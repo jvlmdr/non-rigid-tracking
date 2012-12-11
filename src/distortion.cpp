@@ -1,4 +1,5 @@
 #include "distortion.hpp"
+#include <glog/logging.h>
 #include <cmath>
 
 cv::Point2d distort(const cv::Point2d& x, double w) {
@@ -7,8 +8,14 @@ cv::Point2d distort(const cv::Point2d& x, double w) {
 }
 
 cv::Point2d undistort(const cv::Point2d& y, double w) {
+  CHECK(isUndistortable(y, w)) << "This point cannot be undistorted";
   double r = cv::norm(y);
   return undistortRadius(r, w) / r * y;
+}
+
+// Can a given distorted point be undistorted?
+bool isUndistortable(const cv::Point2d& y, double w) {
+  return (cv::norm(y) < maxDistortedRadius(w));
 }
 
 double distortRadius(double r, double w) {

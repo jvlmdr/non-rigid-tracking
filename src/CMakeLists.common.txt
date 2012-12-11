@@ -180,6 +180,7 @@ TARGET_LINK_LIBRARIES(evaluate-matches gsl ${LAPACK_LIB})
 ADD_EXECUTABLE(undistort-image
     undistort_image.cpp
     camera_properties.cpp
+    axis_aligned_ellipse.cpp
     camera_properties_reader.cpp
     matrix_reader.cpp
     distortion.cpp
@@ -190,6 +191,7 @@ TARGET_LINK_LIBRARIES(undistort-image ${OpenCV_LIBS})
 ADD_EXECUTABLE(undistort-points
     undistort_points.cpp
     camera_properties.cpp
+    axis_aligned_ellipse.cpp
     camera_properties_reader.cpp
     matrix_reader.cpp
     distortion.cpp)
@@ -202,6 +204,8 @@ ADD_EXECUTABLE(cameras-to-fund-mat
     camera_pose_reader.cpp
     world_point_reader.cpp
     camera_properties.cpp
+    axis_aligned_ellipse.cpp
+    distortion.cpp
     camera_properties_reader.cpp
     matrix_reader.cpp
     geometry.cpp
@@ -454,6 +458,8 @@ ADD_EXECUTABLE(agglomerative-cluster
   camera.cpp
   camera_pose.cpp
   camera_properties.cpp
+  axis_aligned_ellipse.cpp
+  distortion.cpp
   camera_reader.cpp
   camera_properties_reader.cpp
   camera_pose_reader.cpp
@@ -512,6 +518,8 @@ ADD_EXECUTABLE(static-camera-to-moving
   static_cameras_to_moving.cpp
   camera.cpp
   camera_properties.cpp
+  axis_aligned_ellipse.cpp
+  distortion.cpp
   camera_pose.cpp
   camera_writer.cpp
   camera_properties_writer.cpp
@@ -566,6 +574,8 @@ ADD_EXECUTABLE(display-distorted-epipolar-line
   distorted_epipolar_lines.cpp
   sift_position.cpp
   camera_properties.cpp
+  axis_aligned_ellipse.cpp
+  distortion.cpp
   sift_position_reader.cpp
   camera_properties_reader.cpp
   matrix_reader.cpp
@@ -581,6 +591,8 @@ ADD_EXECUTABLE(extract-multiview-examples
   sift_position.cpp
   descriptor.cpp
   camera_properties.cpp
+  axis_aligned_ellipse.cpp
+  distortion.cpp
   extract_sift.cpp
   sift_feature_reader.cpp
   sift_position_reader.cpp
@@ -690,3 +702,18 @@ TARGET_LINK_LIBRARIES(track-live ceres)
 TARGET_LINK_LIBRARIES(track-live cxsparse)
 TARGET_LINK_LIBRARIES(track-live cholmod ccolamd camd colamd amd)
 TARGET_LINK_LIBRARIES(track-live ${LAPACK_LIB})
+
+ADD_EXECUTABLE(find-multiview-track
+  find_multiview_track.cpp
+  camera.cpp
+  camera_properties.cpp
+  axis_aligned_ellipse.cpp
+  camera_pose.cpp
+  distortion.cpp
+  read_lines.cpp
+  matrix_reader.cpp
+  camera_properties_reader.cpp
+  camera_pose_reader.cpp
+  world_point_reader.cpp)
+TARGET_LINK_LIBRARIES(find-multiview-track glog gflags)
+TARGET_LINK_LIBRARIES(find-multiview-track ${OpenCV_LIBS})

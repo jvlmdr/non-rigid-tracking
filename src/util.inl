@@ -14,7 +14,11 @@ inline bool isFinite(double x) {
 }
 
 inline cv::Mat imagePointToHomogeneous(const cv::Point2d& x) {
-  return (cv::Mat_<double>(3, 1) << x.x, x.y, 1);
+  return imagePointToHomogeneous(x, 1);
+}
+
+inline cv::Mat imagePointToHomogeneous(const cv::Point2d& x, double w) {
+  return (cv::Mat_<double>(3, 1) << x.x, x.y, w);
 }
 
 inline cv::Point2d imagePointFromHomogeneous(const cv::Mat& X) {
@@ -22,7 +26,11 @@ inline cv::Point2d imagePointFromHomogeneous(const cv::Mat& X) {
 }
 
 inline cv::Mat worldPointToHomogeneous(const cv::Point3d& x) {
-  return (cv::Mat_<double>(4, 1) << x.x, x.y, x.z, 1);
+  return worldPointToHomogeneous(x, 1);
+}
+
+inline cv::Mat worldPointToHomogeneous(const cv::Point3d& x, double w) {
+  return (cv::Mat_<double>(4, 1) << x.x, x.y, x.z, w);
 }
 
 inline cv::Point3d worldPointFromHomogeneous(const cv::Mat& X) {
