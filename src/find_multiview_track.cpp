@@ -64,6 +64,8 @@ Track<cv::Point2d> calibrateAndUndistortTrack(
   std::remove_copy_if(calibrated.begin(), calibrated.end(),
       std::inserter(valid, valid.begin()),
       boost::bind(indexedPointIsNotUndistortable, _1, intrinsics.distort_w));
+  DLOG(INFO) << valid.size() << " / " << calibrated.size() <<
+      " could be undistorted";
 
   // Undistort undistortable points.
   Track<cv::Point2d> undistorted;
@@ -98,15 +100,15 @@ bool toleranceIsOk(double x, double y, double epsilon) {
 
 // projection -- Already calibrated and undistorted.
 void findExtentOfRay(const cv::Point2d& projection,
-                     const Camera& camera,
+                     const CameraPose& camera,
                      const std::vector<Camera>& others) {
   cv::Point2d w = projection;
 
   // Camera center.
-  cv::Point3d c(camera.extrinsics().center);
+  cv::Point3d c(camera.center);
 
   // Find vector in nullspace of linear projection system, A = R_xy - w R_z.
-  cv::Mat R(camera.extrinsics().rotation);
+  cv::Mat R(camera.rotation);
   cv::Mat A = R.rowRange(0, 2) - cv::Mat(w) * R.rowRange(2, 3);
   // 1D nullspace found trivially by cross-product.
   // Take negative i x j because z < 0 is in front of camera.
@@ -230,7 +232,7 @@ void findExtentOfRay(const cv::Point2d& projection,
 }
 
 void findMultiviewTrack(const Track<cv::Point2d>& track,
-                        const Camera& camera,
+                        const CameraPose& pose,
                         const std::vector<OtherView>& other_views,
                         MultiviewTrack<cv::Point2d>& multiview_track) {
   int num_other_views = other_views.size();
@@ -245,13 +247,13 @@ void findMultiviewTrack(const Track<cv::Point2d>& track,
   // For dynamic program, need to find the extent of the 3D ray in each frame.
   Track<cv::Point2d>::const_iterator point;
   for (point = track.begin(); point != track.end(); ++point) {
-    findExtentOfRay(point->second, camera, other_cameras);
+    findExtentOfRay(point->second, pose, other_cameras);
   }
 }
 
 void findMultiviewTracks(
     const TrackList<cv::Point2d>& tracks,
-    const Camera& camera,
+    const CameraPose& camera,
     const std::vector<OtherView>& other_views,
     MultiviewTrackList<cv::Point2d>& multiview_tracks) {
   int num_views = other_views.size() + 1;
@@ -374,7 +376,7 @@ int main(int argc, char** argv) {
 
   // Find multiview tracks.
   MultiviewTrackList<cv::Point2d> multiview_tracks;
-  findMultiviewTracks(undistorted_tracks, camera, other_views,
+  findMultiviewTracks(undistorted_tracks, camera.extrinsics(), other_views,
       multiview_tracks);
 
   // Save points and tracks out.

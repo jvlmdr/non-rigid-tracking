@@ -9,9 +9,9 @@ cv::Matx33d CameraProperties::matrix() const {
   const double& px = principal_point.x;
   const double& py = principal_point.y;
 
-  return cv::Matx33d(fx,  0, px,
-                      0, fy, py,
-                      0,  0,  1);
+  return cv::Matx33d(-fx,  0, px,
+                       0, fy, py,
+                       0,  0,  1);
 }
 
 cv::Point2d CameraProperties::calibrate(const cv::Point2d& y) const {
