@@ -18,4 +18,7 @@ double distortRadius(double x, double w);
 double undistortRadius(double y, double w);
 double maxDistortedRadius(double w);
 
+// Distort a point at infinity.
+cv::Point2d distortPointAtInfinity(const cv::Point2d& x, double w);
+
 #endif

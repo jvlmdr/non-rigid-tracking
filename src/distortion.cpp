@@ -13,7 +13,6 @@ cv::Point2d undistort(const cv::Point2d& y, double w) {
   return undistortRadius(r, w) / r * y;
 }
 
-// Can a given distorted point be undistorted?
 bool isUndistortable(const cv::Point2d& y, double w) {
   return (cv::norm(y) < maxDistortedRadius(w));
 }
@@ -28,4 +27,9 @@ double undistortRadius(double q, double w) {
 
 double maxDistortedRadius(double w) {
   return M_PI / (2. * w);
+}
+
+cv::Point2d distortPointAtInfinity(const cv::Point2d& x, double w) {
+  double r = cv::norm(x);
+  return maxDistortedRadius(w) / r * x;
 }

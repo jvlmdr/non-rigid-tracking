@@ -134,9 +134,9 @@ void findExtentOfRay(const cv::Point2d& projection,
 
     // Assume that line has a vanishing point (b is not at infinity).
     // TODO: Cope with non-vanishing-point case (b at infinity).
-    cv::Point2d a = imagePointFromHomogeneous(A);
-    CHECK(B.at<double>(2, 0) != 0);
-    cv::Point2d b = imagePointFromHomogeneous(B);
+    //cv::Point2d a = imagePointFromHomogeneous(A);
+    //CHECK(B.at<double>(2, 0) != 0);
+    //cv::Point2d b = imagePointFromHomogeneous(B);
 
     double a3 = A.at<double>(2, 0);
     double b3 = B.at<double>(2, 0);
@@ -147,87 +147,88 @@ void findExtentOfRay(const cv::Point2d& projection,
       continue;
     }
 
-    double lambda_max;
+    double delta = 1;
+
+    double lambda;
+    cv::Point2d x;
+    double lambda_min;
+
+    if (a3 < 0) {
+      // Ray starts in front of camera. Line starts at a finite coordinate.
+      LOG(INFO) << "Ray starts in front of camera";
+      lambda_min = 0;
+    } else {
+      // Ray starts behind camera. Line starts at infinity.
+      LOG(INFO) << "Ray starts behind camera";
+      lambda_min = -a3 / b3;
+    }
+
     if (b3 < 0) {
-      // Ray ends in front of camera.
-      double delta = 1;
+      // Ray goes to infinity in front of camera. There is a vanishing point.
+      LOG(INFO) << "Ray ends in front of camera";
+      CHECK(B.at<double>(2, 0) != 0);
+      x = imagePointFromHomogeneous(B);
+      x = other->intrinsics().distortAndUncalibrate(x);
 
-      // Previous point was vanishing point.
-      double lambda = std::numeric_limits<double>::infinity();
-      cv::Point2d x = other->intrinsics().distortAndUncalibrate(b);
-
-      // Unfortunately we can't use lambda = infinity for bisection.
+      // We can't use lambda = infinity for bisection.
       // Find a lambda which is big enough.
       lambda = 1.;
-      {
-        bool found = false;
-
-        while (!found) {
-          double error = errorInDistanceFromPoint(x, lambda, A, B, delta,
-                  other->intrinsics());
-          if (error < 0) {
-            found = true;
-          }
-          lambda *= 2;
+      bool found = false;
+      while (!found) {
+        double error = errorInDistanceFromPoint(x, lambda, A, B, delta,
+            other->intrinsics());
+        if (error < 0) {
+          found = true;
         }
+        lambda *= 2;
       }
-
-      std::vector<double> lambdas;
-      bool converged = false;
-
-      while (!converged) {
-        // Check there is a point on the line at least delta pixels away from x.
-        double f_max = errorInDistanceFromPoint(x, 0, A, B, delta,
-              other->intrinsics());
-
-        if (f_max < 0) {
-          // No solution is possible.
-          converged = true;
-        } else {
-          double old_lambda = lambda;
-
-          // Find lambda which gives point delta pixels away from x.
-          std::pair<double, double> interval = boost::math::tools::bisect(
-                boost::bind(errorInDistanceFromPoint, x, _1, A, B, delta,
-                  other->intrinsics()),
-                0., lambda,
-                boost::math::tools::eps_tolerance<double>(16));
-          lambda = interval.second;
-          LOG(INFO) << lambda;
-
-          // Guard against limit cycles.
-          CHECK(lambda != old_lambda) << "Entered limit cycle";
-
-          // Add lambda to the list.
-          lambdas.push_back(lambda);
-
-          // Update position.
-          cv::Mat X = A + lambda * B;
-          x = imagePointFromHomogeneous(X);
-          x = other->intrinsics().distortAndUncalibrate(x);
-        }
-      }
-
-      LOG(INFO) << lambdas.size();
     } else {
-      // Ray ends behind camera, find intersection of ray with edge of image.
-      LOG(INFO) << "No vanishing point";
-      lambda_max = 0;
+      // Ray goes to infinity behind camera, crossing image plane.
+      // There is no vanishing point. However, under distortion, a 2D point at
+      // infinity will still have a finite position.
+      LOG(INFO) << "Ray ends behind camera";
+      lambda = -a3 / b3;
+      cv::Mat X = A + lambda * B;
+      x = cv::Point2d(X.at<double>(0, 0), X.at<double>(1, 0));
+      x = distortPointAtInfinity(x, other->intrinsics().distort_w);
+      x = other->intrinsics().uncalibrate(x);
     }
 
-    /*
-    double max_lambda;
-    // If vanishing point is inside circle, no bound on lambda.
-    if (circle.contains(b)) {
-      LOG(INFO) << "Vanishing point is visible";
-      // Bound lambda by minimum which gives sub-pixel accuracy?
-      // Nah, do this later.
-      max_lambda = std::numeric_limits<double>::infinity();
-    } else {
-      // If vanishing point is outside circle, find intersection.
-      max_lambda = circle.findIntersection(a, b);
+    std::vector<double> lambdas;
+    bool converged = false;
+
+    while (!converged) {
+      // Check there is a point on the line at least delta pixels away from x.
+      double f_max = errorInDistanceFromPoint(x, lambda_min, A, B, delta,
+            other->intrinsics());
+
+      if (f_max < 0) {
+        // No solution is possible.
+        converged = true;
+      } else {
+        double old_lambda = lambda;
+
+        // Find lambda which gives point delta pixels away from x.
+        std::pair<double, double> interval = boost::math::tools::bisect(
+              boost::bind(errorInDistanceFromPoint, x, _1, A, B, delta,
+                other->intrinsics()),
+              lambda_min, lambda,
+              boost::math::tools::eps_tolerance<double>(16));
+        lambda = interval.second;
+        LOG(INFO) << lambda;
+
+        // Guard against limit cycles.
+        CHECK(lambda != old_lambda) << "Entered limit cycle";
+
+        // Add lambda to the list.
+        lambdas.push_back(lambda);
+
+        // Update position.
+        cv::Mat X = A + lambda * B;
+        x = imagePointFromHomogeneous(X);
+        x = other->intrinsics().distortAndUncalibrate(x);
+      }
     }
-    */
   }
 }
 
