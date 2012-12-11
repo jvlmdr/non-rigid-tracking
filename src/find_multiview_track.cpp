@@ -96,17 +96,11 @@ bool toleranceIsOk(double x, double y, double epsilon) {
   return std::abs(x - y) < epsilon;
 }
 
+// projection -- Already calibrated and undistorted.
 void findExtentOfRay(const cv::Point2d& projection,
                      const Camera& camera,
                      const std::vector<Camera>& others) {
-  // Apply inverse intrinsics.
-  cv::Mat W = imagePointToHomogeneous(projection);
-  cv::Mat K(camera.intrinsics().matrix());
-  W = K.inv() * W;
-  cv::Point2d w = imagePointFromHomogeneous(W);
-
-  // Undistort point.
-  w = undistort(w, camera.intrinsics().distort_w);
+  cv::Point2d w = projection;
 
   // Camera center.
   cv::Point3d c(camera.extrinsics().center);
@@ -143,7 +137,7 @@ void findExtentOfRay(const cv::Point2d& projection,
 
     if (a3 > 0 && b3 > 0) {
       // Entire ray is behind camera.
-      LOG(INFO) << "Ray is not observed";
+      DLOG(INFO) << "Ray is not observed";
       continue;
     }
 
@@ -155,17 +149,17 @@ void findExtentOfRay(const cv::Point2d& projection,
 
     if (a3 < 0) {
       // Ray starts in front of camera. Line starts at a finite coordinate.
-      LOG(INFO) << "Ray starts in front of camera";
+      DLOG(INFO) << "Ray starts in front of camera";
       lambda_min = 0;
     } else {
       // Ray starts behind camera. Line starts at infinity.
-      LOG(INFO) << "Ray starts behind camera";
+      DLOG(INFO) << "Ray starts behind camera";
       lambda_min = -a3 / b3;
     }
 
     if (b3 < 0) {
       // Ray goes to infinity in front of camera. There is a vanishing point.
-      LOG(INFO) << "Ray ends in front of camera";
+      DLOG(INFO) << "Ray ends in front of camera";
       CHECK(B.at<double>(2, 0) != 0);
       x = imagePointFromHomogeneous(B);
       x = other->intrinsics().distortAndUncalibrate(x);
@@ -186,7 +180,7 @@ void findExtentOfRay(const cv::Point2d& projection,
       // Ray goes to infinity behind camera, crossing image plane.
       // There is no vanishing point. However, under distortion, a 2D point at
       // infinity will still have a finite position.
-      LOG(INFO) << "Ray ends behind camera";
+      DLOG(INFO) << "Ray ends behind camera";
       lambda = -a3 / b3;
       cv::Mat X = A + lambda * B;
       x = cv::Point2d(X.at<double>(0, 0), X.at<double>(1, 0));
@@ -215,7 +209,6 @@ void findExtentOfRay(const cv::Point2d& projection,
               lambda_min, lambda,
               boost::math::tools::eps_tolerance<double>(16));
         lambda = interval.second;
-        LOG(INFO) << lambda;
 
         // Guard against limit cycles.
         CHECK(lambda != old_lambda) << "Entered limit cycle";
@@ -227,8 +220,12 @@ void findExtentOfRay(const cv::Point2d& projection,
         cv::Mat X = A + lambda * B;
         x = imagePointFromHomogeneous(X);
         x = other->intrinsics().distortAndUncalibrate(x);
+
+        DLOG(INFO) << "x(" << lambda << ") => " << x;
       }
     }
+
+    LOG(INFO) << "Quantized ray into " << lambdas.size() << " positions";
   }
 }
 
