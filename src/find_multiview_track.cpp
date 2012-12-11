@@ -127,13 +127,6 @@ void findExtentOfRay(const cv::Point2d& projection,
   for (other = others.begin(); other != others.end(); ++other) {
     cv::Mat P(other->extrinsics().matrix());
 
-    // Assume that the 3D line
-    //   c + lambda v
-    // defines a 2D line
-    //   alpha a + (1 - alpha) b
-    // with
-    //   a = P([c 1]), b = P([v 0]).
-    // Note that b is the projection of a point at infinity.
     cv::Mat C = worldPointToHomogeneous(c);
     cv::Mat V = worldPointToHomogeneous(v, 0);
     cv::Mat A = P * C;
@@ -159,87 +152,63 @@ void findExtentOfRay(const cv::Point2d& projection,
       // Ray ends in front of camera.
       double delta = 1;
 
-      double w = other->intrinsics().distort_w;
-      double k = distortRadius(cv::norm(v), w) / cv::norm(v);
-      double a1 = A.at<double>(0, 0);
-      double a2 = A.at<double>(1, 0);
-      double b1 = B.at<double>(0, 0);
-      double b2 = B.at<double>(1, 0);
-      cv::Point2d d = cv::Point2d(a1, a2) - a3 / b3 * cv::Point2d(b1, b2);
-      d.x *= other->intrinsics().focal_x;
-      d.y *= other->intrinsics().focal_y;
+      // Previous point was vanishing point.
+      double lambda = std::numeric_limits<double>::infinity();
+      cv::Point2d x = other->intrinsics().distortAndUncalibrate(b);
 
-      // Solve a quadratic system.
-      double aa = sqr(delta) * sqr(b3);
-      double bb = sqr(delta) * 2 * a3 * b3;
-      double cc = sqr(delta) * sqr(a3) - sqr(k) * d.dot(d);
-
-      double discriminant = sqr(bb) - 4 * aa * cc;
-      CHECK(discriminant >= 0) << "Cannot solve system";
-
-      double lambda1 = (-bb - std::sqrt(discriminant)) / (2 * aa);
-      double lambda2 = (-bb + std::sqrt(discriminant)) / (2 * aa);
-      CHECK(lambda2 > 0) << "No positive solutions";
-      if (discriminant > 0) {
-        CHECK(lambda1 < 0) << "Two positive solutions";
-      }
-
-      lambda_max = lambda2;
-      LOG(INFO) << "lambda_max => " << lambda_max;
-
-      // Now find next lambda.
-      double lambda = lambda_max;
-      cv::Mat X = A + lambda * B;
-      cv::Point2d x = imagePointFromHomogeneous(X);
-      x = other->intrinsics().distortAndUncalibrate(x);
-      LOG(INFO) << "x(lambda_max) => " << x;
-
-      cv::Point2d center = other->intrinsics().distortAndUncalibrate(a);
-      cv::Point2d vanishing_point = other->intrinsics().distortAndUncalibrate(b);
-      LOG(INFO) << "image of center => " << center;
-      LOG(INFO) << "image of vanishing point => " << vanishing_point;
-
+      // Unfortunately we can't use lambda = infinity for bisection.
+      // Find a lambda which is big enough.
+      lambda = 1.;
       {
-        cv::Mat X = A + 0 * B;
-        cv::Point2d x = imagePointFromHomogeneous(X);
-        x = other->intrinsics().distortAndUncalibrate(x);
-        LOG(INFO) << "x(0) => " << x;
+        bool found = false;
+
+        while (!found) {
+          double error = errorInDistanceFromPoint(x, lambda, A, B, delta,
+                  other->intrinsics());
+          if (error < 0) {
+            found = true;
+          }
+          lambda *= 2;
+        }
       }
 
+      std::vector<double> lambdas;
       bool converged = false;
 
       while (!converged) {
-        double lambda_prime = lambda;
-        cv::Point2d x_prime = x;
-
-        double f_max = errorInDistanceFromPoint(x_prime, 0, A, B, delta,
+        // Check there is a point on the line at least delta pixels away from x.
+        double f_max = errorInDistanceFromPoint(x, 0, A, B, delta,
               other->intrinsics());
-        LOG(INFO) << "f_max => " << f_max;
+
         if (f_max < 0) {
           // No solution is possible.
-          LOG(INFO) << "Converged (f_max < 0)";
           converged = true;
-        }
+        } else {
+          double old_lambda = lambda;
 
-        if (!converged) {
+          // Find lambda which gives point delta pixels away from x.
           std::pair<double, double> interval = boost::math::tools::bisect(
-                boost::bind(errorInDistanceFromPoint, x_prime, _1, A, B, delta,
+                boost::bind(errorInDistanceFromPoint, x, _1, A, B, delta,
                   other->intrinsics()),
-                0., lambda_prime,
-                boost::math::tools::eps_tolerance<double>(32));
+                0., lambda,
+                boost::math::tools::eps_tolerance<double>(16));
           lambda = interval.second;
-          LOG(INFO) << "lambda => " << lambda;
+          LOG(INFO) << lambda;
 
           // Guard against limit cycles.
-          CHECK(lambda != lambda_prime) << "Entered limit cycle";
+          CHECK(lambda != old_lambda) << "Entered limit cycle";
 
-          X = A + lambda * B;
+          // Add lambda to the list.
+          lambdas.push_back(lambda);
+
+          // Update position.
+          cv::Mat X = A + lambda * B;
           x = imagePointFromHomogeneous(X);
           x = other->intrinsics().distortAndUncalibrate(x);
-          LOG(INFO) << "x(lambda) => " << x;
-          LOG(INFO) << "image of center => " << center;
         }
       }
+
+      LOG(INFO) << lambdas.size();
     } else {
       // Ray ends behind camera, find intersection of ray with edge of image.
       LOG(INFO) << "No vanishing point";
