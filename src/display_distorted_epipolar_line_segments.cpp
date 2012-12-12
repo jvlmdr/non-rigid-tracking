@@ -104,11 +104,11 @@ void findExtentOfRay(const cv::Point2d& projection,
 
       if (a3 < 0) {
         // Ray starts in front of camera. Line starts at a finite coordinate.
-        LOG(INFO) << "Ray starts in front of camera";
+        DLOG(INFO) << "Ray starts in front of camera";
         lambda_min = 0;
       } else {
         // Ray starts behind camera. Line starts at infinity.
-        LOG(INFO) << "Ray starts behind camera";
+        DLOG(INFO) << "Ray starts behind camera";
         lambda_min = -a3 / b3;
         CHECK(lambda_min > 0);
         lambda_min = lambda_min * (1. + 1e-6);
@@ -117,7 +117,7 @@ void findExtentOfRay(const cv::Point2d& projection,
 
       if (b3 < 0) {
         // Ray goes to infinity in front of camera. There is a vanishing point.
-        LOG(INFO) << "Ray ends in front of camera";
+        DLOG(INFO) << "Ray ends in front of camera";
         CHECK(B.at<double>(2, 0) != 0);
         x = imagePointFromHomogeneous(B);
         x = other->intrinsics().distortAndUncalibrate(x);
@@ -138,7 +138,7 @@ void findExtentOfRay(const cv::Point2d& projection,
         // Ray goes to infinity behind camera, crossing image plane.
         // There is no vanishing point. However, under distortion, a 2D point at
         // infinity will still have a finite position.
-        LOG(INFO) << "Ray ends behind camera";
+        DLOG(INFO) << "Ray ends behind camera";
         lambda = -a3 / b3;
         CHECK(lambda > 0);
         lambda = lambda * (1 - 1e-6);
@@ -170,8 +170,6 @@ void findExtentOfRay(const cv::Point2d& projection,
                   other->intrinsics()),
                 lambda_min, lambda,
                 boost::math::tools::eps_tolerance<double>(16));
-          DLOG(INFO) << "interval => [" << interval.first << ", " <<
-              interval.second << "]";
           lambda = interval.second;
 
           // Guard against limit cycles.
@@ -186,10 +184,11 @@ void findExtentOfRay(const cv::Point2d& projection,
 
           line.push_back(x);
         }
+
         first = false;
       }
 
-      LOG(INFO) << "Quantized ray into " << line.size() << " positions";
+      DLOG(INFO) << "Quantized ray into " << line.size() << " positions";
     }
 
     lines.push_back(std::vector<cv::Point2d>());
