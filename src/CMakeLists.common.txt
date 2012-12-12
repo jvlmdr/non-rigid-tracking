@@ -717,3 +717,20 @@ ADD_EXECUTABLE(find-multiview-track
   world_point_reader.cpp)
 TARGET_LINK_LIBRARIES(find-multiview-track glog gflags)
 TARGET_LINK_LIBRARIES(find-multiview-track ${OpenCV_LIBS})
+
+ADD_EXECUTABLE(display-distorted-epipolar-line-segments
+  display_distorted_epipolar_line_segments.cpp
+  distortion.cpp
+  camera.cpp
+  camera_properties.cpp
+  axis_aligned_ellipse.cpp
+  camera_pose.cpp
+  distortion.cpp
+  camera_properties_reader.cpp
+  camera_pose_reader.cpp
+  matrix_reader.cpp
+  world_point_reader.cpp
+  read_lines.cpp
+  read_image.cpp)
+TARGET_LINK_LIBRARIES(display-distorted-epipolar-line-segments glog gflags)
+TARGET_LINK_LIBRARIES(display-distorted-epipolar-line-segments ${OpenCV_LIBS})
