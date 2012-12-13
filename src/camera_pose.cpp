@@ -18,3 +18,16 @@ cv::Matx34d CameraPose::matrix() const {
 
   return matrix;
 }
+
+cv::Point3d CameraPose::directionOfRayThrough(const cv::Point2d& w) const {
+  // Find vector in nullspace of linear projection system, A = R_xy - w R_z.
+  cv::Mat R(rotation);
+  cv::Mat Q = R.rowRange(0, 2) - cv::Mat(w) * R.rowRange(2, 3);
+
+  // 1D nullspace found trivially by cross-product.
+  // Take negative i x j because z < 0 is in front of camera.
+  cv::Mat V = -Q.row(0).t().cross(Q.row(1).t());
+  cv::Point3d v(V.at<double>(0, 0), V.at<double>(0, 1), V.at<double>(0, 2));
+
+  return v;
+}

@@ -94,10 +94,6 @@ double errorInDistanceFromPoint(cv::Point2d y,
   return cv::norm(x - y) - delta;
 }
 
-bool toleranceIsOk(double x, double y, double epsilon) {
-  return std::abs(x - y) < epsilon;
-}
-
 // projection -- Already calibrated and undistorted.
 void findExtentOfRay(const cv::Point2d& projection,
                      const CameraPose& camera,
