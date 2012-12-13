@@ -19,3 +19,8 @@ const CameraPose& Camera::extrinsics() const {
 cv::Matx34d Camera::matrix() const {
   return intrinsics_.matrix() * extrinsics_.matrix();
 }
+
+cv::Point2d Camera::project(const cv::Point3d& x) const {
+  cv::Point2d w = extrinsics_.project(x);
+  return intrinsics_.distortAndUncalibrate(w);
+}

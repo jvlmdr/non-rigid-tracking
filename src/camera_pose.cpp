@@ -1,4 +1,5 @@
 #include "camera_pose.hpp"
+#include "util.hpp"
 
 cv::Matx34d CameraPose::matrix() const {
   cv::Matx34d matrix;
@@ -17,6 +18,13 @@ cv::Matx34d CameraPose::matrix() const {
   t.copyTo(dst);
 
   return matrix;
+}
+
+cv::Point2d CameraPose::project(const cv::Point3d& x) const {
+  cv::Mat P(matrix());
+  cv::Mat X = worldPointToHomogeneous(x);
+  cv::Mat W = P * X;
+  return imagePointFromHomogeneous(W);
 }
 
 cv::Point3d CameraPose::directionOfRayThrough(const cv::Point2d& w) const {

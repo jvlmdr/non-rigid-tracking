@@ -15,6 +15,8 @@ class Camera {
     const CameraPose& extrinsics() const;
     cv::Matx34d matrix() const;
 
+    cv::Point2d project(const cv::Point3d& x) const;
+
   private:
     CameraProperties intrinsics_;
     CameraPose extrinsics_;

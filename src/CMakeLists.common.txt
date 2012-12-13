@@ -720,6 +720,7 @@ TARGET_LINK_LIBRARIES(find-multiview-track ${OpenCV_LIBS})
 
 ADD_EXECUTABLE(display-distorted-epipolar-line-segments
   display_distorted_epipolar_line_segments.cpp
+  quantize_ray.cpp
   distortion.cpp
   camera.cpp
   camera_properties.cpp

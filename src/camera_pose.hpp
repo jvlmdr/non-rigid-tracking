@@ -10,6 +10,7 @@ struct CameraPose {
 
   cv::Matx34d matrix() const;
 
+  cv::Point2d project(const cv::Point3d& x) const;
   cv::Point3d directionOfRayThrough(const cv::Point2d& w) const;
 };
 
