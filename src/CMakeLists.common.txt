@@ -705,6 +705,8 @@ TARGET_LINK_LIBRARIES(track-live ${LAPACK_LIB})
 
 ADD_EXECUTABLE(find-multiview-track
   find_multiview_track.cpp
+  quantize_ray.cpp
+  viterbi.cpp
   camera.cpp
   camera_properties.cpp
   axis_aligned_ellipse.cpp
