@@ -1,0 +1,13 @@
+package videoseg;
+
+message Rasterization {
+  // Always lexicographically ordered by (y, x).
+  // In case of holes, this can be empty!
+  repeated ScanInterval scan_inter = 1;
+}
+
+message ScanInterval {
+  required int32 y = 1;
+  required int32 left_x = 2;
+  required int32 right_x = 3;
+}

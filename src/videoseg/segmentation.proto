@@ -1,0 +1,19 @@
+import "region.proto";
+
+package videoseg;
+
+// Flat video segmentation, no hierarchy.
+message VideoSegmentation {
+  repeated Frame frames = 1;
+
+  // Flat image segmentation, no hierarchy.
+  message Frame {
+    // Sorted by id.
+    repeated Region regions = 1;
+
+    message Region {
+      required int32 id = 1;
+      required Rasterization raster = 3;
+    }
+  }
+}

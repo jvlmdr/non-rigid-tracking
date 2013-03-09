@@ -3,67 +3,15 @@ project(non-rigid-tracking)
 
 set(CMAKE_CXX_FLAGS "-Wall")
 
-# Boost
-find_package(Boost REQUIRED)
+# All #includes relative to top level.
+include_directories(.)
+# For generated protobuf files.
+include_directories(${CMAKE_CURRENT_BINARY_DIR})
 
-# OpenCV
-find_package(OpenCV REQUIRED
-  COMPONENTS core highgui imgproc features2d nonfree video)
-include_directories(${OpenCV_INCLUDE_DIRS})
+include(depend.cmake)
 
-# Protocol Buffers (required by Ceres)
-find_package(Protobuf REQUIRED)
-include_directories(${PROTOBUF_INCLUDE_DIRS})
-
-# Ceres
-find_path(CERES_INCLUDE_DIRS NAMES ceres/ceres.h)
-find_library(CERES_LIBRARIES NAMES ceres)
-include_directories(${CERES_INCLUDE_DIRS})
-# SuiteSparse (for Ceres)
-find_library(CXSPARSE_LIBRARIES NAMES cxsparse)
-find_library(CHOLMOD_LIBRARIES NAMES cholmod)
-find_library(CCOLAMD_LIBRARIES NAMES ccolamd)
-find_library(CAMD_LIBRARIES NAMES camd)
-find_library(COLAMD_LIBRARIES NAMES colamd)
-find_library(AMD_LIBRARIES NAMES amd)
-set(SUITESPARSE_LIBRARIES
-  ${CXSPARSE_LIBRARIES}
-  ${CHOLMOD_LIBRARIES}
-  ${CCOLAMD_LIBRARIES}
-  ${CAMD_LIBRARIES}
-  ${COLAMD_LIBRARIES}
-  ${AMD_LIBRARIES})
-# LAPACK (for Ceres)
-find_package(LAPACK REQUIRED)
-# Eigen (for Ceres)
-find_path(EIGEN_INCLUDE_DIRS NAMES Eigen/Core)
-include_directories(${EIGEN_INCLUDE_DIRS})
-set(CERES_LIBRARIES
-  ${CERES_LIBRARIES}
-  ${SUITESPARSE_LIBRARIES}
-  ${LAPACK_LIBRARIES}
-  ${PROTOBUF_LIBRARIES})
-
-# Google Test
-find_package(GTest REQUIRED)
-include_directories(${GTEST_INCLUDE_DIRS})
-
-# Google Log
-find_package(Glog REQUIRED)
-include_directories(${GLOG_INCLUDE_DIRS})
-
-# GFlags
-find_package(GFlags REQUIRED)
-include_directories(${GFLAGS_INCLUDE_DIRS})
-
-# liblinear
-find_path(LIBLINEAR_INCLUDE_DIRS NAMES linear.h)
-include_directories(${LIBLINEAR_INCLUDE_DIRS})
-find_library(LIBLINEAR_LIBRARIES NAMES linear)
-set(LIBLINEAR_LIBRARIES ${LIBLINEAR_LIBRARIES} ${BLAS_LIBRARIES})
-
-# GNU Scientific Library (GSL)
-find_library(GSL_LIBRARIES NAMES gsl)
+add_subdirectory(videoseg)
+add_subdirectory(util)
 
 add_executable(visualize-keypoints
   visualize_keypoints.cpp
@@ -681,21 +629,6 @@ add_executable(filter-matches
   unique_match_result_reader.cpp
   match_result_writer.cpp)
 target_link_libraries(filter-matches
-  ${GLOG_LIBRARIES}
-  ${GFLAGS_LIBRARIES}
-  ${OpenCV_LIBS})
-
-add_executable(display-multiview-multitracks
-  display_multiview_multitracks.cpp
-  image_index.cpp
-  random_color.cpp
-  hsv.cpp
-  sift_position.cpp
-  draw_sift_position.cpp
-  read_lines.cpp
-  sift_position_reader.cpp
-  read_image.cpp)
-target_link_libraries(display-multiview-multitracks
   ${GLOG_LIBRARIES}
   ${GFLAGS_LIBRARIES}
   ${OpenCV_LIBS})
