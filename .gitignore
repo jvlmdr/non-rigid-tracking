@@ -1,2 +1,8 @@
 .DS_Store
 .*.swp
+debug/
+release/
+input/
+output/
+visualize/
+misc/
