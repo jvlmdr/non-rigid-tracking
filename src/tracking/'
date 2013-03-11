@@ -1,0 +1,377 @@
+#include "tracking/using.hpp"
+#include <sstream>
+#include <opencv2/highgui/highgui.hpp>
+#include <opencv2/imgproc/imgproc.hpp>
+#include <glog/logging.h>
+#include <gflags/gflags.h>
+#include <algorithm>
+#include "tracking/warp.hpp"
+#include "tracking/flow.hpp"
+#include "tracking/similarity-warp.hpp"
+#include "tracking/translation-warp.hpp"
+#include "util/sqr.hpp"
+
+using namespace tracking;
+
+DEFINE_bool(display, true, "Show tracking in window");
+DEFINE_int32(radius, 8, "Half of [patch size - 1]");
+DEFINE_double(mask_sigma, 4., "Sigma to use in mask");
+DEFINE_double(min_scale, 1., "Minimum warp scale");
+
+// Optical flow settings (frame to frame).
+const int MAX_NUM_ITERATIONS = 100;
+const double FUNCTION_TOLERANCE = 1e-6;
+const double GRADIENT_TOLERANCE = 1e-6;
+const double PARAMETER_TOLERANCE = 1e-6;
+const bool ITERATION_LIMIT_IS_FATAL = true;
+const bool CHECK_CONDITION = true;
+const double MAX_CONDITION = 1e3;
+
+class TrackedFeature {
+  public:
+    inline int id() const { return id_; }
+    inline const cv::Mat& appearance() const { return appearance_; }
+    inline cv::Mat& appearance() { return appearance_; }
+
+    inline bool isSimilarity() const {
+      return static_cast<bool>(similarity_);
+    }
+
+    inline const Warp& warp() const {
+      if (isSimilarity()) {
+        return *similarity_;
+      } else {
+        return *translation_;
+      }
+    }
+
+    inline Warp& warp() {
+      if (isSimilarity()) {
+        return *similarity_;
+      } else {
+        return *translation_;
+      }
+    }
+
+    inline const SimilarityWarp& similarity() const {
+      return *similarity_;
+    }
+
+    inline SimilarityWarp& similarity() {
+      return *similarity_;
+    }
+
+    inline const TranslationWarp& translation() const {
+      return *translation_;
+    }
+
+    inline TranslationWarp& translation() {
+      return *translation_;
+    }
+
+    void swap(TrackedFeature& other) {
+      std::swap(id_, other.id_);
+      similarity_.swap(other.similarity_);
+      translation_.swap(other.translation_);
+      std::swap(appearance_, other.appearance_);
+    }
+
+  private:
+    int id_;
+    // Only one of these is non-null.
+    scoped_ptr<SimilarityWarp> similarity_;
+    scoped_ptr<TranslationWarp> translation_;
+    cv::Mat appearance_;
+};
+
+typedef list<TrackedFeature> FeatureList;
+
+cv::Mat makeGaussian(double sigma, int width) {
+  cv::Mat gaussian = cv::Mat_<double>(width, width);
+  int radius = (width - 1) / 2;
+  double sigma2 = sigma * sigma;
+
+  for (int i = 0; i < width; i += 1) {
+    double u = i - radius;
+    for (int j = 0; j < width; j += 1) {
+      double v = j - radius;
+      double d2 = u * u + v * v;
+      gaussian.at<double>(i, j) = std::exp(-d2 / (2. * sigma2));
+    }
+  }
+
+  cv::Mat mask = cv::Mat_<double>::zeros(width, width);
+  cv::Point center(radius, radius);
+  cv::circle(mask, center, radius, 1., -1);
+  cv::multiply(gaussian, mask, gaussian);
+
+  return gaussian;
+}
+
+void init(int& argc, char**& argv) {
+  std::ostringstream usage;
+  usage << "Automatically detects and tracks featuers." << std::endl;
+  usage << std::endl;
+  usage << argv[0] << " video tracks" << std::endl;
+  usage << std::endl;
+  google::SetUsageMessage(usage.str());
+
+  google::InitGoogleLogging(argv[0]);
+  google::ParseCommandLineFlags(&argc, &argv, true);
+
+  if (argc != 3) {
+    google::ShowUsageWithFlags(argv[0]);
+    std::exit(1);
+  }
+}
+
+class OccupancyMap {
+  public:
+    OccupancyMap(int width, int height, double radius)
+        : occupied_(width, height, false), radius_(radius) {}
+
+    inline bool occupied(double x, double y) const {
+      return occupied_(x, y);
+    }
+
+    void add(double x, double y) {
+      // Set region to occupied.
+      int min_y = std::floor(y - radius_ + 0.5);
+      int max_y = std::floor(y + radius_ + 0.5);
+      // Clip to bounds of image.
+      min_y = std::max(min_y, 0);
+      max_y = std::min(max_y, occupied_.rows - 1);
+
+      for (int i = min_y; i <= max_y; i += 1) {
+        double delta = std::sqrt(sqr(radius_) - sqr(i - y));
+        // Set region to occupied.
+        int min_x = std::floor(x - delta + 0.5);
+        int max_x = std::floor(x + delta + 0.5);
+        // Clip to bounds of image.
+        min_x = std::max(min_x, 0);
+        max_x = std::min(max_x, occupied_.rows - 1);
+
+        for (int j = min_x; j <= max_x; j += 1) {
+          occupied_(i, j) = true;
+        }
+      }
+    }
+
+  private:
+    cv::Mat_<bool> occupied_;
+    double radius_;
+};
+
+class ScaleSpaceOccupancyMap {
+  public:
+    ScaleSpaceOccupancyMap(int width,
+                           int height,
+                           double radius,
+                           double step,
+                           double sigma)
+        : width_(width),
+          height_(height),
+          radius_(radius),
+          log_step_(std::log(step)),
+          sigma_(sigma) {
+      int num_levels = std::log(std::min(width_, height_)) / log_step_;
+
+      for (int level = 0; level < num_levels; level += 1) {
+        double scale = std::exp(level * log_step_);
+        int w = std::ceil(width / scale);
+        int h = std::ceil(height / scale);
+        occupied_.push_back(cv::Mat_<bool>(h, w, false));
+      }
+    }
+
+    inline bool occupied(double x, double y, double scale) const {
+      // Determine nearest level.
+      int level = std::floor(std::log(scale) / log_step_ + 0.5);
+      // Clamp to valid range.
+      level = std::max(level, 0);
+      level = std::min(level, int(occupied_.size()) - 1);
+      // Divide x and y by scale of the nearest level.
+      double level_scale = std::exp(level * log_step_);
+      x = x / level_scale;
+      y = y / level_scale;
+
+      int i = std::floor(y + 0.5);
+      int j = std::floor(x + 0.5);
+
+      return occupied_[level](i, j);
+    }
+
+    void add(double x, double y, double scale) {
+    }
+
+  private:
+    double width_;
+    double height_;
+    double radius_;
+    double log_step_;
+    double sigma_;
+    vector<cv::Mat_<bool> > occupied_;
+};
+
+struct ScoredPixel {
+  cv::Point p;
+  float score;
+};
+
+// This is an object to avoid re-allocating cornerness map.
+class FeatureDetector {
+  public:
+    FeatureDetector(int width, int height)
+        : cornerness_(cv::Mat_<float>(height, width)) {}
+
+    void detect(const cv::Mat& image,
+                FeatureList& features,
+                int block_size,
+                int k_size,
+                double min_clearance) {
+      // Calculate cornerness at every pixel.
+      cv::cornerMinEigenVal(image, cornerness_, block_size, k_size);
+
+      // Populate occupancy map with location of existing translation features.
+      const int width = cornerness_.cols;
+      const int height = cornerness_.rows;
+      OccupancyMap occupancy(width, height, min_clearance);
+
+      FeatureList::const_iterator feature;
+      for (feature = features.begin(); feature != features.end(); ++feature) {
+        if (!feature->isSimilarity()) {
+          const TranslationWarp& warp = feature->translation();
+          occupancy.add(warp.x(), warp.y());
+        }
+      }
+
+      // Build list of pixels sorted by score.
+      list<cv::Point> pixels;
+      cv::Mat_<list<cv::Point>::const_iterator> lookup;
+
+      for (int x = 0; x < width; x += 1) {
+        for (int y = 0; y < height; y += 1) {
+          cv::Point p(x, y);
+          double score = cornerness_.at<float>(p);
+          if (
+          pixels.push_back(cv::Point(x, y));
+          lookup(y, x) = --pixels.end();
+          lookup(y, x) = --pixels.end();
+        }
+      }
+
+      pixels.sort(
+
+      // 
+    }
+
+  private:
+    cv::Mat cornerness_;
+};
+
+void detectAndTrack(cv::VideoCapture& capture) {
+  // Linear solver options.
+  FlowOptions options;
+  options.solver_options.linear_solver_type = ceres::DENSE_QR;
+  options.solver_options.max_num_iterations = MAX_NUM_ITERATIONS;
+  options.solver_options.function_tolerance = FUNCTION_TOLERANCE;
+  options.solver_options.gradient_tolerance = GRADIENT_TOLERANCE;
+  options.solver_options.parameter_tolerance = PARAMETER_TOLERANCE;
+  options.check_condition = CHECK_CONDITION;
+  options.max_condition = MAX_CONDITION;
+  options.iteration_limit_is_fatal = ITERATION_LIMIT_IS_FATAL;
+  options.interpolation = cv::INTER_AREA;
+
+  // Construct mask.
+  int diameter = FLAGS_radius * 2 + 1;
+  cv::Mat mask = makeGaussian(FLAGS_mask_sigma, diameter);
+
+  // Loop state.
+  bool end = false;
+
+  // Features currently being tracked.
+  FeatureList features;
+
+  // Memory that is re-used every loop.
+  cv::Mat image;
+  cv::Mat color_image;
+  cv::Mat integer_image;
+  cv::Mat ddx;
+  cv::Mat ddy;
+  cv::Mat display;
+
+  const cv::Mat diff = (cv::Mat_<double>(1, 3) << -0.5, 0, 0.5);
+  const cv::Mat identity = (cv::Mat_<double>(1, 1) << 1);
+
+  // Read frames of video.
+  while (!end) {
+    // Read next frame.
+    bool ok = capture.read(color_image);
+    if (!ok) {
+      // Reached end.
+      end = true;
+    } else {
+      // Convert color to intensity.
+      cv::cvtColor(color_image, integer_image, CV_BGR2GRAY);
+      // Convert to floating point in [0, 1].
+      integer_image.convertTo(image, cv::DataType<double>::type, 1. / 255);
+      // Compute gradient images once.
+      cv::sepFilter2D(image, ddx, -1, diff, identity);
+      cv::sepFilter2D(image, ddy, -1, identity, diff);
+
+      // Track features from the previous image.
+      {
+        FeatureList::iterator feature = features.begin();
+        while (feature != features.end()) {
+          bool tracked = trackPatch(feature->warp(), feature->appearance(),
+              image, ddx, ddy, mask, options);
+
+          // Erase feature if failed to track. Move to next feature.
+          if (!tracked) {
+            features.erase(feature++);
+          } else {
+            ++feature;
+          }
+        }
+      }
+
+      // Detect new features.
+      //detectFeatures(image, features);
+
+      // Convert grayscale back to color for displaying.
+      cv::cvtColor(integer_image, display, CV_GRAY2BGR);
+
+      // Draw features.
+      LOG(INFO) << features.size() << " features";
+      {
+        FeatureList::const_iterator feature;
+        for (feature = features.begin(); feature != features.end(); ++feature) {
+          cv::Scalar color(200, 0, 0);
+          feature->warp().draw(display, FLAGS_radius, color, 1);
+        }
+      }
+
+      // Display image.
+      cv::imshow("Tracks", display);
+      cv::waitKey(1000 / 30);
+    }
+  }
+}
+
+int main(int argc, char** argv) {
+  init(argc, argv);
+
+  string video_file = argv[1];
+  string tracks_file = argv[2];
+
+  bool ok;
+
+  // Open video stream.
+  cv::VideoCapture capture;
+  ok = capture.open(video_file);
+  CHECK(ok) << "Could not open video stream";
+
+  detectAndTrack(capture);
+
+  return 0;
+}

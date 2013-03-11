@@ -11,6 +11,7 @@ include_directories(${CMAKE_CURRENT_BINARY_DIR})
 include(depend.cmake)
 
 add_subdirectory(videoseg)
+add_subdirectory(tracking)
 add_subdirectory(util)
 
 add_executable(visualize-keypoints
@@ -73,24 +74,24 @@ target_link_libraries(adjacent-matches-to-tracks
   ${GFLAGS_LIBRARIES}
   ${OpenCV_LIBS})
 
-add_executable(track-features-bidir
-  track_features_bidir.cpp
-  read_image.cpp
-  flow.cpp
-  warp.cpp
-  util.cpp
-  similarity_warper.cpp
-  similarity_warp.cpp
-  sift_position.cpp
-  sift_position_reader.cpp
-  sift_position_writer.cpp
-  random_color.cpp
-  hsv.cpp)
-target_link_libraries(track-features-bidir
-  ${GLOG_LIBRARIES}
-  ${GFLAGS_LIBRARIES}
-  ${OpenCV_LIBS}
-  ${CERES_LIBRARIES})
+#add_executable(track-features-bidir
+#  track_features_bidir.cpp
+#  read_image.cpp
+#  flow.cpp
+#  warp.cpp
+#  util.cpp
+#  similarity_warper.cpp
+#  similarity_warp.cpp
+#  sift_position.cpp
+#  sift_position_reader.cpp
+#  sift_position_writer.cpp
+#  random_color.cpp
+#  hsv.cpp)
+#target_link_libraries(track-features-bidir
+#  ${GLOG_LIBRARIES}
+#  ${GFLAGS_LIBRARIES}
+#  ${OpenCV_LIBS}
+#  ${CERES_LIBRARIES})
 
 add_executable(extract-sift-tracks
   extract_sift_tracks.cpp
@@ -775,20 +776,20 @@ target_link_libraries(merge-forward-and-reverse-tracks
   ${GFLAGS_LIBRARIES}
   ${OpenCV_LIBS})
 
-add_executable(track-live
-  track_live.cpp
-  flow.cpp
-  warp.cpp
-  util.cpp
-  translation_warp.cpp
-  translation_warper.cpp
-  similarity_warp.cpp
-  similarity_warper.cpp)
-target_link_libraries(track-live
-  ${GLOG_LIBRARIES}
-  ${GFLAGS_LIBRARIES}
-  ${OpenCV_LIBS}
-  ${CERES_LIBRARIES})
+#add_executable(track-live
+#  track_live.cpp
+#  flow.cpp
+#  warp.cpp
+#  util.cpp
+#  translation_warp.cpp
+#  translation_warper.cpp
+#  similarity_warp.cpp
+#  similarity_warper.cpp)
+#target_link_libraries(track-live
+#  ${GLOG_LIBRARIES}
+#  ${GFLAGS_LIBRARIES}
+#  ${OpenCV_LIBS}
+#  ${CERES_LIBRARIES})
 
 add_executable(find-multiview-track
   find_multiview_track.cpp

@@ -1,9 +1,11 @@
-#ifndef WARP_HPP_
-#define WARP_HPP_
+#ifndef TRACKING_WARP_HPP_
+#define TRACKING_WARP_HPP_
 
-#include <opencv2/core/core.hpp>
+#include "tracking/using.hpp"
 #include <ceres/ceres.h>
-#include "warper.hpp"
+#include "tracking/warper.hpp"
+
+namespace tracking {
 
 // Describes a continuously-parametrized affine warp.
 //
@@ -40,8 +42,8 @@ class Warp {
     virtual double* params() = 0;
     virtual const double* params() const = 0;
 
-    // Provide the underlying warper.
-    virtual const Warper* warper() const = 0;
+    // Allocate and construct a warper.
+    virtual Warper* newWarper() const = 0;
 };
 
 // Extracts a square patch of an image after applying a warp.
@@ -59,5 +61,7 @@ void samplePatchAffine(const cv::Mat& src,
                        int width,
                        bool invert,
                        int interpolation);
+
+} // namespace tracking
 
 #endif

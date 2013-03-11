@@ -1,0 +1,19 @@
+package tracking;
+
+// Describes a list of tracks from a video sequence.
+message TrackListData {
+  message Frame {
+    message Point {
+      required int32 id = 1;
+      required double x = 2;
+      required double y = 3;
+      optional double scale = 4;
+      optional double angle = 5;
+    }
+
+    // Sorted by ID for efficient search.
+    repeated Point points = 1;
+  }
+
+  repeated Frame frames = 1;
+}
