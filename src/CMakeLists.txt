@@ -12,6 +12,7 @@ include(depend.cmake)
 
 add_subdirectory(videoseg)
 add_subdirectory(tracking)
+add_subdirectory(tools)
 add_subdirectory(util)
 
 add_executable(visualize-keypoints
