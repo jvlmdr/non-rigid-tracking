@@ -1,10 +1,11 @@
 #include "tracking/using.hpp"
 #include <sstream>
+#include <algorithm>
+#include <numeric>
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
 #include <glog/logging.h>
 #include <gflags/gflags.h>
-#include <algorithm>
 #include "tracking/warp.hpp"
 #include "tracking/flow.hpp"
 #include "tracking/similarity-warp.hpp"
@@ -20,15 +21,22 @@ DEFINE_int32(radius, 8, "Half of [patch size - 1]");
 DEFINE_double(threshold, 1e-3, "Cornerness threshold");
 DEFINE_double(min_clearance, 8., "Minimum clearance before re-detecting");
 DEFINE_double(mask_sigma, 4., "Sigma to use in mask");
+DEFINE_double(max_residual, 0.05,
+    "Maximum relative average intensity difference");
 
-// Optical flow settings (frame to frame).
-const int MAX_NUM_ITERATIONS = 100;
+DEFINE_bool(check_condition, true,
+    "Check condition of Jacobian during tracking?");
+DEFINE_double(max_condition, 1e3,
+    "Maximum condition of Jacobian during tracking");
+DEFINE_int32(max_iter, 100,
+    "Maximum number of iterations in non-linear problem");
+DEFINE_bool(fatal_max_iter, true,
+    "Does reaching the iteration limit without converging terminate the "
+    "track?");
+
 const double FUNCTION_TOLERANCE = 1e-6;
 const double GRADIENT_TOLERANCE = 1e-6;
 const double PARAMETER_TOLERANCE = 1e-6;
-const bool ITERATION_LIMIT_IS_FATAL = true;
-const bool CHECK_CONDITION = true;
-const double MAX_CONDITION = 1e3;
 
 class TrackedFeature {
   public:
@@ -158,20 +166,8 @@ class FeatureList {
       return features_.size();
     }
 
-    void add(const SimilarityWarp& warp,
-             const cv::Mat& image,
-             int width,
-             const cv::Vec3b& color) {
-      TrackedFeature feature(warp, color);
-      add(feature, image, width);
-    }
-
-    void add(const TranslationWarp& warp,
-             const cv::Mat& image,
-             int width,
-             const cv::Vec3b& color) {
-      TrackedFeature feature(warp, color);
-      add(feature, image, width);
+    TrackedFeature& add() {
+      return (features_[count_++] = TrackedFeature());
     }
 
     void erase(iterator position) {
@@ -185,17 +181,6 @@ class FeatureList {
   private:
     map<int, TrackedFeature> features_;
     int count_;
-
-    void add(TrackedFeature& feature, const cv::Mat& image, int width) {
-      // Extract appearance.
-      cv::Mat patch;
-      samplePatch(feature.warp(), image, patch, width, false, cv::INTER_AREA);
-      // Update feature with appearance (without copying).
-      std::swap(feature.appearance(), patch);
-
-      (features_[count_] = TrackedFeature()).swap(feature);
-      count_ += 1;
-    }
 };
 
 cv::Mat makeGaussian(double sigma, int width) {
@@ -218,6 +203,18 @@ cv::Mat makeGaussian(double sigma, int width) {
   cv::multiply(gaussian, mask, gaussian);
 
   return gaussian;
+}
+
+// Computes the average pixel residual, weighted by W.
+double patchResidual(const cv::Mat& A, const cv::Mat& B, const cv::Mat& W) {
+  // D = abs(A - B) .* W
+  cv::Mat D = cv::abs(A - B);
+  cv::multiply(D, W, D);
+
+  double num = std::accumulate(D.begin<double>(), D.end<double>(), 0.);
+  double denom = std::accumulate(W.begin<double>(), W.end<double>(), 0.);
+
+  return num / denom;
 }
 
 void init(int& argc, char**& argv) {
@@ -348,7 +345,8 @@ class FeatureDetector {
                 int k_size,
                 double min_clearance,
                 double threshold,
-                int diameter) {
+                int diameter,
+                int interpolation) {
       // Calculate cornerness at every pixel.
       cv::cornerMinEigenVal(float_image, cornerness_, block_size, k_size);
 
@@ -405,10 +403,17 @@ class FeatureDetector {
         std::pop_heap(pixels.begin(), pixels.end());
         pixels.pop_back();
 
+        // Add to list if not occupied.
         if (!occupancy.occupied(pixel.pos)) {
-          // Add to list if not occupied.
           TranslationWarp warp(pixel.pos.x, pixel.pos.y);
-          features.add(warp, image, diameter, randomColor(0.9, 0.9));
+          // Sample patch appearance.
+          cv::Mat patch;
+          samplePatch(warp, image, patch, diameter, false, interpolation);
+
+          TrackedFeature feature(warp, randomColor(0.9, 0.9));
+          std::swap(feature.appearance(), patch);
+
+          features.add().swap(feature);
           num_added += 1;
         }
 
@@ -427,20 +432,9 @@ void detectAndTrack(cv::VideoCapture& capture,
                     int radius,
                     double threshold,
                     double min_clearance,
-                    double mask_sigma) {
-  // Linear solver options.
-  FlowOptions options;
-  options.solver_options.linear_solver_type = ceres::DENSE_QR;
-  options.solver_options.max_num_iterations = MAX_NUM_ITERATIONS;
-  options.solver_options.function_tolerance = FUNCTION_TOLERANCE;
-  options.solver_options.gradient_tolerance = GRADIENT_TOLERANCE;
-  options.solver_options.parameter_tolerance = PARAMETER_TOLERANCE;
-  options.solver_options.logging_type = ceres::SILENT;
-  options.check_condition = CHECK_CONDITION;
-  options.max_condition = MAX_CONDITION;
-  options.iteration_limit_is_fatal = ITERATION_LIMIT_IS_FATAL;
-  options.interpolation = cv::INTER_AREA;
-
+                    double mask_sigma,
+                    double max_residual,
+                    const FlowOptions& options) {
   // Construct mask.
   int diameter = radius * 2 + 1;
   cv::Mat mask = makeGaussian(mask_sigma, diameter);
@@ -492,28 +486,46 @@ void detectAndTrack(cv::VideoCapture& capture,
 
       int num_removed = 0;
 
-      // Track features from the previous image.
-      {
-        FeatureList::iterator feature = features.begin();
-        while (feature != features.end()) {
-          bool tracked = trackPatch(feature->second.warp(),
-              feature->second.appearance(), image, ddx, ddy, mask, options);
+      FeatureList::iterator it = features.begin();
+      while (it != features.end()) {
+        TrackedFeature& feature = it->second;
 
-          // Erase feature if failed to track. Move to next feature.
-          if (!tracked) {
-            features.erase(feature++);
-            num_removed += 1;
-          } else {
-            ++feature;
+        // Track features from the previous image.
+        bool tracked = trackPatch(feature.warp(), feature.appearance(), image,
+            ddx, ddy, mask, options);
+
+        if (tracked) {
+          // Sample patch for appearance check and template update.
+          cv::Mat patch;
+          samplePatch(feature.warp(), image, patch, diameter, false,
+              options.interpolation);
+
+          // Do appearance check.
+          double residual = patchResidual(patch, feature.appearance(), mask);
+          if (residual > max_residual) {
+            DLOG(INFO) << "Appearance residual too large (" << residual <<
+                " > " << max_residual << ")";
+            tracked = false;
           }
+
+          // Update appearance.
+          std::swap(feature.appearance(), patch);
         }
 
-        LOG(INFO) << "Removed " << num_removed << " features";
+        // Erase feature if failed to track. Move to next feature.
+        if (!tracked) {
+          features.erase(it++);
+          num_removed += 1;
+        } else {
+          ++it;
+        }
       }
+
+      LOG(INFO) << "Removed " << num_removed << " features";
 
       // Detect new features.
       detector->detect(image, float_image, features, radius, 3, min_clearance,
-          threshold, diameter);
+          threshold, diameter, options.interpolation);
 
       // Convert grayscale back to color for displaying.
       cv::cvtColor(integer_image, display, CV_GRAY2BGR);
@@ -548,8 +560,20 @@ int main(int argc, char** argv) {
   ok = capture.open(video_file);
   CHECK(ok) << "Could not open video stream";
 
+  FlowOptions options;
+  options.solver_options.linear_solver_type = ceres::DENSE_QR;
+  options.solver_options.max_num_iterations = FLAGS_max_iter;
+  options.solver_options.function_tolerance = FUNCTION_TOLERANCE;
+  options.solver_options.gradient_tolerance = GRADIENT_TOLERANCE;
+  options.solver_options.parameter_tolerance = PARAMETER_TOLERANCE;
+  options.solver_options.logging_type = ceres::SILENT;
+  options.check_condition = FLAGS_check_condition;
+  options.max_condition = FLAGS_max_condition;
+  options.iteration_limit_is_fatal = FLAGS_fatal_max_iter;
+  options.interpolation = cv::INTER_LINEAR;
+
   detectAndTrack(capture, FLAGS_radius, FLAGS_threshold, FLAGS_min_clearance,
-      FLAGS_mask_sigma);
+      FLAGS_mask_sigma, FLAGS_max_residual, options);
 
   return 0;
 }
