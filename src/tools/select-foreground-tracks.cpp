@@ -103,16 +103,17 @@ void findSubset(const map<int, Tally>& stats,
                 set<int>& ids,
                 double min_fraction) {
   map<int, Tally>::const_iterator track;
-  int n = 0;
 
   for (track = stats.begin(); track != stats.end(); ++track) {
+    int id = track->first;
     const Tally& tally = track->second;
+
     double fraction = double(tally.num_inside) / tally.total;
+
     if (fraction >= min_fraction) {
       // Keep track.
-      ids.insert(n);
+      ids.insert(id);
     }
-    n += 1;
   }
 }
 

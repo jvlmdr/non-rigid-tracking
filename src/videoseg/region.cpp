@@ -56,14 +56,10 @@ inline bool intervalBefore(const ScanInterval& lhs, const ScanInterval& rhs) {
 
 bool regionContains(const Rasterization& region, cv::Point pos) {
   typedef RepeatedPtrField<ScanInterval> IntervalList;
-
   const IntervalList& intervals = region.scan_inter();
-  IntervalList::const_iterator begin;
-  IntervalList::const_iterator end;
-  boost::tie(begin, end) = std::equal_range(intervals.begin(), intervals.end(),
-      pos, IntervalBefore());
 
-  return (begin != end);
+  return std::binary_search(intervals.begin(), intervals.end(), pos,
+      IntervalBefore());
 }
 
 ////////////////////////////////////////////////////////////////////////////////
