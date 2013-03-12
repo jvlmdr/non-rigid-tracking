@@ -132,23 +132,23 @@ target_link_libraries(pca-descriptor
   ${GFLAGS_LIBRARIES}
   ${OpenCV_LIBS})
 
-add_executable(visualize-tracks
-  visualize_tracks.cpp
-  sift_position.cpp
-  scale_space_position.cpp
-  draw_sift_position.cpp
-  sift_feature_drawer.cpp
-  translation_feature_drawer.cpp
-  scale_space_feature_drawer.cpp
-  read_image.cpp
-  random_color.cpp
-  hsv.cpp
-  sift_position_reader.cpp
-  scale_space_position_reader.cpp)
-target_link_libraries(visualize-tracks
-  ${GLOG_LIBRARIES}
-  ${GFLAGS_LIBRARIES}
-  ${OpenCV_LIBS})
+#add_executable(visualize-tracks
+#  visualize_tracks.cpp
+#  sift_position.cpp
+#  scale_space_position.cpp
+#  draw_sift_position.cpp
+#  sift_feature_drawer.cpp
+#  translation_feature_drawer.cpp
+#  scale_space_feature_drawer.cpp
+#  read_image.cpp
+#  random_color.cpp
+#  hsv.cpp
+#  sift_position_reader.cpp
+#  scale_space_position_reader.cpp)
+#target_link_libraries(visualize-tracks
+#  ${GLOG_LIBRARIES}
+#  ${GFLAGS_LIBRARIES}
+#  ${OpenCV_LIBS})
 
 add_executable(merge-tracks
   merge_tracks.cpp

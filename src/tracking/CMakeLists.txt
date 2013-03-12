@@ -21,3 +21,12 @@ target_link_libraries(detect-and-track
   ${OpenCV_LIBS}
   ${PROTOBUF_LIBRARIES}
   ${CERES_LIBRARIES})
+
+add_executable(visualize-tracks visualize-tracks.cpp)
+target_link_libraries(visualize-tracks
+  tracking
+  util
+  ${GLOG_LIBRARIES}
+  ${GFLAGS_LIBRARIES}
+  ${OpenCV_LIBS}
+  ${PROTOBUF_LIBRARIES})

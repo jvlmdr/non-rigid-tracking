@@ -14,10 +14,12 @@
 #include "tracking/translation-warp.hpp"
 #include "util/sqr.hpp"
 #include "util/random-color.hpp"
+#include <boost/format.hpp>
 
 using namespace tracking;
 
 DEFINE_bool(display, true, "Show tracking in window");
+DEFINE_string(save, "", "Directory to save frames to, ignored if empty");
 
 DEFINE_int32(radius, 8, "Half of [patch size - 1]");
 DEFINE_double(threshold, 1e-3, "Cornerness threshold");
@@ -39,6 +41,15 @@ DEFINE_bool(fatal_max_iter, true,
 const double FUNCTION_TOLERANCE = 1e-6;
 const double GRADIENT_TOLERANCE = 1e-6;
 const double PARAMETER_TOLERANCE = 1e-6;
+
+// Visualization parameters.
+const double SATURATION = 0.99;
+const double BRIGHTNESS = 0.99;
+const int LINE_THICKNESS = 1;
+
+string makeFilename(const string& format, int n) {
+  return boost::str(boost::format(format) % n);
+}
 
 // Describes a feature which is currently being tracked.
 class TrackedFeature {
@@ -345,7 +356,12 @@ struct ScoredPixel {
 // This is an object to avoid re-allocating cornerness map.
 class FeatureDetector {
   public:
+    FeatureDetector() : cornerness_() {}
     FeatureDetector(cv::Size size) : cornerness_(cv::Mat_<float>(size)) {}
+
+    void reserve(cv::Size size) {
+      cornerness_.create(size, cv::DataType<float>::type);
+    }
 
     void detect(const cv::Mat& image,
                 const cv::Mat& float_image,
@@ -422,7 +438,7 @@ class FeatureDetector {
           cv::Mat patch;
           samplePatch(warp, image, patch, diameter, false, interpolation);
 
-          TrackedFeature feature(warp, randomColor(0.9, 0.9));
+          TrackedFeature feature(warp, randomColor(SATURATION, BRIGHTNESS));
           std::swap(feature.appearance(), patch);
 
           features.add().swap(feature);
@@ -472,7 +488,7 @@ void drawFeatures(const TrackedFeatureList& features,
     const TrackedFeature& feature = it->second;
     cv::Vec3b color = feature.color();
     cv::Scalar scalar(color[0], color[1], color[2]);
-    feature.warp().draw(image, radius, scalar, 1);
+    feature.warp().draw(image, radius, scalar, LINE_THICKNESS);
   }
 }
 
@@ -484,13 +500,17 @@ void detectAndTrack(cv::VideoCapture& capture,
                     double mask_sigma,
                     double max_residual,
                     const FlowOptions& options,
-                    bool display) {
+                    bool display,
+                    const std::string& save) {
   // Construct mask.
   int diameter = radius * 2 + 1;
   cv::Mat mask = makeGaussian(mask_sigma, diameter);
+  // Draw tracks?
+  bool render = (display || !save.empty());
 
   // Loop state.
   bool end = false;
+  int n = 0;
 
   // Features currently being tracked.
   TrackedFeatureList features;
@@ -507,7 +527,7 @@ void detectAndTrack(cv::VideoCapture& capture,
   const cv::Mat diff = (cv::Mat_<double>(1, 3) << -0.5, 0, 0.5);
   const cv::Mat identity = (cv::Mat_<double>(1, 1) << 1);
 
-  scoped_ptr<FeatureDetector> detector;
+  FeatureDetector detector;
 
   // Read frames of video.
   while (!end) {
@@ -520,11 +540,6 @@ void detectAndTrack(cv::VideoCapture& capture,
     }
 
     LOG(INFO) << "Tracking " << features.size() << " features";
-
-    if (!detector) {
-      // Initialize anything which needs width and height.
-      detector.reset(new FeatureDetector(color_image.size()));
-    }
 
     // Convert color to intensity.
     cv::cvtColor(color_image, integer_image, CV_BGR2GRAY);
@@ -576,7 +591,8 @@ void detectAndTrack(cv::VideoCapture& capture,
     LOG(INFO) << "Removed " << num_removed << " features";
 
     // Detect new features.
-    detector->detect(image, float_image, features, radius, 3, min_clearance,
+    detector.reserve(color_image.size());
+    detector.detect(image, float_image, features, radius, 3, min_clearance,
         threshold, diameter, options.interpolation);
 
     // Add all features to structure.
@@ -584,13 +600,22 @@ void detectAndTrack(cv::VideoCapture& capture,
     addFeaturesToFrame(features, frame);
     tracks.mutable_frames()->Add()->Swap(&frame);
 
-    if (display) {
+    if (render) {
       // Convert grayscale back to color for displaying.
       cv::cvtColor(integer_image, visualization, CV_GRAY2BGR);
       drawFeatures(features, visualization, radius);
-      cv::imshow("Tracks", visualization);
-      cv::waitKey(1000. / 30);
+
+      if (display) {
+        cv::imshow("Tracks", visualization);
+        cv::waitKey(1000. / 30);
+      }
+      if (!save.empty()) {
+        string file = makeFilename(save, n);
+        cv::imwrite(file, visualization);
+      }
     }
+
+    n += 1;
   }
 }
 
@@ -620,10 +645,9 @@ int main(int argc, char** argv) {
   options.interpolation = cv::INTER_LINEAR;
 
   TrackList tracks;
-
   detectAndTrack(capture, tracks, FLAGS_radius, FLAGS_threshold,
       FLAGS_min_clearance, FLAGS_mask_sigma, FLAGS_max_residual, options,
-      FLAGS_display);
+      FLAGS_display, FLAGS_save);
 
   LOG(INFO) << "Saving tracks...";
   std::ofstream ofs(tracks_file.c_str(), std::ios::trunc | std::ios::binary);
