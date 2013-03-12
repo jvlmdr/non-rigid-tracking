@@ -2,7 +2,6 @@
 #define TRACKING_WARP_HPP_
 
 #include "tracking/using.hpp"
-#include <ceres/ceres.h>
 #include "tracking/warper.hpp"
 
 namespace tracking {

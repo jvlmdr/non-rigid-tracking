@@ -6,6 +6,9 @@
 
 namespace tracking {
 
+// A Warper contains methods to transform a 2D point given some parameters.
+// A Warp is the composition of a Warper and these parameters.
+
 // Describes a class of parametrized affine warps.
 //
 // Has:
