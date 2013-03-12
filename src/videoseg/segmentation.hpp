@@ -7,6 +7,16 @@
 
 namespace videoseg {
 
+struct RegionBefore {
+  inline bool operator()(const VideoSegmentation::Frame::Region& lhs,
+                         int rhs) const;
+  inline bool operator()(int lhs,
+                         const VideoSegmentation::Frame::Region& rhs) const;
+};
+
+inline bool regionBefore(const VideoSegmentation::Frame::Region& lhs,
+                         const VideoSegmentation::Frame::Region& rhs);
+
 void flattenHierarchicalSegmentation(const SegmentationTree& tree,
                                      const map<VertexIndex, int>& leaves,
                                      int num_labels,
@@ -14,5 +24,7 @@ void flattenHierarchicalSegmentation(const SegmentationTree& tree,
                                      VideoSegmentation& flat);
 
 }
+
+#include "videoseg/segmentation.inl"
 
 #endif

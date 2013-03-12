@@ -1,11 +1,13 @@
 #include "tracking/using.hpp"
 #include <sstream>
+#include <fstream>
 #include <algorithm>
 #include <numeric>
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
 #include <glog/logging.h>
 #include <gflags/gflags.h>
+#include "tracking/track-list.hpp"
 #include "tracking/warp.hpp"
 #include "tracking/flow.hpp"
 #include "tracking/similarity-warp.hpp"
@@ -38,6 +40,7 @@ const double FUNCTION_TOLERANCE = 1e-6;
 const double GRADIENT_TOLERANCE = 1e-6;
 const double PARAMETER_TOLERANCE = 1e-6;
 
+// Describes a feature which is currently being tracked.
 class TrackedFeature {
   public:
     TrackedFeature() : similarity_(), translation_(), appearance_(), color_() {}
@@ -92,6 +95,10 @@ class TrackedFeature {
       return static_cast<bool>(similarity_);
     }
 
+    inline bool isTranslation() const {
+      return static_cast<bool>(translation_);
+    }
+
     inline const Warp& warp() const {
       if (isSimilarity()) {
         return *similarity_;
@@ -135,13 +142,15 @@ class TrackedFeature {
     // Only one of these is non-null.
     scoped_ptr<SimilarityWarp> similarity_;
     scoped_ptr<TranslationWarp> translation_;
+
     cv::Mat appearance_;
     cv::Vec3b color_;
 };
 
-class FeatureList {
+// Describes a list of features currently being tracked.
+class TrackedFeatureList {
   public:
-    FeatureList() : features_(), count_(0) {}
+    TrackedFeatureList() : features_(), count_(0) {}
 
     typedef map<int, TrackedFeature>::const_iterator const_iterator;
     typedef map<int, TrackedFeature>::iterator iterator;
@@ -340,7 +349,7 @@ class FeatureDetector {
 
     void detect(const cv::Mat& image,
                 const cv::Mat& float_image,
-                FeatureList& features,
+                TrackedFeatureList& features,
                 int block_size,
                 int k_size,
                 double min_clearance,
@@ -354,20 +363,23 @@ class FeatureDetector {
       const cv::Size size = cornerness_.size();
       OccupancyMap occupancy(size, min_clearance);
 
-      FeatureList::const_iterator feature;
-      for (feature = features.begin(); feature != features.end(); ++feature) {
-        if (!feature->second.isSimilarity()) {
-          const TranslationWarp& warp = feature->second.translation();
+      TrackedFeatureList::const_iterator it;
+      for (it = features.begin(); it != features.end(); ++it) {
+        const TrackedFeature& feature = it->second;
+
+        if (feature.isTranslation()) {
+          const TranslationWarp& warp = feature.translation();
           occupancy.add(cv::Point2d(warp.x(), warp.y()));
         }
       }
 
-      // Build list of pixels sorted by score.
+      // Build list of local maxima.
       typedef vector<ScoredPixel> PixelList;
       PixelList pixels;
+      int radius = (diameter - 1) / 2;
 
-      for (int x = 1; x < size.width - 1; x += 1) {
-        for (int y = 1; y < size.height - 1; y += 1) {
+      for (int x = radius; x < size.width - radius - 1; x += 1) {
+        for (int y = radius; y < size.height - radius - 1; y += 1) {
           cv::Point pos(x, y);
           double score = cornerness_.at<float>(pos);
           bool use;
@@ -428,13 +440,51 @@ class FeatureDetector {
     cv::Mat cornerness_;
 };
 
+void addFeaturesToFrame(const TrackedFeatureList& features,
+                        TrackList::Frame& frame) {
+  TrackedFeatureList::const_iterator it;
+
+  for (it = features.begin(); it != features.end(); ++it) {
+    int id = it->first;
+    const TrackedFeature& feature = it->second;
+
+    if (!feature.isTranslation()) {
+      continue;
+    }
+
+    const TranslationWarp& warp = feature.translation();
+
+    TrackList::Point point;
+    point.set_id(id);
+    point.set_x(warp.x());
+    point.set_y(warp.y());
+
+    frame.mutable_points()->Add()->Swap(&point);
+  }
+}
+
+void drawFeatures(const TrackedFeatureList& features,
+                  cv::Mat& image,
+                  int radius) {
+  // Draw features.
+  TrackedFeatureList::const_iterator it;
+  for (it = features.begin(); it != features.end(); ++it) {
+    const TrackedFeature& feature = it->second;
+    cv::Vec3b color = feature.color();
+    cv::Scalar scalar(color[0], color[1], color[2]);
+    feature.warp().draw(image, radius, scalar, 1);
+  }
+}
+
 void detectAndTrack(cv::VideoCapture& capture,
+                    TrackList& tracks,
                     int radius,
                     double threshold,
                     double min_clearance,
                     double mask_sigma,
                     double max_residual,
-                    const FlowOptions& options) {
+                    const FlowOptions& options,
+                    bool display) {
   // Construct mask.
   int diameter = radius * 2 + 1;
   cv::Mat mask = makeGaussian(mask_sigma, diameter);
@@ -443,7 +493,7 @@ void detectAndTrack(cv::VideoCapture& capture,
   bool end = false;
 
   // Features currently being tracked.
-  FeatureList features;
+  TrackedFeatureList features;
 
   // Memory that is re-used every loop.
   cv::Mat image;
@@ -452,7 +502,7 @@ void detectAndTrack(cv::VideoCapture& capture,
   cv::Mat float_image;
   cv::Mat ddx;
   cv::Mat ddy;
-  cv::Mat display;
+  cv::Mat visualization;
 
   const cv::Mat diff = (cv::Mat_<double>(1, 3) << -0.5, 0, 0.5);
   const cv::Mat identity = (cv::Mat_<double>(1, 1) << 1);
@@ -466,82 +516,79 @@ void detectAndTrack(cv::VideoCapture& capture,
     if (!ok) {
       // Reached end.
       end = true;
-    } else {
-      LOG(INFO) << "Tracking " << features.size() << " features";
+      continue;
+    }
 
-      if (!detector) {
-        // Initialize anything which needs width and height.
-        detector.reset(new FeatureDetector(color_image.size()));
-      }
+    LOG(INFO) << "Tracking " << features.size() << " features";
 
-      // Convert color to intensity.
-      cv::cvtColor(color_image, integer_image, CV_BGR2GRAY);
-      // Convert to floating point in [0, 1].
-      integer_image.convertTo(image, cv::DataType<double>::type, 1. / 255);
-      // Purely for OpenCV corner detection.
-      integer_image.convertTo(float_image, cv::DataType<float>::type, 1. / 255);
-      // Compute gradient images once.
-      cv::sepFilter2D(image, ddx, -1, diff, identity);
-      cv::sepFilter2D(image, ddy, -1, identity, diff);
+    if (!detector) {
+      // Initialize anything which needs width and height.
+      detector.reset(new FeatureDetector(color_image.size()));
+    }
 
-      int num_removed = 0;
+    // Convert color to intensity.
+    cv::cvtColor(color_image, integer_image, CV_BGR2GRAY);
+    // Convert to floating point in [0, 1].
+    integer_image.convertTo(image, cv::DataType<double>::type, 1. / 255);
+    // Purely for OpenCV corner detection.
+    integer_image.convertTo(float_image, cv::DataType<float>::type, 1. / 255);
+    // Compute gradient images once.
+    cv::sepFilter2D(image, ddx, -1, diff, identity);
+    cv::sepFilter2D(image, ddy, -1, identity, diff);
 
-      FeatureList::iterator it = features.begin();
-      while (it != features.end()) {
-        TrackedFeature& feature = it->second;
+    int num_removed = 0;
 
-        // Track features from the previous image.
-        bool tracked = trackPatch(feature.warp(), feature.appearance(), image,
-            ddx, ddy, mask, options);
+    TrackedFeatureList::iterator it = features.begin();
+    while (it != features.end()) {
+      TrackedFeature& feature = it->second;
 
-        if (tracked) {
-          // Sample patch for appearance check and template update.
-          cv::Mat patch;
-          samplePatch(feature.warp(), image, patch, diameter, false,
-              options.interpolation);
+      // Track features from the previous image.
+      bool tracked = trackPatch(feature.warp(), feature.appearance(), image,
+          ddx, ddy, mask, options);
 
-          // Do appearance check.
-          double residual = patchResidual(patch, feature.appearance(), mask);
-          if (residual > max_residual) {
-            DLOG(INFO) << "Appearance residual too large (" << residual <<
-                " > " << max_residual << ")";
-            tracked = false;
-          }
+      if (tracked) {
+        // Sample patch for appearance check and template update.
+        cv::Mat patch;
+        samplePatch(feature.warp(), image, patch, diameter, false,
+            options.interpolation);
 
-          // Update appearance.
-          std::swap(feature.appearance(), patch);
+        // Do appearance check.
+        double residual = patchResidual(patch, feature.appearance(), mask);
+        if (residual > max_residual) {
+          DLOG(INFO) << "Appearance residual too large (" << residual <<
+              " > " << max_residual << ")";
+          tracked = false;
         }
 
-        // Erase feature if failed to track. Move to next feature.
-        if (!tracked) {
-          features.erase(it++);
-          num_removed += 1;
-        } else {
-          ++it;
-        }
+        // Update appearance.
+        std::swap(feature.appearance(), patch);
       }
 
-      LOG(INFO) << "Removed " << num_removed << " features";
+      // Erase feature if failed to track. Move to next feature.
+      if (!tracked) {
+        features.erase(it++);
+        num_removed += 1;
+      } else {
+        ++it;
+      }
+    }
 
-      // Detect new features.
-      detector->detect(image, float_image, features, radius, 3, min_clearance,
-          threshold, diameter, options.interpolation);
+    LOG(INFO) << "Removed " << num_removed << " features";
 
+    // Detect new features.
+    detector->detect(image, float_image, features, radius, 3, min_clearance,
+        threshold, diameter, options.interpolation);
+
+    // Add all features to structure.
+    TrackList::Frame frame;
+    addFeaturesToFrame(features, frame);
+    tracks.mutable_frames()->Add()->Swap(&frame);
+
+    if (display) {
       // Convert grayscale back to color for displaying.
-      cv::cvtColor(integer_image, display, CV_GRAY2BGR);
-
-      // Draw features.
-      {
-        FeatureList::const_iterator feature;
-        for (feature = features.begin(); feature != features.end(); ++feature) {
-          cv::Vec3b color = feature->second.color();
-          feature->second.warp().draw(display, radius,
-              cv::Scalar(color[0], color[1], color[2]), 1);
-        }
-      }
-
-      // Display image.
-      cv::imshow("Tracks", display);
+      cv::cvtColor(integer_image, visualization, CV_GRAY2BGR);
+      drawFeatures(features, visualization, radius);
+      cv::imshow("Tracks", visualization);
       cv::waitKey(1000. / 30);
     }
   }
@@ -572,8 +619,18 @@ int main(int argc, char** argv) {
   options.iteration_limit_is_fatal = FLAGS_fatal_max_iter;
   options.interpolation = cv::INTER_LINEAR;
 
-  detectAndTrack(capture, FLAGS_radius, FLAGS_threshold, FLAGS_min_clearance,
-      FLAGS_mask_sigma, FLAGS_max_residual, options);
+  TrackList tracks;
+
+  detectAndTrack(capture, tracks, FLAGS_radius, FLAGS_threshold,
+      FLAGS_min_clearance, FLAGS_mask_sigma, FLAGS_max_residual, options,
+      FLAGS_display);
+
+  LOG(INFO) << "Saving tracks...";
+  std::ofstream ofs(tracks_file.c_str(), std::ios::trunc | std::ios::binary);
+  ok = tracks.SerializeToOstream(&ofs);
+  if (!ok) {
+    LOG(FATAL) << "Could not save output";
+  }
 
   return 0;
 }

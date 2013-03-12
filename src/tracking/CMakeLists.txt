@@ -4,7 +4,6 @@ PROTOBUF_GENERATE_CPP(
   track-list.proto)
 
 add_library(tracking
-  track-list.cpp
   warp.cpp
   flow.cpp
   translation-warp.cpp

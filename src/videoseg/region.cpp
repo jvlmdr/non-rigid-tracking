@@ -4,6 +4,70 @@
 
 namespace videoseg {
 
+struct IntervalBefore {
+  inline bool operator()(const ScanInterval& lhs, const cv::Point& rhs) const {
+    if (lhs.y() < rhs.y) {
+      return true;
+    } else if (rhs.y < lhs.y()) {
+      return false;
+    } else {
+      if (lhs.right_x() < rhs.x) {
+        return true;
+      } else {
+        return false;
+      }
+    }
+  }
+
+  inline bool operator()(const cv::Point& lhs, const ScanInterval& rhs) const {
+    if (lhs.y < rhs.y()) {
+      return true;
+    } else if (rhs.y() < lhs.y) {
+      return false;
+    } else {
+      if (lhs.x < rhs.left_x()) {
+        return true;
+      } else {
+        return false;
+      }
+    }
+  }
+};
+
+inline bool intervalBefore(const ScanInterval& lhs, const ScanInterval& rhs) {
+  if (lhs.y() < rhs.y()) {
+    return true;
+  } else if (rhs.y() < lhs.y()) {
+    return false;
+  } else {
+    if (lhs.left_x() < rhs.left_x()) {
+      return true;
+    } else if (rhs.left_x() < lhs.left_x()) {
+      return false;
+    } else {
+      if (lhs.right_x() < rhs.right_x()) {
+        return true;
+      } else {
+        return false;
+      }
+    }
+  }
+}
+
+bool regionContains(const Rasterization& region, cv::Point pos) {
+  typedef RepeatedPtrField<ScanInterval> IntervalList;
+
+  const IntervalList& intervals = region.scan_inter();
+  IntervalList::const_iterator begin;
+  IntervalList::const_iterator end;
+  boost::tie(begin, end) = std::equal_range(intervals.begin(), intervals.end(),
+      pos, IntervalBefore());
+
+  return (begin != end);
+}
+
+////////////////////////////////////////////////////////////////////////////////
+
 struct PositionInIntervalList {
   typedef RepeatedPtrField<ScanInterval> IntervalList;
   // Interval list and a position within that list.
@@ -13,23 +77,7 @@ struct PositionInIntervalList {
   // Ordered by ScanInterval ordering of element under cursor.
   bool operator<(const PositionInIntervalList& other) const {
     // Note order is reversed since STL implements a max heap not a min heap.
-    if (other.interval->y() < interval->y()) {
-      return true;
-    } else if (interval->y() < other.interval->y()) {
-      return false;
-    } else {
-      if (other.interval->left_x() < interval->left_x()) {
-        return true;
-      } else if (interval->left_x() < other.interval->left_x()) {
-        return false;
-      } else {
-        if (other.interval->right_x() < interval->right_x()) {
-          return true;
-        } else {
-          return false;
-        }
-      }
-    }
+    return intervalBefore(*other.interval, *interval);
   }
 
   PositionInIntervalList(const IntervalList& intervals)

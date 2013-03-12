@@ -3,8 +3,11 @@
 
 #include "videoseg/using.hpp"
 #include "videoseg/region.pb.h"
+#include <opencv2/core/core.hpp>
 
 namespace videoseg {
+
+bool regionContains(const Rasterization& region, cv::Point pos);
 
 // Merge many 2D regions.
 void mergeRegions(const vector<const Rasterization*>& regions,
