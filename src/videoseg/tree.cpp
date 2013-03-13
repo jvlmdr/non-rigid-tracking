@@ -63,16 +63,16 @@ void addToHierarchy(SegmentationTree& tree,
   CompoundRegionList::const_iterator leaf;
 
   for (leaf = leaves.begin(); leaf != leaves.end(); ++leaf) {
-
     // Climb hierarchy until we reach the root node.
     const CompoundRegion* hierarchy_node = &*leaf;
     VertexIndex previous_vertex;
     bool reached_root = false;
+    bool inconsistent = false;
     int level = 0;
     Hierarchy::const_iterator generation = hierarchy.begin();
     vector<map<int, VertexIndex> >::iterator lookup = lookups.begin();
 
-    while (!reached_root) {
+    while (!reached_root && !inconsistent) {
       int id = hierarchy_node->id();
       int parent_id = hierarchy_node->parent_id();
 
@@ -105,17 +105,8 @@ void addToHierarchy(SegmentationTree& tree,
           roots.insert(vertex);
         }
       } else {
-        vertex = it->second;
         // Node already exists.
-
-        // If node had no parent and will now, remove from list of roots.
-        if (boost::in_degree(vertex, tree) == 0) {
-          if (parent_id >= 0) {
-            // Remove from the root list and add edge.
-            int erased = roots.erase(vertex);
-            CHECK_EQ(erased, 1);
-          }
-        }
+        vertex = it->second;
 
         // If the previous node did not have a parent, add the edge.
         if (level > 0) {
@@ -126,8 +117,25 @@ void addToHierarchy(SegmentationTree& tree,
             SegmentationTree::in_edge_iterator edge;
             boost::tie(edge, boost::tuples::ignore) =
                 boost::in_edges(previous_vertex, tree);
-            CHECK_EQ(boost::source(*edge, tree), vertex) <<
-                "Node had a different parent";
+
+            if (boost::source(*edge, tree) != vertex) {
+              // Node had an existing parent which was different. Leave node
+              // attached to its existing parent and do not traverse any higher.
+              inconsistent = true;
+              LOG(WARNING) << "Inconsistency in segmentation hierarchy";
+            }
+          }
+        }
+
+        if (!inconsistent) {
+          // If node previously had no parent and will in the next iteration,
+          // remove from list of roots.
+          if (boost::in_degree(vertex, tree) == 0) {
+            if (parent_id >= 0) {
+              // Remove from the root list and add edge.
+              int erased = roots.erase(vertex);
+              CHECK_EQ(erased, 1);
+            }
           }
         }
       }
