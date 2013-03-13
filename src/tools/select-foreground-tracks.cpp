@@ -108,11 +108,12 @@ void findSubset(const map<int, Tally>& stats,
     int id = track->first;
     const Tally& tally = track->second;
 
-    double fraction = double(tally.num_inside) / tally.total;
-
-    if (fraction >= min_fraction) {
-      // Keep track.
-      ids.insert(id);
+    if (tally.total > 0) {
+      double fraction = double(tally.num_inside) / tally.total;
+      if (fraction >= min_fraction) {
+        // Keep track.
+        ids.insert(id);
+      }
     }
   }
 }

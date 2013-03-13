@@ -32,3 +32,11 @@ target_link_libraries(segment-foreground
   ${GFLAGS_LIBRARIES}
   ${OpenCV_LIBS}
   ${PROTOBUF_LIBRARIES})
+
+add_executable(visualize-foreground visualize-foreground.cpp)
+target_link_libraries(visualize-foreground
+  videoseg videoseg-draw util
+  ${GLOG_LIBRARIES}
+  ${GFLAGS_LIBRARIES}
+  ${OpenCV_LIBS}
+  ${PROTOBUF_LIBRARIES})
